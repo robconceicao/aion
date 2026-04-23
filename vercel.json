@@ -1,0 +1,14 @@
+{
+  "version": 2,
+  "public": true,
+  "cleanUrls": true,
+  "rewrites": [
+    {
+      "source": "/((?!.*\\.).*)",
+      "destination": "/index.html"
+    }
+  ],
+  "framework": null,
+  "buildCommand": "sed -i 's/\\r$//' frontend/build.sh && cd frontend && bash build.sh",
+  "outputDirectory": "frontend/build/web"
+}

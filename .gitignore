@@ -1,0 +1,38 @@
+# Master Ignore for Aion Project
+
+# Secrets & Config
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.env
+secrets.json
+
+# Dependencies
+node_modules/
+venv/
+env/
+.venv/
+.dart_tool/
+.packages
+.pub-cache/
+.pub/
+build/
+
+# Mobile specific
+ios/Flutter/Generated.xcconfig
+android/local.properties
+android/key.properties
+*.keystore
+*.jks
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db

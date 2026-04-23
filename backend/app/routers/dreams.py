@@ -13,8 +13,8 @@ async def create_dream(
     request: Request,
     dream_in: DreamCreate
 ):
-    # Usando usuário convidado para teste rápido
-    current_user = {"id": "convidado_anonimo"}
+    # Usando um UUID válido para o usuário convidado
+    current_user = {"id": "00000000-0000-0000-0000-000000000000"}
     supabase = get_supabase()
     
     # 1. Capture IP and simulate Geolocation

@@ -25,6 +25,6 @@ class DreamModel(BaseModel):
 
 class DreamCreate(BaseModel):
     text: str
-    emotion: str
-    tags: List[str]
-    is_recurrent: bool
+    emotion: Optional[str] = "neutral"
+    tags: Optional[List[str]] = []
+    is_recurrent: Optional[bool] = False

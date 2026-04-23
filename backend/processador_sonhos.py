@@ -44,10 +44,9 @@ def processar_novo_sonho():
         modelos_disponiveis = [m.name for m in genai.list_models()]
         
         prioridade = [
-            "models/gemini-2.5-flash",
-            "models/gemini-3-flash-preview",
-            "models/gemini-2.0-flash",
-            "models/gemini-flash-latest"
+            "models/gemini-1.5-flash",
+            "models/gemini-1.5-pro",
+            "models/gemini-pro"
         ]
         
         sucesso = False

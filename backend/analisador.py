@@ -47,10 +47,9 @@ def analisar_sonho(texto_do_sonho):
     try:
         # Hierarquia de elite baseada na sua lista de modelos disponíveis
         modelos_tentativa = [
-            "models/gemini-2.5-flash", 
-            "models/gemini-3-flash-preview",
-            "models/gemini-2.0-flash",
-            "models/gemini-flash-latest"
+            "models/gemini-1.5-flash", 
+            "models/gemini-1.5-pro",
+            "models/gemini-pro"
         ]
         
         for model_name in modelos_tentativa:

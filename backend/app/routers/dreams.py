@@ -11,9 +11,10 @@ router = APIRouter()
 @router.post("/", response_model=dict)
 async def create_dream(
     request: Request,
-    dream_in: DreamCreate, 
-    current_user: dict = Depends(get_current_user)
+    dream_in: DreamCreate
 ):
+    # Usando usuário convidado para teste rápido
+    current_user = {"id": "convidado_anonimo"}
     supabase = get_supabase()
     
     # 1. Capture IP and simulate Geolocation

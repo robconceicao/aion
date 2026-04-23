@@ -1,31 +1,37 @@
-import google.generativeai as genai
+from google import genai
 from app.core.config import settings
-import os
 
-genai.configure(api_key=settings.GEMINI_API_KEY)
+# Novo SDK oficial do Google
+client = genai.Client(api_key=settings.GEMINI_API_KEY)
 
 async def transcribe_audio(audio_path: str):
     """
-    Transcribes audio using Gemini 1.5 Flash (Multimodal).
-    The file is uploaded to Gemini and then analyzed.
+    Transcreve áudio usando o novo SDK google-genai.
     """
     try:
-        # Use Gemini 3 Flash for maximum performance and multimodal accuracy
-        model = genai.GenerativeModel('gemini-3-flash')
+        # Upload do arquivo de áudio
+        print(f"[VOICE_SERVICE] Enviando áudio para transcrição: {audio_path}")
         
-        # Upload the file
-        sample_file = genai.upload_file(path=audio_path, display_name="Dream Record")
+        with open(audio_path, "rb") as f:
+            audio_bytes = f.read()
         
-        # Generate content with prompt
-        response = model.generate_content([
-            "Transcreva este áudio de um sonho. Remova hesitações e foque no conteúdo literal.",
-            sample_file
-        ])
+        # Cria a parte de áudio para o modelo multimodal
+        from google.genai import types
+        audio_part = types.Part.from_bytes(
+            data=audio_bytes,
+            mime_type="audio/m4a"
+        )
         
-        # Cleanup file from Gemini server (optional but good practice)
-        # genai.delete_file(sample_file.name) 
+        response = client.models.generate_content(
+            model="gemini-2.0-flash",
+            contents=[
+                "Transcreva este áudio de um relato de sonho. Remova hesitações e foque no conteúdo literal. Responda apenas com a transcrição, sem comentários adicionais.",
+                audio_part
+            ]
+        )
         
+        print(f"[VOICE_SERVICE] Transcrição concluída com sucesso!")
         return response.text.strip()
     except Exception as e:
-        print(f"Error in transcription: {e}")
+        print(f"[VOICE_SERVICE] Erro na transcrição: {e}")
         return None

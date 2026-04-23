@@ -1,13 +1,13 @@
 import os
-import google.generativeai as genai
+from google import genai
 from dotenv import load_dotenv
 
 # Carrega a chave do arquivo .env
 load_dotenv()
 api_key = os.getenv("GEMINI_API_KEY")
 
-# Inicializa o cliente usando o SDK estável
-genai.configure(api_key=api_key)
+# Inicializa o novo cliente
+client = genai.Client(api_key=api_key)
 
 def analisar_sonho(texto_do_sonho):
     print("Conectando ao inconsciente coletivo (Gemini)...")

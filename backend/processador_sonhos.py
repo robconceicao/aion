@@ -2,28 +2,49 @@ import os
 import time
 import json
 from supabase import create_client, Client
-import google.generativeai as genai
+from google import genai
 from dotenv import load_dotenv
 
-# 1. Configurações Iniciais e Carga de Ambiente
+# 1. Configurações Iniciais
 load_dotenv()
 
 # Credenciais Supabase
 url = os.getenv("SUPABASE_URL")
 key = os.getenv("SUPABASE_KEY")
 if not url or not key:
-    print("[ERRO]: SUPABASE_URL ou SUPABASE_KEY não encontrados no .env")
+    print("[ERRO]: SUPABASE_URL ou SUPABASE_KEY não encontrados.")
 else:
     supabase: Client = create_client(url, key)
 
-# Credenciais Gemini (Lógica Robusta: busca múltiplas chaves possíveis)
-api_key = os.getenv("GEMINI_API_KEY") or os.getenv("API_KEY_INVENT_EXPERT")
+# Credenciais Gemini - novo SDK
+api_key = os.getenv("GEMINI_API_KEY")
 if not api_key:
-    print("[ERRO]: GEMINI_API_KEY não encontrada no .env")
+    print("[ERRO]: GEMINI_API_KEY não encontrada.")
     exit(1)
 
-# Inicializa usando o SDK estável
-genai.configure(api_key=api_key)
+# Inicializa o novo cliente do SDK
+client = genai.Client(api_key=api_key)
+
+PROMPT_TEMPLATE = """
+Atue como Aion, o Oráculo de Mito & Psique — analista junguiano e especialista em mitologia campbelliana.
+Analise o relato abaixo e responda APENAS com um JSON válido, sem markdown, seguindo exatamente este esquema:
+{{
+  "aviso": "Aviso compassivo lembrando que é reflexão simbólica.",
+  "essencia": "2-3 frases poéticas sobre o sonho.",
+  "arquetipos": [{{ "nome": "...", "simbolo": "emoji", "descricao": "..." }}],
+  "funcao_compensatoria": "Equilíbrio psíquico.",
+  "simbolos_chave": [{{ "elemento": "...", "significado": "..." }}],
+  "fase_jornada": {{ "nome": "...", "descricao": "..." }},
+  "prospeccao": "O que o sonho antecipa.",
+  "pergunta_para_reflexao": "Uma pergunta poderosa.",
+  "mito_espelho": {{ "titulo": "...", "paralelo": "..." }},
+  "intensidade_sombra": 7,
+  "intensidade_heroi": 5,
+  "intensidade_transformacao": 8
+}}
+
+RELATO DO SONHO: "{relato}"
+"""
 
 def processar_novo_sonho():
     print("\n=== INICIANDO PROCESSAMENTO: MITO & PSIQUE (AION) ===")
@@ -40,47 +61,23 @@ def processar_novo_sonho():
         sonho_id = sonho_data['id']
         relato_usuario = sonho_data['relato']
 
-        # C. Tentativa inteligente entre os modelos de elite
-        modelos_disponiveis = [m.name for m in genai.list_models()]
-        
-        prioridade = [
-            "models/gemini-1.5-flash",
-            "models/gemini-1.5-pro",
-            "models/gemini-pro"
+        # B. Tentativa com modelos disponíveis (novo SDK)
+        modelos = [
+            "gemini-2.0-flash",
+            "gemini-2.0-flash-lite",
+            "gemini-1.5-flash",
         ]
         
         sucesso = False
-        for target_model in prioridade:
-            if target_model not in modelos_disponiveis:
-                continue
-                
+        for model_name in modelos:
             try:
-                print(f"Tentando análise com o modelo: {target_model}...")
+                print(f"Tentando análise com o modelo: {model_name}...")
                 
-                # Instruções Oraculares
-                prompt = f"""
-                Atue como Aion, o Oráculo de Mito & Psique — analista junguiano e especialista em mitologia campbelliana.
-                Analise o relato abaixo e responda APENAS com um JSON válido seguindo exatamente este esquema:
-                {{
-                  "aviso": "Aviso compassivo lembrando que é reflexão simbólica.",
-                  "essencia": "2-3 frases poéticas sobre o sonho.",
-                  "arquetipos": [{{ "nome": "...", "simbolo": "emoji", "descricao": "..." }}],
-                  "funcao_compensatoria": "Equilíbrio psíquico.",
-                  "simbolos_chave": [{{ "elemento": "...", "significado": "..." }}],
-                  "fase_jornada": {{ "nome": "...", "descricao": "..." }},
-                  "prospeccao": "O que o sonho antecipa.",
-                  "pergunta_para_reflexao": "Uma pergunta poderosa.",
-                  "mito_espelho": {{ "titulo": "...", "paralelo": "..." }},
-                  "intensidade_sombra": 0-10,
-                  "intensidade_heroi": 0-10,
-                  "intensidade_transformacao": 0-10
-                }}
-
-                RELATO DO SONHO: "{relato_usuario}"
-                """
-
-                model = genai.GenerativeModel(target_model)
-                response = model.generate_content(prompt)
+                prompt = PROMPT_TEMPLATE.format(relato=relato_usuario)
+                response = client.models.generate_content(
+                    model=model_name,
+                    contents=prompt
+                )
                 content = response.text
                 
                 # Limpeza de markdown
@@ -91,37 +88,27 @@ def processar_novo_sonho():
                 
                 analise_json = json.loads(content.strip())
 
-                # D. Atualiza o Supabase
+                # C. Atualiza o Supabase com a análise
                 supabase.table("sonhos").update({"interpretacao": analise_json}).eq("id", sonho_id).execute()
                 
-                print("\n" + "="*40)
-                print(f"SUCESSO! ANÁLISE SALVA NO SUPABASE.")
-                print(f"Modelo que respondeu: {target_model}")
-                print("="*40)
+                print("=" * 40)
+                print(f"SUCESSO! Análise salva no Supabase com {model_name}.")
+                print("=" * 40)
                 sucesso = True
                 break
 
             except Exception as e:
-                error_msg = str(e)
-                if "429" in error_msg:
-                    print(f"Limite de cota atingido para {target_model}. Tentando próximo modelo...")
-                    continue
-                elif "503" in error_msg:
-                    print(f"Modelo {target_model} ocupado. Tentando próximo...")
-                    continue
-                else:
-                    print(f"Erro inesperado no modelo {target_model}: {error_msg}")
-                    continue
+                print(f"Erro com {model_name}: {e}")
+                continue
         
         if not sucesso:
-            print("[ERRO FINAL]: Nenhum modelo conseguiu processar o sonho no momento.")
+            print("[ERRO FINAL]: Nenhum modelo conseguiu processar o sonho.")
 
     except Exception as e:
         print(f"\n[ERRO CRÍTICO]: {e}")
 
 if __name__ == "__main__":
-    # Modo Worker: O Aion agora fica "vigiando" o banco e processa sonhos automaticamente
     print("O Oráculo está em vigília... (Modo Worker Ativo)")
     while True:
         processar_novo_sonho()
-        time.sleep(30) # Verifica novos sonhos a cada 30 segundos
+        time.sleep(30)

@@ -9,8 +9,7 @@ router = APIRouter()
 
 @router.post("/transcribe")
 async def transcribe_voice(
-    file: UploadFile = File(...),
-    current_user: dict = Depends(get_current_user)
+    file: UploadFile = File(...)
 ):
     """
     Receives an audio file, transcribes it using Gemini, and returns the text.

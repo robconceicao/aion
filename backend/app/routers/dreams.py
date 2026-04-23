@@ -14,49 +14,40 @@ async def create_dream(
     dream_in: DreamCreate
 ):
     # Usando um UUID válido para o usuário convidado
-    current_user = {"id": "00000000-0000-0000-0000-000000000000"}
+    current_user_id = "00000000-0000-0000-0000-000000000000"
     supabase = get_supabase()
     
-    # 1. Capture IP and simulate Geolocation
-    client_host = request.client.host
-    location = "São Paulo, Brasil" # Simulado
-    
-    # 2. Analyze Dream via IA (Immediate analysis for better UX)
+    # 1. Analyze Dream via IA
     analysis = await analyze_dream(dream_in.text)
     
-    # 3. Prepare data for Supabase
+    # 2. Prepare data for Supabase (Apenas colunas essenciais confirmadas)
     dream_id = str(uuid.uuid4())
     dream_data = {
         "id": dream_id,
-        "user_id": str(current_user.get("id", current_user.get("_id", "unknown"))),
         "relato": dream_in.text,
-        "interpretacao": analysis,
-        "criado_em": datetime.utcnow().isoformat(),
-        "localizacao": location,
-        "status": "processado"
+        "interpretacao": analysis
     }
     
-    # 4. Save to Supabase (Table 'sonhos')
+    # 3. Save to Supabase (Table 'sonhos')
     try:
+        # Nota: Estamos enviando apenas id, relato e interpretacao
         res = supabase.table("sonhos").insert(dream_data).execute()
         return dream_data
     except Exception as e:
+        # Se falhar aqui, o log do Render mostrará o erro do Supabase
+        print(f"[ERRO SUPABASE]: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Erro ao salvar no Oráculo: {str(e)}")
 
 @router.get("/", response_model=list)
-async def list_dreams(current_user: dict = Depends(get_current_user)):
+async def list_dreams():
     supabase = get_supabase()
-    user_id = str(current_user.get("id", current_user.get("_id", "unknown")))
-    
-    res = supabase.table("sonhos").select("*").eq("user_id", user_id).execute()
+    res = supabase.table("sonhos").select("*").limit(20).execute()
     return res.data
 
 @router.get("/{dream_id}", response_model=dict)
-async def get_dream(dream_id: str, current_user: dict = Depends(get_current_user)):
+async def get_dream(dream_id: str):
     supabase = get_supabase()
-    user_id = str(current_user.get("id", current_user.get("_id", "unknown")))
-    
-    res = supabase.table("sonhos").select("*").eq("id", dream_id).eq("user_id", user_id).execute()
+    res = supabase.table("sonhos").select("*").eq("id", dream_id).execute()
     
     if not res.data:
         raise HTTPException(status_code=404, detail="Sonho não encontrado")

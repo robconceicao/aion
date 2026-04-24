@@ -1,9 +1,13 @@
 import json
 from google import genai
+from google.genai import types
 from app.core.config import settings
 
-# Novo SDK oficial do Google (google-genai)
-client = genai.Client(api_key=settings.GEMINI_API_KEY)
+# Usa a API v1 (estável) em vez de v1beta (padrão do SDK)
+client = genai.Client(
+    api_key=settings.GEMINI_API_KEY,
+    http_options={"api_version": "v1"}
+)
 
 PROMPT_TEMPLATE = """
 Atue como Aion, um analista junguiano especialista em mitologia comparada. 

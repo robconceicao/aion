@@ -3,10 +3,10 @@ from google import genai
 from google.genai import types
 from app.core.config import settings
 
-# Usa a API v1 (estável) em vez de v1beta (padrão do SDK)
+# Usa a API v1beta onde os modelos desta chave estão disponíveis
 client = genai.Client(
     api_key=settings.GEMINI_API_KEY,
-    http_options={"api_version": "v1"}
+    http_options={"api_version": "v1beta"}
 )
 
 PROMPT_TEMPLATE = """
@@ -44,10 +44,11 @@ async def analyze_dream(dream_text: str, context: dict = None) -> dict:
     """Analisa o sonho usando o novo SDK google-genai."""
     print(f"[AI_SERVICE] Iniciando análise. Chave configurada: {'Sim' if settings.GEMINI_API_KEY else 'NÃO!'}")
 
+    # Modelos confirmados disponíveis nesta chave (via ListModels)
     modelos = [
-        "gemini-2.0-flash",
-        "gemini-2.0-flash-lite",
-        "gemini-1.5-flash",
+        "gemini-2.5-flash",       # Modelo mais recente e estável
+        "gemini-2.0-flash-lite-001",  # Versão específica estável
+        "gemini-2.0-flash",       # Fallback
     ]
 
     ultimo_erro = None

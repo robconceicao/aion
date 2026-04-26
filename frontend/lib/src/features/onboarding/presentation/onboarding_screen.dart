@@ -169,6 +169,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> with SingleTickerPr
                       ],
                     ),
                   ),
+                    ),
+                  ),
                 ),
               ),
             );

@@ -19,85 +19,121 @@ class DreamDiaryScreen extends StatelessWidget {
             child: SingleChildScrollView(
           child: Column(
             children: [
-              const SizedBox(height: 60),
+              const SizedBox(height: 40),
               const Center(
-                child: AionPulseLogo(size: 160.0),
+                child: AionPulseLogo(size: 180.0),
               ),
-              const SizedBox(height: 24),
-              Text(
-                'AION',
-                style: theme.textTheme.displayLarge?.copyWith(fontSize: 32, letterSpacing: 12, fontWeight: FontWeight.w300),
-              ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 16),
               Text(
                 'MITO & PSIQUE',
-                style: theme.textTheme.displayLarge?.copyWith(fontSize: 12, letterSpacing: 8, color: AionTheme.gold),
+                style: theme.textTheme.displayMedium?.copyWith(
+                  fontSize: 10,
+                  letterSpacing: 7,
+                  color: AionTheme.gold,
+                ),
               ),
-              const SizedBox(height: 60),
-              
-              // Grid of Cards
+              const SizedBox(height: 8),
+              // Gradient text equivalent in Flutter
+              ShaderMask(
+                shaderCallback: (bounds) => const LinearGradient(
+                  colors: [AionTheme.amber, AionTheme.gold],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ).createShader(bounds),
+                child: Text(
+                  'DIÁRIO DE SONHOS',
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.displayLarge?.copyWith(
+                    fontSize: 32, // clamp approximation
+                    letterSpacing: 6,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                child: Column(
+                child: Text(
+                  '"Os sonhos são autorretratos espontâneos da psique."',
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontSize: 13,
+                    fontStyle: FontStyle.italic,
+                    color: AionTheme.mist,
+                    height: 1.9,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '— Carl Gustav Jung',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  fontSize: 11,
+                  color: AionTheme.veil,
+                ),
+              ),
+              const SizedBox(height: 32),
+              
+              // Stats Row Mock
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  _buildStatItem('12', 'SONHOS'),
+                  const SizedBox(width: 24),
+                  _buildStatItem('3', 'FAVORITOS'),
+                  const SizedBox(width: 24),
+                  _buildStatItem('2', 'ESTE MÊS'),
+                  const SizedBox(width: 24),
+                  _buildStatItem('Sábio', 'ARQUÉTIPO'),
+                ],
+              ),
+              const SizedBox(height: 32),
+
+              // Action Buttons Row
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
+                  alignment: WrapAlignment.center,
                   children: [
-                    // Main Record Button
-                    GestureDetector(
-                      onTap: () async {
-                        final transcription = await Navigator.push<String>(
-                          context,
-                          MaterialPageRoute(builder: (context) => const RecordDreamScreen()),
-                        );
-                        if (transcription != null && transcription.isNotEmpty) {
-                          debugPrint('Relato recebido: $transcription');
-                        }
-                      },
-                      child: Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 8),
-                        decoration: BoxDecoration(
-                          color: AionTheme.darkAbyss,
-                          border: Border.all(color: Colors.white.withOpacity(0.05)),
-                        ),
-                        child: Column(
-                          children: [
-                            const Text('✧', style: TextStyle(fontSize: 32, color: AionTheme.gold)),
-                            const SizedBox(height: 12),
-                            Text(
-                              'REGISTRAR SONHO',
-                              style: theme.textTheme.displayMedium?.copyWith(fontSize: 14, color: Colors.white),
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              'Áudio ou Texto',
-                              textAlign: TextAlign.center,
-                              style: theme.textTheme.bodyMedium?.copyWith(fontSize: 12, color: Colors.white38),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        _buildNavCard(theme, '⟁', 'ARQUÉTIPOS', null),
-                        const SizedBox(width: 16),
-                        _buildNavCard(theme, '◯', 'A JORNADA', null),
-                      ],
-                    ),
+                    _buildBtn(context, 'Registrar Sonho', isPrimary: true),
+                    _buildBtn(context, 'Diário (12)', isPrimary: false),
+                    _buildBtn(context, 'Padrões', isPrimary: false),
+                    _buildBtn(context, 'Arquétipos', isPrimary: false),
+                    _buildBtn(context, 'Canal', isPrimary: false),
                   ],
                 ),
               ),
-              const SizedBox(height: 48),
+
+              const SizedBox(height: 32),
+              TextButton(
+                onPressed: () {},
+                child: Text(
+                  'editar perfil',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: AionTheme.mist,
+                    fontSize: 11,
+                    letterSpacing: 2,
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 32),
               // Footer disclaimer
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 40.0),
                 child: Text(
-                  '⚠ Esta ferramenta oferece reflexão simbólica baseada nas teorias de Jung e Campbell. Não é terapia, não é diagnóstico psicológico.',
+                  '⚠ Reflexão simbólica baseada em Jung & Campbell. Não é terapia, não é diagnóstico. Para suporte clínico, procure um psicólogo.',
                   textAlign: TextAlign.center,
-                  style: theme.textTheme.bodyMedium?.copyWith(fontSize: 10, height: 1.6),
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontSize: 10, 
+                    color: AionTheme.mist,
+                    height: 1.8
+                  ),
                 ),
               ),
-              const SizedBox(height: 60),
+              const SizedBox(height: 40),
             ],
           ),
         ),
@@ -107,33 +143,59 @@ class DreamDiaryScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildNavCard(ThemeData theme, String icon, String title, String? subtitle) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 8),
-        decoration: BoxDecoration(
-          color: AionTheme.darkAbyss,
-          border: Border.all(color: Colors.white.withOpacity(0.05)),
+  Widget _buildStatItem(String value, String label) {
+    return Column(
+      children: [
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 20,
+            color: AionTheme.amber,
+          ),
         ),
-        child: Column(
-          children: [
-            Text(icon, style: const TextStyle(fontSize: 24, color: AionTheme.gold)),
-            const SizedBox(height: 12),
-            Text(
-              title,
-              style: theme.textTheme.displayMedium?.copyWith(fontSize: 12, color: Colors.white),
-            ),
-            if (subtitle != null) ...[
-              const SizedBox(height: 6),
-              Text(
-                subtitle,
-                textAlign: TextAlign.center,
-                style: theme.textTheme.bodyMedium?.copyWith(fontSize: 10, color: Colors.white38),
-              ),
-            ]
-          ],
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 9,
+            color: AionTheme.silver,
+            letterSpacing: 2,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildBtn(BuildContext context, String text, {required bool isPrimary}) {
+    return ElevatedButton(
+      onPressed: () async {
+        if (text == 'Registrar Sonho') {
+          final transcription = await Navigator.push<String>(
+            context,
+            MaterialPageRoute(builder: (context) => const RecordDreamScreen()),
+          );
+          if (transcription != null && transcription.isNotEmpty) {
+            debugPrint('Relato recebido: $transcription');
+          }
+        }
+      },
+      style: ElevatedButton.styleFrom(
+        backgroundColor: isPrimary ? AionTheme.gold : Colors.transparent,
+        foregroundColor: isPrimary ? AionTheme.darkVoid : AionTheme.silver,
+        side: BorderSide(
+          color: isPrimary ? AionTheme.gold : AionTheme.veil,
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12), // Using padding comparable to JSX
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(4), // very slight curve or zero
+        ),
+        elevation: 0,
+        textStyle: const TextStyle(
+          fontFamily: 'Georgia', // using serif matching
+          fontSize: 12,
         ),
       ),
+      child: Text(text),
     );
   }
 }

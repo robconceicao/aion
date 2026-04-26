@@ -60,20 +60,22 @@ class _OnboardingScreenState extends State<OnboardingScreen> with SingleTickerPr
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
-            return SingleChildScrollView(
-              child: ConstrainedBox(
-                constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                child: IntrinsicHeight(
-                  child: Center(
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 560),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                        child: Column(
-                      children: [
-                        const SizedBox(height: 60),
-                        // Aion Logo with Pulse
-                        const AionPulseLogo(size: 120),
+            return Scrollbar(
+              thumbVisibility: true,
+              child: SingleChildScrollView(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                  child: IntrinsicHeight(
+                    child: Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 560),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                          child: Column(
+                            children: [
+                              const SizedBox(height: 60),
+                              // Aion Logo with Pulse
+                              const AionPulseLogo(size: 180),
                         const SizedBox(height: 20),
                         Text(
                           'MITO & PSIQUE',
@@ -172,6 +174,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> with SingleTickerPr
                     ),
                   ),
                 ),
+              ),
               ),
             );
           },
@@ -289,42 +292,30 @@ class _OnboardingScreenState extends State<OnboardingScreen> with SingleTickerPr
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 24),
-        GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            crossAxisSpacing: 8,
-            mainAxisSpacing: 8,
-            childAspectRatio: 2.5,
-          ),
-          itemCount: _lifePhases.length,
-          itemBuilder: (context, index) {
-            final ph = _lifePhases[index];
+        Column(
+          children: _lifePhases.map((ph) {
             final isSelected = _selectedPhase == ph;
             return GestureDetector(
               onTap: () => setState(() => _selectedPhase = ph),
               child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
+                width: double.infinity,
+                margin: const EdgeInsets.only(bottom: 10),
+                padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
                 decoration: BoxDecoration(
                   color: isSelected ? AionTheme.gold.withOpacity(0.12) : AionTheme.deep,
                   border: Border.all(color: isSelected ? AionTheme.gold : AionTheme.veil),
                 ),
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    ph,
-                    style: TextStyle(
-                      color: isSelected ? AionTheme.amber : AionTheme.silver,
-                      fontSize: 12,
-                      fontFamily: 'Georgia',
-                      height: 1.4,
-                    ),
+                child: Text(
+                  ph,
+                  style: TextStyle(
+                    color: isSelected ? AionTheme.amber : AionTheme.silver,
+                    fontSize: 14,
+                    fontFamily: 'Georgia',
                   ),
                 ),
               ),
             );
-          },
+          }).toList(),
         ),
       ],
     );

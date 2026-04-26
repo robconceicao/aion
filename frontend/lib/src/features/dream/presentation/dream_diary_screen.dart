@@ -15,7 +15,7 @@ class DreamDiaryScreen extends StatelessWidget {
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 480),
+            constraints: const BoxConstraints(maxWidth: 820),
             child: SingleChildScrollView(
           child: Column(
             children: [

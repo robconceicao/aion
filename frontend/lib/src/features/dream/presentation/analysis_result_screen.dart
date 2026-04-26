@@ -43,7 +43,7 @@ class AnalysisResultScreen extends StatelessWidget {
           final isWide = constraints.maxWidth > 600;
           return Center(
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 480),
+              constraints: const BoxConstraints(maxWidth: 820),
               child: SingleChildScrollView(
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
                 child: Column(

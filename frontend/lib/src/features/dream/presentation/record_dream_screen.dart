@@ -97,7 +97,9 @@ class _RecordDreamScreenState extends State<RecordDreamScreen> with SingleTicker
       
       setState(() {
         _transcription = response.data['text'];
-        _reviewController.text = _transcription ?? '';
+        _textInputController.text = _textInputController.text.isNotEmpty 
+          ? '${_textInputController.text} $_transcription'
+          : _transcription ?? '';
         _isProcessing = false;
       });
     } catch (e) {
@@ -106,11 +108,10 @@ class _RecordDreamScreenState extends State<RecordDreamScreen> with SingleTicker
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('A tradução vocal falhou. Se estiver na Web, verifique se o seu servidor backend está rodando e acessível.'),
+            content: Text('A tradução vocal falhou. Verifique se o servidor backend está rodando e acessível.'),
             duration: Duration(seconds: 5),
           ),
         );
-        setState(() => _currentMode = DreamInputMode.selection);
       }
     }
   }
@@ -149,45 +150,85 @@ class _RecordDreamScreenState extends State<RecordDreamScreen> with SingleTicker
     }
   }
 
+  String _mood = 'Não informar';
+  final List<String> _moods = ['Não informar', 'Aterrorizado', 'Ansioso', 'Neutro', 'Curioso', 'Revigorado', 'Eufórico', 'Triste', 'Lúcido'];
+  final TextEditingController _ctxController = TextEditingController();
+  final TextEditingController _tagController = TextEditingController();
+  final List<String> _tags = [];
+  bool _recurring = false;
+  bool _deepMode = false;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     
     return Scaffold(
       backgroundColor: AionTheme.darkVoid,
-      appBar: AppBar(
-        title: Text(
-          _currentMode == DreamInputMode.selection ? 'COMO DESEJA RELATAR?' : 
-          _currentMode == DreamInputMode.voice ? 'RELATO VOCAL' : 'RELATO ESCRITO',
-          style: AionTheme.serifStyle(fontSize: 18, color: AionTheme.gold, letterSpacing: 2),
-        ),
-        leading: IconButton(
-          icon: Icon(
-            _currentMode == DreamInputMode.selection ? Icons.close : Icons.arrow_back_ios,
-            color: AionTheme.gold,
-          ),
-          onPressed: () {
-            if (_currentMode == DreamInputMode.selection) {
-              Navigator.pop(context);
-            } else {
-              setState(() {
-                _currentMode = DreamInputMode.selection;
-                _transcription = null;
-              });
-            }
-          },
-        ),
-      ),
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 480),
+            constraints: const BoxConstraints(maxWidth: 820),
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 30.0),
+              padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 36.0),
               child: _isProcessing 
                 ? const MandalaSpinner(message: 'Aion está tecendo os símbolos...')
                 : _buildBody(theme),
             ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNav(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('M I T O  &  P S I Q U E', style: TextStyle(fontSize: 9, letterSpacing: 5, color: AionTheme.gold)),
+                const SizedBox(height: 8),
+                const Text('Registrar Sonho', style: TextStyle(fontSize: 24, letterSpacing: 3, fontFamily: 'Georgia', color: Colors.white)),
+              ],
+            ),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                _navBtn(context, 'INÍCIO', false, () => Navigator.pop(context)),
+                _navBtn(context, '+ SONHO', true, () {}),
+                _navBtn(context, 'ARQUÉTIPOS', false, () {}),
+                _navBtn(context, 'CANAL', false, () {}),
+              ],
+            ),
+          ],
+        ),
+        const SizedBox(height: 32),
+      ],
+    );
+  }
+
+  Widget _navBtn(BuildContext context, String label, bool isActive, VoidCallback onTap) {
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+        decoration: BoxDecoration(
+          color: isActive ? AionTheme.gold : Colors.transparent,
+          border: Border.all(color: isActive ? AionTheme.gold : AionTheme.veil),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isActive ? AionTheme.darkVoid : AionTheme.silver,
+            fontSize: 10,
+            letterSpacing: 2,
+            fontFamily: 'Georgia',
           ),
         ),
       ),
@@ -199,7 +240,8 @@ class _RecordDreamScreenState extends State<RecordDreamScreen> with SingleTicker
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SizedBox(height: 20),
+          _buildNav(context),
+          
           // Dream Text Card
           Container(
             padding: const EdgeInsets.all(22),
@@ -218,11 +260,11 @@ class _RecordDreamScreenState extends State<RecordDreamScreen> with SingleTicker
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'Relato do Sonho *',
+                      'R E L A T O   D O   S O N H O   *',
                       style: theme.textTheme.bodyMedium?.copyWith(
-                        color: Colors.white,
-                        fontSize: 12,
-                        letterSpacing: 1,
+                        color: AionTheme.gold,
+                        fontSize: 11,
+                        letterSpacing: 2,
                       ),
                     ),
                     IconButton(
@@ -276,107 +318,226 @@ class _RecordDreamScreenState extends State<RecordDreamScreen> with SingleTicker
           const SizedBox(height: 16),
 
           // Mood + Context
-          Row(
-            children: [
-              Expanded(
-                child: Container(
-                  padding: const EdgeInsets.all(18),
-                  decoration: BoxDecoration(
-                    color: AionTheme.deep,
-                    border: Border.all(color: AionTheme.shadow),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Estado ao Acordar', style: TextStyle(color: AionTheme.silver, fontSize: 11)),
-                      const SizedBox(height: 8),
-                      // Mock Dropdown
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 12),
-                        decoration: BoxDecoration(
-                          color: AionTheme.deep,
-                          border: Border.all(color: AionTheme.shadow),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final isWide = constraints.maxWidth > 500;
+              final children = [
+                Expanded(
+                  flex: isWide ? 1 : 0,
+                  child: Container(
+                    padding: const EdgeInsets.all(18),
+                    decoration: BoxDecoration(
+                      color: AionTheme.deep,
+                      border: Border.all(color: AionTheme.shadow),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('E S T A D O   A O   A C O R D A R', style: TextStyle(color: AionTheme.silver, fontSize: 10, letterSpacing: 2)),
+                        const SizedBox(height: 12),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          decoration: BoxDecoration(
+                            color: AionTheme.darkVoid,
+                            border: Border.all(color: AionTheme.shadow),
+                          ),
+                          child: DropdownButtonHideUnderline(
+                            child: DropdownButton<String>(
+                              value: _mood,
+                              dropdownColor: AionTheme.darkVoid,
+                              style: const TextStyle(color: AionTheme.silver, fontSize: 13, fontFamily: 'Georgia'),
+                              icon: const Icon(Icons.keyboard_arrow_down, color: AionTheme.silver),
+                              isExpanded: true,
+                              onChanged: (val) => setState(() => _mood = val!),
+                              items: _moods.map((m) => DropdownMenuItem(value: m, child: Text(m))).toList(),
+                            ),
+                          ),
                         ),
-                        child: Text('Não informar', style: TextStyle(color: AionTheme.silver, fontSize: 13, fontFamily: 'Georgia')),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Container(
-                  padding: const EdgeInsets.all(18),
-                  decoration: BoxDecoration(
-                    color: AionTheme.deep,
-                    border: Border.all(color: AionTheme.shadow),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Contexto de Vida', style: TextStyle(color: AionTheme.silver, fontSize: 11)),
-                      const SizedBox(height: 8),
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 12),
-                        decoration: BoxDecoration(
-                          color: AionTheme.deep,
-                          border: Border.all(color: AionTheme.shadow),
+                if (isWide) const SizedBox(width: 14) else const SizedBox(height: 14),
+                Expanded(
+                  flex: isWide ? 1 : 0,
+                  child: Container(
+                    padding: const EdgeInsets.all(18),
+                    decoration: BoxDecoration(
+                      color: AionTheme.deep,
+                      border: Border.all(color: AionTheme.shadow),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('C O N T E X T O   D E   V I D A', style: TextStyle(color: AionTheme.silver, fontSize: 10, letterSpacing: 2)),
+                        const SizedBox(height: 12),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          decoration: BoxDecoration(
+                            color: AionTheme.darkVoid,
+                            border: Border.all(color: AionTheme.shadow),
+                          ),
+                          child: TextField(
+                            controller: _ctxController,
+                            style: const TextStyle(color: AionTheme.silver, fontSize: 13, fontFamily: 'Georgia'),
+                            decoration: const InputDecoration(
+                              hintText: 'Ex: transição de carreira...',
+                              hintStyle: TextStyle(color: Colors.white24),
+                              border: InputBorder.none,
+                            ),
+                          ),
                         ),
-                        child: Text('Ex: transição...', style: TextStyle(color: Colors.white24, fontSize: 13, fontFamily: 'Georgia')),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ];
+              return isWide ? Row(children: children) : Column(children: children);
+            },
+          ),
+          const SizedBox(height: 16),
+
+          // Tags
+          Container(
+            padding: const EdgeInsets.all(22),
+            decoration: BoxDecoration(
+              color: AionTheme.deep,
+              border: Border.all(color: AionTheme.shadow),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('T A G S   P E R S O N A L I Z A D A S', style: TextStyle(color: AionTheme.silver, fontSize: 10, letterSpacing: 2)),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        decoration: BoxDecoration(
+                          color: AionTheme.darkVoid,
+                          border: Border.all(color: AionTheme.shadow),
+                        ),
+                        child: TextField(
+                          controller: _tagController,
+                          style: const TextStyle(color: AionTheme.silver, fontSize: 13, fontFamily: 'Georgia'),
+                          decoration: const InputDecoration(
+                            hintText: 'Digite uma tag e pressione Enter...',
+                            hintStyle: TextStyle(color: Colors.white24),
+                            border: InputBorder.none,
+                          ),
+                          onSubmitted: (val) {
+                            if (val.trim().isNotEmpty && !_tags.contains(val.trim())) {
+                              setState(() => _tags.add(val.trim()));
+                              _tagController.clear();
+                            }
+                          },
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    InkWell(
+                      onTap: () {
+                        if (_tagController.text.trim().isNotEmpty && !_tags.contains(_tagController.text.trim())) {
+                          setState(() => _tags.add(_tagController.text.trim()));
+                          _tagController.clear();
+                        }
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
+                        decoration: BoxDecoration(
+                          color: AionTheme.darkVoid,
+                          border: Border.all(color: AionTheme.shadow),
+                        ),
+                        child: const Text('+ A D D', style: TextStyle(color: AionTheme.silver, fontSize: 10, letterSpacing: 2)),
+                      ),
+                    ),
+                  ],
+                ),
+                if (_tags.isNotEmpty) const SizedBox(height: 16),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: _tags.map((t) => Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: AionTheme.veil),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(t, style: const TextStyle(color: AionTheme.silver, fontSize: 12, fontFamily: 'Georgia')),
+                        const SizedBox(width: 8),
+                        InkWell(
+                          onTap: () => setState(() => _tags.remove(t)),
+                          child: const Icon(Icons.close, size: 14, color: AionTheme.mist),
+                        ),
+                      ],
+                    ),
+                  )).toList(),
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: 16),
 
           // Options
-          Row(
-            children: [
-              Expanded(
-                child: Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: AionTheme.darkVoid,
-                    border: Border.all(color: AionTheme.shadow),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.check_box_outline_blank, color: AionTheme.silver, size: 16),
-                      const SizedBox(width: 12),
-                      Text('Sonho recorrente', style: TextStyle(color: AionTheme.silver, fontSize: 13)),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: AionTheme.darkVoid,
-                    border: Border.all(color: AionTheme.shadow),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.check_box_outline_blank, color: AionTheme.amber, size: 16),
-                      const SizedBox(width: 12),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final isWide = constraints.maxWidth > 500;
+              final children = [
+                Expanded(
+                  flex: isWide ? 1 : 0,
+                  child: InkWell(
+                    onTap: () => setState(() => _recurring = !_recurring),
+                    child: Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: _recurring ? AionTheme.gold.withOpacity(0.05) : AionTheme.darkVoid,
+                        border: Border.all(color: _recurring ? AionTheme.gold : AionTheme.shadow),
+                      ),
+                      child: Row(
                         children: [
-                          Text('Análise Aprofundada', style: TextStyle(color: AionTheme.silver, fontSize: 13)),
-                          Text('Perguntas guiadas', style: TextStyle(color: AionTheme.mist, fontSize: 10)),
+                          Icon(_recurring ? Icons.check_box : Icons.check_box_outline_blank, color: _recurring ? AionTheme.gold : AionTheme.silver, size: 16),
+                          const SizedBox(width: 12),
+                          const Text('Sonho recorrente', style: TextStyle(color: AionTheme.silver, fontSize: 13, fontFamily: 'Georgia')),
                         ],
                       ),
-                    ],
+                    ),
                   ),
                 ),
-              ),
-            ],
+                if (isWide) const SizedBox(width: 12) else const SizedBox(height: 12),
+                Expanded(
+                  flex: isWide ? 1 : 0,
+                  child: InkWell(
+                    onTap: () => setState(() => _deepMode = !_deepMode),
+                    child: Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: _deepMode ? AionTheme.gold.withOpacity(0.05) : AionTheme.darkVoid,
+                        border: Border.all(color: _deepMode ? AionTheme.gold : AionTheme.shadow),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(_deepMode ? Icons.check_box : Icons.check_box_outline_blank, color: _deepMode ? AionTheme.gold : AionTheme.silver, size: 16),
+                          const SizedBox(width: 12),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: const [
+                              Text('Análise Aprofundada', style: TextStyle(color: AionTheme.silver, fontSize: 13, fontFamily: 'Georgia')),
+                              Text('Perguntas guiadas', style: TextStyle(color: AionTheme.mist, fontSize: 10, fontFamily: 'Georgia')),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ];
+              return isWide ? Row(children: children) : Column(children: children);
+            },
           ),
           const SizedBox(height: 24),
 
@@ -387,13 +548,12 @@ class _RecordDreamScreenState extends State<RecordDreamScreen> with SingleTicker
                   ? () => _analyzeAndNavigate(_textInputController.text)
                   : null,
               style: ElevatedButton.styleFrom(
-                backgroundColor: AionTheme.darkAbyss,
-                foregroundColor: AionTheme.gold,
-                side: BorderSide(color: AionTheme.shadow),
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.zero),
+                backgroundColor: AionTheme.gold,
+                foregroundColor: AionTheme.darkVoid,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
               ),
-              child: const Text('Invocar o Oráculo ☽', style: TextStyle(fontFamily: 'Georgia', fontSize: 14)),
+              child: const Text('I N V O C A R   O   O R Á C U L O   ☽', style: TextStyle(letterSpacing: 3, fontSize: 11)),
             ),
           ),
           const SizedBox(height: 40),

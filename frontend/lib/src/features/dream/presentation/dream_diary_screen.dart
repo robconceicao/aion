@@ -97,11 +97,9 @@ class DreamDiaryScreen extends StatelessWidget {
                   runSpacing: 10,
                   alignment: WrapAlignment.center,
                   children: [
-                    _buildBtn(context, 'Registrar Sonho', isPrimary: true),
-                    _buildBtn(context, 'Diário (12)', isPrimary: false),
-                    _buildBtn(context, 'Padrões', isPrimary: false),
-                    _buildBtn(context, 'Arquétipos', isPrimary: false),
-                    _buildBtn(context, 'Canal', isPrimary: false),
+                    _buildBtn(context, 'REGISTRAR SONHO', isPrimary: true),
+                    _buildBtn(context, 'ARQUÉTIPOS', isPrimary: false),
+                    _buildBtn(context, 'CANAL', isPrimary: false),
                   ],
                 ),
               ),
@@ -169,7 +167,7 @@ class DreamDiaryScreen extends StatelessWidget {
   Widget _buildBtn(BuildContext context, String text, {required bool isPrimary}) {
     return ElevatedButton(
       onPressed: () async {
-        if (text == 'Registrar Sonho') {
+        if (text == 'REGISTRAR SONHO') {
           final transcription = await Navigator.push<String>(
             context,
             MaterialPageRoute(builder: (context) => const RecordDreamScreen()),

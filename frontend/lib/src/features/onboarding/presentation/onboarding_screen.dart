@@ -106,11 +106,54 @@ class _OnboardingScreenState extends State<OnboardingScreen> with SingleTickerPr
               // Footer
               SizedBox(
                 width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: (_currentStep == 1 && !_isNameValid) ? null : _nextStep,
-                  child: Text(_currentStep == _totalSteps ? 'COMEÇAR' : 'CONTINUAR →'),
+                child: Row(
+                  children: [
+                    if (_currentStep > 1) ...[
+                      Expanded(
+                        flex: 2,
+                        child: OutlinedButton(
+                          onPressed: () => setState(() => _currentStep--),
+                          style: OutlinedButton.styleFrom(
+                            side: const BorderSide(color: AionTheme.veil),
+                            foregroundColor: AionTheme.silver,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(0)),
+                          ),
+                          child: const Text('← VOLTAR', style: TextStyle(fontFamily: 'Georgia', letterSpacing: 2, fontSize: 11)),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                    ],
+                    Expanded(
+                      flex: 4,
+                      child: ElevatedButton(
+                        onPressed: (_currentStep == 1 && _nameController.text.trim().isEmpty) || (_currentStep == 2 && _selectedIntention.isEmpty) ? null : _nextStep,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AionTheme.gold,
+                          foregroundColor: AionTheme.darkVoid,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(0)),
+                        ),
+                        child: Text(
+                          _currentStep == _totalSteps ? 'INICIAR JORNADA ☽' : 'CONTINUAR →',
+                          style: const TextStyle(fontFamily: 'Georgia', letterSpacing: 2, fontSize: 11),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
+              if (_currentStep == 3)
+                Padding(
+                  padding: const EdgeInsets.only(top: 16),
+                  child: TextButton(
+                    onPressed: _nextStep,
+                    child: Text(
+                      'pular esta etapa',
+                      style: GoogleFonts.ptSerif(fontSize: 11, letterSpacing: 2, color: AionTheme.mist),
+                    ),
+                  ),
+                ),
               const SizedBox(height: 40),
             ],
           ),
@@ -131,16 +174,18 @@ class _OnboardingScreenState extends State<OnboardingScreen> with SingleTickerPr
         TextField(
           controller: _nameController,
           textAlign: TextAlign.center,
-          style: theme.textTheme.bodyLarge,
+          style: theme.textTheme.bodyLarge?.copyWith(fontSize: 16),
           decoration: InputDecoration(
             hintText: 'Seu nome ou como prefere ser chamado...',
             hintStyle: theme.textTheme.bodyMedium?.copyWith(color: AionTheme.mist),
-            contentPadding: const EdgeInsets.symmetric(vertical: 24),
-            border: const OutlineInputBorder(
-              borderSide: BorderSide(color: AionTheme.darkAbyss),
+            contentPadding: const EdgeInsets.symmetric(vertical: 24, horizontal: 18),
+            fillColor: AionTheme.deep,
+            filled: true,
+            border: OutlineInputBorder(
+              borderSide: BorderSide(color: _nameController.text.isNotEmpty ? AionTheme.gold.withOpacity(0.6) : AionTheme.veil),
             ),
-            enabledBorder: const OutlineInputBorder(
-              borderSide: BorderSide(color: AionTheme.darkAbyss),
+            enabledBorder: OutlineInputBorder(
+              borderSide: BorderSide(color: _nameController.text.isNotEmpty ? AionTheme.gold.withOpacity(0.6) : AionTheme.veil),
             ),
             focusedBorder: const OutlineInputBorder(
               borderSide: BorderSide(color: AionTheme.gold),
@@ -150,43 +195,118 @@ class _OnboardingScreenState extends State<OnboardingScreen> with SingleTickerPr
         const SizedBox(height: 12),
         Text(
           'Usado para personalizar sua experiência. Nunca compartilhado.',
-          style: theme.textTheme.bodyMedium?.copyWith(fontSize: 11),
+          style: theme.textTheme.bodyMedium?.copyWith(fontSize: 11, color: AionTheme.mist),
         ),
       ],
     );
   }
+
+  String _selectedIntention = '';
+  final List<String> _intentions = [
+    "Autoconhecimento",
+    "Compreender padrões repetitivos",
+    "Lidar com sonhos perturbadores",
+    "Conexão com o simbólico",
+    "Acompanhar meu processo terapêutico",
+    "Curiosidade e exploração"
+  ];
 
   Widget _buildStepTwo(ThemeData theme) {
     return Column(
       children: [
         Text(
-          'Simbologia Pura',
+          'O que te traz ao Diário de Sonhos?',
           style: theme.textTheme.displayMedium,
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 24),
-        Text(
-          'Aion não julga. Ele amplifica seus sonhos através de arquétipos universais e mitos ancestrais.',
-          style: theme.textTheme.bodyLarge,
-          textAlign: TextAlign.center,
+        Column(
+          children: _intentions.map((int) {
+            final isSelected = _selectedIntention == int;
+            return GestureDetector(
+              onTap: () => setState(() {
+                _selectedIntention = int;
+                _isNameValid = true; // Temporary reuse of state variable for continuing
+              }),
+              child: Container(
+                width: double.infinity,
+                margin: const EdgeInsets.only(bottom: 10),
+                padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
+                decoration: BoxDecoration(
+                  color: isSelected ? AionTheme.gold.withOpacity(0.12) : AionTheme.deep,
+                  border: Border.all(color: isSelected ? AionTheme.gold : AionTheme.veil),
+                ),
+                child: Text(
+                  int,
+                  style: TextStyle(
+                    color: isSelected ? AionTheme.amber : AionTheme.silver,
+                    fontSize: 14,
+                    fontFamily: 'Georgia',
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
         ),
       ],
     );
   }
 
+  String _selectedPhase = '';
+  final List<String> _lifePhases = [
+    "Transição de carreira", "Fim de relacionamento",
+    "Início de relacionamento", "Luto",
+    "Crise de identidade", "Crescimento pessoal",
+    "Maternidade / Paternidade", "Busca espiritual",
+    "Isolamento", "Fase criativa",
+    "Doença ou recuperação", "Outro"
+  ];
+
   Widget _buildStepThree(ThemeData theme) {
     return Column(
       children: [
         Text(
-          'Pronto para a Jornada?',
+          'Em que fase da vida você está?',
           style: theme.textTheme.displayMedium,
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 24),
-        Text(
-          'A revelação está em suas mãos. Registre seus sonhos por voz ou texto e descubra os padrões da sua psique.',
-          style: theme.textTheme.bodyLarge,
-          textAlign: TextAlign.center,
+        GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            crossAxisSpacing: 8,
+            mainAxisSpacing: 8,
+            childAspectRatio: 2.5,
+          ),
+          itemCount: _lifePhases.length,
+          itemBuilder: (context, index) {
+            final ph = _lifePhases[index];
+            final isSelected = _selectedPhase == ph;
+            return GestureDetector(
+              onTap: () => setState(() => _selectedPhase = ph),
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
+                decoration: BoxDecoration(
+                  color: isSelected ? AionTheme.gold.withOpacity(0.12) : AionTheme.deep,
+                  border: Border.all(color: isSelected ? AionTheme.gold : AionTheme.veil),
+                ),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    ph,
+                    style: TextStyle(
+                      color: isSelected ? AionTheme.amber : AionTheme.silver,
+                      fontSize: 12,
+                      fontFamily: 'Georgia',
+                      height: 1.4,
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
         ),
       ],
     );

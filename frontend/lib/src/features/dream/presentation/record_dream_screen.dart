@@ -181,7 +181,7 @@ class _RecordDreamScreenState extends State<RecordDreamScreen> with SingleTicker
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 800),
+            constraints: const BoxConstraints(maxWidth: 480),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 30.0),
               child: _isProcessing 

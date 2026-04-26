@@ -43,7 +43,7 @@ class AnalysisResultScreen extends StatelessWidget {
           final isWide = constraints.maxWidth > 600;
           return Center(
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 800),
+              constraints: const BoxConstraints(maxWidth: 480),
               child: SingleChildScrollView(
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
                 child: Column(
@@ -90,7 +90,7 @@ class AnalysisResultScreen extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _buildLabel('☽ ESSÊNCIA', color: AionTheme.gold),
+                          _buildLabel('✧ ESSÊNCIA', color: AionTheme.gold),
                           Text(
                             '"${analysis['essencia']}"',
                             style: theme.textTheme.bodyLarge?.copyWith(
@@ -335,7 +335,7 @@ class AnalysisResultScreen extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            _buildLabel('☽ MITO ESPELHO', color: const Color(0xFF5A9A6A)),
+                            _buildLabel('✧ MITO ESPELHO', color: const Color(0xFF5A9A6A)),
                             Text(
                               analysis['mito_espelho']['titulo'] ?? '',
                               style: const TextStyle(color: Colors.white, fontSize: 14),

@@ -40,10 +40,27 @@ async def analyze_dream(dream_text: str, context: dict = None) -> dict:
     """Analisa o sonho usando Claude (Anthropic)."""
     print(f"[AI_SERVICE] Iniciando análise com Claude. Chave configurada: {'Sim' if settings.ANTHROPIC_API_KEY else 'NAO!'}")
 
-    modelos = [
-        "claude-3-haiku-20240307",      # Mais rápido e universalmente disponível
-        "claude-3-sonnet-20240229",     # Fallback mais robusto
-    ]
+    # Descobre dinamicamente os modelos disponíveis nesta conta
+    modelos = []
+    try:
+        modelos_disponiveis = client.models.list()
+        for m in modelos_disponiveis.data:
+            # Filtra apenas modelos de texto/chat (não embedding ou outros)
+            if "claude" in m.id.lower():
+                modelos.append(m.id)
+                print(f"[AI_SERVICE] Modelo disponível: {m.id}")
+        # Ordena para priorizar modelos mais novos (haiku é o mais barato/rápido)
+        modelos.sort(reverse=True)
+    except Exception as e:
+        print(f"[AI_SERVICE] Não foi possível listar modelos: {e}")
+        # Fallback com nomes conhecidos
+        modelos = [
+            "claude-3-haiku-20240307",
+            "claude-3-sonnet-20240229",
+            "claude-3-opus-20240229",
+        ]
+
+    print(f"[AI_SERVICE] Modelos a tentar: {modelos[:3]}")
 
     ultimo_erro = None
     for model_name in modelos:

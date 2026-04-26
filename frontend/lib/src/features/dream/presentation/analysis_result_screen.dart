@@ -405,6 +405,7 @@ class AnalysisResultScreen extends StatelessWidget {
                           child: const Text('Início'),
                         ),
                       ],
+                    ),
                     const SizedBox(height: 40),
                   ],
                 ),

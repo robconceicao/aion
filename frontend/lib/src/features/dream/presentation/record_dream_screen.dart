@@ -34,6 +34,7 @@ class _RecordDreamScreenState extends State<RecordDreamScreen> with SingleTicker
   @override
   void initState() {
     super.initState();
+    _ctxController.text = "Transição de carreira, busca por propósito..."; // Pre-preenchido
     _audioRecorder = AudioRecorder();
     _platformRecorder = getPlatformRecorder();
     _animationController = AnimationController(
@@ -171,7 +172,7 @@ class _RecordDreamScreenState extends State<RecordDreamScreen> with SingleTicker
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 36.0),
               child: _isProcessing 
-                ? const MandalaSpinner(message: 'Aion está tecendo os símbolos...')
+                ? const MandalaSpinner(message: 'Buscando os melhores significados\nsegundo o seu contexto...')
                 : _buildBody(theme),
             ),
           ),
@@ -202,8 +203,12 @@ class _RecordDreamScreenState extends State<RecordDreamScreen> with SingleTicker
               children: [
                 _navBtn(context, 'INÍCIO', false, () => Navigator.pop(context)),
                 _navBtn(context, '+ SONHO', true, () {}),
-                _navBtn(context, 'ARQUÉTIPOS', false, () {}),
-                _navBtn(context, 'CANAL', false, () {}),
+                _navBtn(context, 'ARQUÉTIPOS', false, () {
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Em breve...')));
+                }),
+                _navBtn(context, 'CANAL', false, () {
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Em breve...')));
+                }),
               ],
             ),
           ],
@@ -381,10 +386,9 @@ class _RecordDreamScreenState extends State<RecordDreamScreen> with SingleTicker
                           ),
                           child: TextField(
                             controller: _ctxController,
+                            readOnly: true,
                             style: const TextStyle(color: AionTheme.silver, fontSize: 13, fontFamily: 'Georgia'),
                             decoration: const InputDecoration(
-                              hintText: 'Ex: transição de carreira...',
-                              hintStyle: TextStyle(color: Colors.white24),
                               border: InputBorder.none,
                             ),
                           ),
@@ -553,7 +557,19 @@ class _RecordDreamScreenState extends State<RecordDreamScreen> with SingleTicker
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
               ),
-              child: const Text('I N V O C A R   O   O R Á C U L O   ☽', style: TextStyle(letterSpacing: 3, fontSize: 11)),
+              child: const Text('B U S C A R   O   S I G N I F I C A D O', style: TextStyle(letterSpacing: 3, fontSize: 11, fontWeight: FontWeight.bold)),
+            ),
+          ),
+          const SizedBox(height: 24),
+          const Text(
+            '"Um mesmo sonho não possui um significado único, fixo ou determinado por dicionários de sonhos, mas sim inúmeras possibilidades de análise e significados que dependem do contexto do sonhador."',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: AionTheme.mist,
+              fontSize: 10,
+              fontStyle: FontStyle.italic,
+              fontFamily: 'Georgia',
+              height: 1.6,
             ),
           ),
           const SizedBox(height: 40),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../../../src/core/theme.dart';
 import 'record_dream_screen.dart';
 import 'widgets/aion_logo.dart';
@@ -26,50 +27,30 @@ class DreamDiaryScreen extends StatelessWidget {
               const SizedBox(height: 16),
               Text(
                 'MITO & PSIQUE',
-                style: theme.textTheme.displayMedium?.copyWith(
+                style: GoogleFonts.ptSerif(
                   fontSize: 10,
-                  letterSpacing: 7,
+                  letterSpacing: 6,
                   color: AionTheme.gold,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
               const SizedBox(height: 8),
-              // Gradient text equivalent in Flutter
-              ShaderMask(
-                shaderCallback: (bounds) => const LinearGradient(
-                  colors: [AionTheme.amber, AionTheme.gold],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ).createShader(bounds),
-                child: Text(
-                  'DIÁRIO DE SONHOS',
-                  textAlign: TextAlign.center,
-                  style: theme.textTheme.displayLarge?.copyWith(
-                    fontSize: 32, // clamp approximation
-                    letterSpacing: 6,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 24),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                child: Text(
-                  '"Os sonhos são autorretratos espontâneos da psique."',
-                  textAlign: TextAlign.center,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    fontSize: 13,
-                    fontStyle: FontStyle.italic,
-                    color: AionTheme.mist,
-                    height: 1.9,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 4),
               Text(
-                '— Carl Gustav Jung',
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  fontSize: 11,
-                  color: AionTheme.veil,
+                'AION',
+                style: theme.textTheme.displayLarge?.copyWith(
+                  fontSize: 32,
+                  letterSpacing: 8,
+                  color: AionTheme.amber,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'O Diário do Sonho',
+                style: GoogleFonts.ptSerif(
+                  fontSize: 13,
+                  fontStyle: FontStyle.italic,
+                  color: AionTheme.mist,
+                  letterSpacing: 1,
                 ),
               ),
               const SizedBox(height: 32),
@@ -175,6 +156,13 @@ class DreamDiaryScreen extends StatelessWidget {
           if (transcription != null && transcription.isNotEmpty) {
             debugPrint('Relato recebido: $transcription');
           }
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('$text em breve...'),
+              duration: const Duration(seconds: 2),
+            ),
+          );
         }
       },
       style: ElevatedButton.styleFrom(

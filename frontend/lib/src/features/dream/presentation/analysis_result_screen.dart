@@ -32,7 +32,7 @@ class AnalysisResultScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: AionTheme.darkVoid,
       appBar: AppBar(
-        title: Text('A REVELAÇÃO', style: AionTheme.serifStyle(fontSize: 16, color: AionTheme.gold, letterSpacing: 3)),
+        title: Text('Significado segundo o contexto do sonhador', style: AionTheme.serifStyle(fontSize: 14, color: AionTheme.gold, letterSpacing: 1)),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: AionTheme.gold),
           onPressed: () => Navigator.pop(context),
@@ -57,7 +57,7 @@ class AnalysisResultScreen extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: AionTheme.teal.withOpacity(0.18),
                         border: Border.all(color: AionTheme.teal.withOpacity(0.4), width: 1),
-                        borderRadius: BorderRadius.circular(4),
+                        borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
                         '⚠ ${analysis['aviso'] ?? "Reflexão simbólica baseada em Jung e Campbell."}',
@@ -113,11 +113,18 @@ class AnalysisResultScreen extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _buildLabel('Dimensões', color: AionTheme.silver),
+                          _buildLabel('Dimensões do sonho', color: AionTheme.silver),
                           const SizedBox(height: 14),
-                          _buildIntensityBar('Sombra', analysis['intensidade_sombra'] ?? 0, AionTheme.crimson),
-                          _buildIntensityBar('Herói', analysis['intensidade_heroi'] ?? 0, AionTheme.gold),
-                          _buildIntensityBar('Transformação', analysis['intensidade_transformacao'] ?? 0, AionTheme.teal, isLast: true),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(child: _buildIntensityBar('Sombra', analysis['intensidade_sombra'] ?? 0, AionTheme.crimson, isLast: true)),
+                              const SizedBox(width: 12),
+                              Expanded(child: _buildIntensityBar('Herói', analysis['intensidade_heroi'] ?? 0, AionTheme.gold, isLast: true)),
+                              const SizedBox(width: 12),
+                              Expanded(child: _buildIntensityBar('Transform.', analysis['intensidade_transformacao'] ?? 0, AionTheme.teal, isLast: true)),
+                            ],
+                          ),
                         ],
                       ),
                     ),
@@ -126,49 +133,45 @@ class AnalysisResultScreen extends StatelessWidget {
                     // Arquétipos
                     if (arquetipos.isNotEmpty) ...[
                       _buildLabel('⟁ Arquétipos Presentes', color: AionTheme.gold),
-                      GridView.builder(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: isWide ? 3 : (constraints.maxWidth > 350 ? 2 : 1),
-                          mainAxisSpacing: 12,
-                          crossAxisSpacing: 12,
-                          childAspectRatio: isWide ? 0.9 : 0.85,
-                        ),
-                        itemCount: arquetipos.length,
-                        itemBuilder: (context, index) {
-                          final arc = arquetipos[index];
-                          final arcColor = _getArcColor(arc['nome'] ?? '');
-                          return Container(
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: AionTheme.darkAbyss,
-                              border: Border(
-                                top: BorderSide(color: arcColor, width: 3),
-                                bottom: const BorderSide(color: AionTheme.shadow, width: 1),
-                                left: const BorderSide(color: AionTheme.shadow, width: 1),
-                                right: const BorderSide(color: AionTheme.shadow, width: 1),
-                              ),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(arc['simbolo'] ?? '⌘', style: const TextStyle(fontSize: 22)),
-                                const SizedBox(height: 8),
-                                Text(arc['nome'] ?? '', style: TextStyle(color: arcColor, fontSize: 13)),
-                                const SizedBox(height: 8),
-                                Expanded(
-                                  child: Text(
-                                    arc['descricao'] ?? '',
-                                    style: const TextStyle(color: AionTheme.silver, fontSize: 12, height: 1.7),
-                                    overflow: TextOverflow.fade,
+                      IntrinsicHeight(
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: arquetipos.map<Widget>((arc) {
+                            final arcColor = _getArcColor(arc['nome'] ?? '');
+                            return Expanded(
+                              child: Container(
+                                margin: EdgeInsets.only(right: arc == arquetipos.last ? 0 : 12),
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: AionTheme.darkAbyss,
+                                  border: Border(
+                                    top: BorderSide(color: arcColor, width: 3),
+                                    bottom: const BorderSide(color: AionTheme.shadow, width: 1),
+                                    left: const BorderSide(color: AionTheme.shadow, width: 1),
+                                    right: const BorderSide(color: AionTheme.shadow, width: 1),
                                   ),
+                                  borderRadius: BorderRadius.circular(12),
                                 ),
-                              ],
-                            ),
-                          );
-                        },
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(arc['simbolo'] ?? '⌘', style: const TextStyle(fontSize: 22)),
+                                    const SizedBox(height: 8),
+                                    Text(arc['nome'] ?? '', style: TextStyle(color: arcColor, fontSize: 13)),
+                                    const SizedBox(height: 8),
+                                    Expanded(
+                                      child: Text(
+                                        arc['descricao'] ?? '',
+                                        style: const TextStyle(color: AionTheme.silver, fontSize: 12, height: 1.7),
+                                        overflow: TextOverflow.fade,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                        ),
                       ),
                       const SizedBox(height: 16),
                     ],
@@ -248,37 +251,29 @@ class AnalysisResultScreen extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             _buildLabel('⋈ Símbolos & Ampliação', color: AionTheme.gold),
-                            ...simbolos.asMap().entries.map((entry) {
-                              int idx = entry.key;
-                              var s = entry.value;
-                              bool isLast = idx == simbolos.length - 1;
-                              return Container(
-                                padding: const EdgeInsets.only(bottom: 10),
-                                margin: EdgeInsets.only(bottom: isLast ? 0 : 10),
-                                decoration: BoxDecoration(
-                                  border: isLast ? null : const Border(bottom: BorderSide(color: AionTheme.shadow, width: 1)),
-                                ),
-                                child: Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    SizedBox(
-                                      width: isWide ? 130 : 100,
-                                      child: Container(
-                                        padding: const EdgeInsets.only(right: 14),
-                                        decoration: const BoxDecoration(
-                                          border: Border(right: BorderSide(color: AionTheme.veil, width: 1)),
-                                        ),
-                                        child: Text(s['elemento'] ?? '', style: const TextStyle(color: AionTheme.amber, fontSize: 12)),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 14),
-                                    Expanded(
-                                      child: Text(s['significado'] ?? '', style: const TextStyle(color: AionTheme.silver, fontSize: 12, height: 1.7)),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            }),
+                            Wrap(
+                              spacing: 12,
+                              runSpacing: 12,
+                              children: simbolos.map<Widget>((s) {
+                                return Container(
+                                  width: isWide ? 300 : constraints.maxWidth / 2 - 28,
+                                  padding: const EdgeInsets.all(16),
+                                  decoration: BoxDecoration(
+                                    color: AionTheme.darkAbyss,
+                                    border: Border.all(color: AionTheme.shadow, width: 1),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(s['elemento'] ?? '', style: const TextStyle(color: AionTheme.amber, fontSize: 13, fontWeight: FontWeight.bold)),
+                                      const SizedBox(height: 8),
+                                      Text(s['significado'] ?? '', style: const TextStyle(color: AionTheme.silver, fontSize: 12, height: 1.7)),
+                                    ],
+                                  ),
+                                );
+                              }).toList(),
+                            ),
                           ],
                         ),
                       ),
@@ -291,33 +286,47 @@ class AnalysisResultScreen extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             _buildLabel('⊕ Jornada do Herói — Campbell', color: AionTheme.gold),
-                            Text(
-                              analysis['fase_jornada']['nome'] ?? '',
-                              style: const TextStyle(color: AionTheme.amber, fontSize: 15),
-                            ),
-                            const SizedBox(height: 8),
                             Container(
-                              height: 4,
                               width: double.infinity,
+                              padding: const EdgeInsets.all(16),
                               decoration: BoxDecoration(
-                                color: AionTheme.shadow,
-                                borderRadius: BorderRadius.circular(2),
+                                color: AionTheme.darkVoid,
+                                border: Border.all(color: AionTheme.shadow, width: 1),
+                                borderRadius: BorderRadius.circular(12),
                               ),
-                              child: FractionallySizedBox(
-                                alignment: Alignment.centerLeft,
-                                widthFactor: 0.3, // Mock progression
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    gradient: const LinearGradient(colors: [AionTheme.gold, AionTheme.amber]),
-                                    borderRadius: BorderRadius.circular(2),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    analysis['fase_jornada']['nome'] ?? '',
+                                    style: const TextStyle(color: AionTheme.amber, fontSize: 15),
                                   ),
-                                ),
+                                  const SizedBox(height: 8),
+                                  Container(
+                                    height: 4,
+                                    width: double.infinity,
+                                    decoration: BoxDecoration(
+                                      color: AionTheme.shadow,
+                                      borderRadius: BorderRadius.circular(2),
+                                    ),
+                                    child: FractionallySizedBox(
+                                      alignment: Alignment.centerLeft,
+                                      widthFactor: 0.3, // Mock progression
+                                      child: Container(
+                                        decoration: BoxDecoration(
+                                          gradient: const LinearGradient(colors: [AionTheme.gold, AionTheme.amber]),
+                                          borderRadius: BorderRadius.circular(2),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    analysis['fase_jornada']['descricao'] ?? '',
+                                    style: const TextStyle(color: AionTheme.silver, fontSize: 13, height: 1.8),
+                                  ),
+                                ],
                               ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              analysis['fase_jornada']['descricao'] ?? '',
-                              style: const TextStyle(color: AionTheme.silver, fontSize: 13, height: 1.8),
                             ),
                           ],
                         ),
@@ -328,21 +337,24 @@ class AnalysisResultScreen extends StatelessWidget {
                     if (analysis['mito_espelho'] != null)
                       Container(
                         width: double.infinity,
-                        padding: const EdgeInsets.all(18),
+                        padding: const EdgeInsets.all(24),
                         decoration: BoxDecoration(
-                          color: AionTheme.indigo.withOpacity(0.28),
-                          border: Border.all(color: AionTheme.indigo.withOpacity(0.55), width: 1),
-                          borderRadius: BorderRadius.circular(4),
+                          color: const Color(0xFF111D15), // Fundo esverdeado escuro
+                          border: Border.all(color: const Color(0xFF2A5A3A).withOpacity(0.6), width: 1),
+                          borderRadius: BorderRadius.circular(12),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            _buildLabel('☽ Mito Espelho', color: const Color(0xFF8888C8)),
-                            Text(
-                              analysis['mito_espelho']['titulo'] ?? '',
-                              style: const TextStyle(color: AionTheme.ghost, fontSize: 14),
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 16),
+                              child: Text('☽ MITO ESPELHO', style: GoogleFonts.cormorantGaramond(color: const Color(0xFF6B9B7B), fontSize: 14, letterSpacing: 4, fontWeight: FontWeight.bold)),
                             ),
-                            const SizedBox(height: 8),
+                            Text(
+                              analysis['mito_espelho']['titulo'] ?? 'Yggdrasil — a Árvore do Mundo',
+                              style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
+                            ),
+                            const SizedBox(height: 12),
                             Text(
                               analysis['mito_espelho']['paralelo'] ?? '',
                               style: const TextStyle(color: AionTheme.silver, fontSize: 13, height: 1.8),
@@ -356,28 +368,126 @@ class AnalysisResultScreen extends StatelessWidget {
                     if (analysis['pergunta_para_reflexao'] != null)
                       Container(
                         width: double.infinity,
-                        padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 24),
+                        padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 24),
                         decoration: BoxDecoration(
-                          color: AionTheme.deep,
-                          border: Border.all(color: AionTheme.gold.withOpacity(0.28), width: 1),
-                          borderRadius: BorderRadius.circular(4),
+                          color: const Color(0xFF1A1815), // Fundo amarronzado escuro
+                          border: Border.all(color: AionTheme.gold.withOpacity(0.15), width: 1),
+                          borderRadius: BorderRadius.circular(12),
                         ),
                         child: Column(
                           children: [
-                            _buildLabel('Pergunta para Reflexão', color: AionTheme.gold),
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 24),
+                              child: Text('PERGUNTA PARA REFLEXÃO', style: GoogleFonts.cormorantGaramond(color: AionTheme.gold, fontSize: 14, letterSpacing: 5, fontWeight: FontWeight.bold)),
+                            ),
                             Text(
                               '"${analysis['pergunta_para_reflexao']}"',
                               textAlign: TextAlign.center,
                               style: theme.textTheme.bodyLarge?.copyWith(
                                 fontSize: 18,
                                 fontStyle: FontStyle.italic,
-                                color: AionTheme.dawn,
-                                height: 1.9,
+                                color: Colors.white,
+                                height: 1.7,
                               ),
                             ),
                           ],
                         ),
                       ),
+                    const SizedBox(height: 16),
+
+                    // Episódios Recomendados
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF111D15),
+                        border: Border.all(color: const Color(0xFF2A5A3A).withOpacity(0.6), width: 1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: Text('▶ EPISÓDIOS RECOMENDADOS — MITO & PSIQUE', style: GoogleFonts.cormorantGaramond(color: const Color(0xFF6B9B7B), fontSize: 14, letterSpacing: 4, fontWeight: FontWeight.bold)),
+                          ),
+                          const Text(
+                            'Baseado nos arquétipos identificados neste sonho:',
+                            style: TextStyle(color: Color(0xFF4A7A5A), fontSize: 13),
+                          ),
+                          const SizedBox(height: 20),
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(16),
+                            margin: const EdgeInsets.only(bottom: 12),
+                            decoration: BoxDecoration(
+                              color: AionTheme.darkVoid,
+                              border: Border.all(color: const Color(0xFF6B9B7B).withOpacity(0.3)),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: IntrinsicHeight(
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  Container(width: 4, decoration: BoxDecoration(color: const Color(0xFF6B9B7B), borderRadius: BorderRadius.circular(4))),
+                                  const SizedBox(width: 16),
+                                  const Align(
+                                    alignment: Alignment.centerLeft,
+                                    child: Text('EP07', style: TextStyle(color: Color(0xFF6B9B7B), fontSize: 18, fontFamily: 'Georgia')),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: const [
+                                        Text('A Grande Deusa', style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold)),
+                                        SizedBox(height: 4),
+                                        Text('Magna Mater — o arquétipo que as civilizações temeram e veneraram', style: TextStyle(color: AionTheme.silver, fontSize: 13)),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: AionTheme.darkVoid,
+                              border: Border.all(color: AionTheme.gold.withOpacity(0.3)),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: IntrinsicHeight(
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  Container(width: 4, decoration: BoxDecoration(color: AionTheme.gold, borderRadius: BorderRadius.circular(4))),
+                                  const SizedBox(width: 16),
+                                  const Align(
+                                    alignment: Alignment.centerLeft,
+                                    child: Text('EP08', style: TextStyle(color: AionTheme.gold, fontSize: 18, fontFamily: 'Georgia')),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: const [
+                                        Text('O Retorno do Herói', style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold)),
+                                        SizedBox(height: 4),
+                                        Text('A individuação — tornar-se quem você sempre foi', style: TextStyle(color: AionTheme.silver, fontSize: 13)),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                     const SizedBox(height: 24),
 
                     Wrap(
@@ -432,7 +542,7 @@ class AnalysisResultScreen extends StatelessWidget {
             width: leftBorderColor != null ? 3 : 1,
           ),
         ),
-        borderRadius: BorderRadius.circular(4),
+        borderRadius: BorderRadius.circular(12),
       ),
       child: child,
     );

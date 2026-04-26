@@ -4,12 +4,22 @@ import 'package:google_fonts/google_fonts.dart';
 class AionTheme {
   // Palette from Mito & Psique
   static const Color darkVoid = Color(0xFF070810);
+  static const Color deep = Color(0xFF0D0C18);
   static const Color darkAbyss = Color(0xFF121120);
+  static const Color shadow = Color(0xFF1A1830);
+  static const Color veil = Color(0xFF252340);
+  static const Color mist = Color(0xFF332F58);
   static const Color gold = Color(0xFFC8A84A);
   static const Color amber = Color(0xFFE8C46A);
-  static const Color silver = Color(0xFF9898B8);
-  static const Color mist = Color(0xFF332F58);
+  static const Color dawn = Color(0xFFF5DFA0);
+  static const Color blood = Color(0xFF7A1E1E);
   static const Color crimson = Color(0xFFA83030);
+  static const Color silver = Color(0xFF9898B8);
+  static const Color ghost = Color(0xFFCCCCE0);
+  static const Color teal = Color(0xFF2A8070);
+  static const Color indigo = Color(0xFF3A3870);
+  static const Color green = Color(0xFF2A5A3A);
+  static const Color rose = Color(0xFF8A3050);
 
   static ThemeData get darkTheme => ThemeData(
     useMaterial3: true,

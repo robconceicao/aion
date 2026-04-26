@@ -131,7 +131,10 @@ class _RecordDreamScreenState extends State<RecordDreamScreen> with SingleTicker
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (context) => AnalysisResultScreen(analysis: response.data),
+            builder: (context) => AnalysisResultScreen(
+              analysis: response.data,
+              dreamText: text, // Pass original text here
+            ),
           ),
         );
       }
@@ -176,11 +179,16 @@ class _RecordDreamScreenState extends State<RecordDreamScreen> with SingleTicker
         ),
       ),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 30.0),
-          child: _isProcessing 
-            ? const MandalaSpinner(message: 'Aion está tecendo os símbolos...')
-            : _buildBody(theme),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 800),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 30.0),
+              child: _isProcessing 
+                ? const MandalaSpinner(message: 'Aion está tecendo os símbolos...')
+                : _buildBody(theme),
+            ),
+          ),
         ),
       ),
     );

@@ -43,24 +43,33 @@ async def analyze_dream(dream_text: str, context: dict = None) -> dict:
     # Descobre dinamicamente os modelos disponíveis nesta conta
     modelos = []
     try:
-        modelos_disponiveis = client.models.list()
-        for m in modelos_disponiveis.data:
-            # Filtra apenas modelos de texto/chat (não embedding ou outros)
-            if "claude" in m.id.lower():
-                modelos.append(m.id)
-                print(f"[AI_SERVICE] Modelo disponível: {m.id}")
-        # Ordena para priorizar modelos mais novos (haiku é o mais barato/rápido)
+        print("[AI_SERVICE] Listando modelos disponíveis na conta...")
+        page = client.models.list()
+        todos = list(page)
+        print(f"[AI_SERVICE] Total de modelos encontrados: {len(todos)}")
+        for m in todos:
+            model_id = m.id if hasattr(m, 'id') else str(m)
+            print(f"[AI_SERVICE] >> Modelo: {model_id}")
+            if "claude" in model_id.lower():
+                modelos.append(model_id)
         modelos.sort(reverse=True)
     except Exception as e:
-        print(f"[AI_SERVICE] Não foi possível listar modelos: {e}")
-        # Fallback com nomes conhecidos
+        print(f"[AI_SERVICE] Erro ao listar modelos: {e}")
+
+    if not modelos:
+        # Tenta modelos Claude 4 (geração atual em 2025/2026)
         modelos = [
-            "claude-3-haiku-20240307",
-            "claude-3-sonnet-20240229",
-            "claude-3-opus-20240229",
+            "claude-opus-4-5",
+            "claude-sonnet-4-5",
+            "claude-haiku-4-5",
+            "claude-opus-4",
+            "claude-sonnet-4",
+            "claude-haiku-4",
+            "claude-3-5-sonnet-20241022",
+            "claude-3-5-haiku-20241022",
         ]
 
-    print(f"[AI_SERVICE] Modelos a tentar: {modelos[:3]}")
+    print(f"[AI_SERVICE] Modelos a tentar: {modelos[:5]}")
 
     ultimo_erro = None
     for model_name in modelos:

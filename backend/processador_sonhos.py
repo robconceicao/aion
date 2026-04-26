@@ -2,7 +2,7 @@ import os
 import time
 import json
 from supabase import create_client, Client
-from google import genai
+import anthropic
 from dotenv import load_dotenv
 
 # 1. Configurações Iniciais
@@ -16,14 +16,13 @@ if not url or not key:
 else:
     supabase: Client = create_client(url, key)
 
-# Credenciais Gemini - novo SDK
-api_key = os.getenv("GEMINI_API_KEY")
+# Credenciais Claude (Anthropic)
+api_key = os.getenv("ANTHROPIC_API_KEY")
 if not api_key:
-    print("[ERRO]: GEMINI_API_KEY não encontrada.")
+    print("[ERRO]: ANTHROPIC_API_KEY não encontrada.")
     exit(1)
 
-# Inicializa o novo cliente do SDK
-client = genai.Client(api_key=api_key)
+client = anthropic.Anthropic(api_key=api_key)
 
 PROMPT_TEMPLATE = """
 Atue como Aion, o Oráculo de Mito & Psique — analista junguiano e especialista em mitologia campbelliana.
@@ -50,7 +49,6 @@ def processar_novo_sonho():
     print("\n=== INICIANDO PROCESSAMENTO: MITO & PSIQUE (AION) ===")
     
     try:
-        # A. Busca no Supabase o sonho pendente (interpretacao é null)
         res = supabase.table("sonhos").select("*").is_("interpretacao", "null").limit(1).execute()
         
         if not res.data:
@@ -61,11 +59,9 @@ def processar_novo_sonho():
         sonho_id = sonho_data['id']
         relato_usuario = sonho_data['relato']
 
-        # B. Tentativa com modelos disponíveis (novo SDK)
         modelos = [
-            "gemini-2.0-flash",
-            "gemini-2.0-flash-lite",
-            "gemini-1.5-flash",
+            "claude-3-5-haiku-20241022",
+            "claude-3-haiku-20240307",
         ]
         
         sucesso = False
@@ -74,25 +70,24 @@ def processar_novo_sonho():
                 print(f"Tentando análise com o modelo: {model_name}...")
                 
                 prompt = PROMPT_TEMPLATE.format(relato=relato_usuario)
-                response = client.models.generate_content(
+                message = client.messages.create(
                     model=model_name,
-                    contents=prompt
+                    max_tokens=2048,
+                    messages=[{"role": "user", "content": prompt}]
                 )
-                content = response.text
                 
-                # Limpeza de markdown
+                content = message.content[0].text
+                
                 if "```json" in content:
                     content = content.split("```json")[1].split("```")[0]
                 elif "```" in content:
                     content = content.split("```")[1].split("```")[0]
                 
                 analise_json = json.loads(content.strip())
-
-                # C. Atualiza o Supabase com a análise
                 supabase.table("sonhos").update({"interpretacao": analise_json}).eq("id", sonho_id).execute()
                 
                 print("=" * 40)
-                print(f"SUCESSO! Análise salva no Supabase com {model_name}.")
+                print(f"SUCESSO! Análise salva com {model_name}.")
                 print("=" * 40)
                 sucesso = True
                 break

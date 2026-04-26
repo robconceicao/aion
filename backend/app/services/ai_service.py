@@ -1,13 +1,9 @@
 import json
-from google import genai
-from google.genai import types
+import anthropic
 from app.core.config import settings
 
-# Usa a API v1beta onde os modelos desta chave estão disponíveis
-client = genai.Client(
-    api_key=settings.GEMINI_API_KEY,
-    http_options={"api_version": "v1beta"}
-)
+# Cliente oficial da Anthropic (Claude)
+client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
 
 PROMPT_TEMPLATE = """
 Atue como Aion, um analista junguiano especialista em mitologia comparada. 
@@ -15,7 +11,7 @@ Analise o seguinte sonho sob a ótica de Carl Jung e Joseph Campbell.
 
 SONHO: {texto}
 
-ESTRUTURA DA RESPOSTA — responda APENAS em JSON válido, sem markdown, sem blocos de código, exatamente neste formato:
+INSTRUÇÃO CRÍTICA: Responda APENAS com um JSON válido, sem markdown, sem blocos de código, sem explicações. Apenas o JSON puro.
 
 {{
   "aviso": "Esta análise é uma reflexão simbólica e não substitui acompanhamento profissional.",
@@ -41,14 +37,12 @@ ESTRUTURA DA RESPOSTA — responda APENAS em JSON válido, sem markdown, sem blo
 """
 
 async def analyze_dream(dream_text: str, context: dict = None) -> dict:
-    """Analisa o sonho usando o novo SDK google-genai."""
-    print(f"[AI_SERVICE] Iniciando análise. Chave configurada: {'Sim' if settings.GEMINI_API_KEY else 'NÃO!'}")
+    """Analisa o sonho usando Claude (Anthropic)."""
+    print(f"[AI_SERVICE] Iniciando análise com Claude. Chave configurada: {'Sim' if settings.ANTHROPIC_API_KEY else 'NÃO!'}")
 
-    # Modelos confirmados disponíveis nesta chave (via ListModels)
     modelos = [
-        "gemini-2.5-flash",       # Modelo mais recente e estável
-        "gemini-2.0-flash-lite-001",  # Versão específica estável
-        "gemini-2.0-flash",       # Fallback
+        "claude-3-5-haiku-20241022",   # Rápido, inteligente e generoso no free tier
+        "claude-3-haiku-20240307",      # Fallback clássico
     ]
 
     ultimo_erro = None
@@ -56,15 +50,19 @@ async def analyze_dream(dream_text: str, context: dict = None) -> dict:
         try:
             print(f"[AI_SERVICE] Tentando modelo: {model_name}")
             prompt = PROMPT_TEMPLATE.format(texto=dream_text)
-            
-            response = client.models.generate_content(
+
+            message = client.messages.create(
                 model=model_name,
-                contents=prompt
+                max_tokens=2048,
+                messages=[
+                    {"role": "user", "content": prompt}
+                ]
             )
-            content = response.text
+
+            content = message.content[0].text
             print(f"[AI_SERVICE] Resposta recebida de {model_name}!")
 
-            # Limpa marcações de markdown se presentes
+            # Limpa markdown se presente
             if "```json" in content:
                 content = content.split("```json")[1].split("```")[0]
             elif "```" in content:
@@ -82,7 +80,7 @@ async def analyze_dream(dream_text: str, context: dict = None) -> dict:
     # Fallback caso todos os modelos falhem
     print(f"[AI_SERVICE] TODOS OS MODELOS FALHARAM. Último erro: {ultimo_erro}")
     return {
-        "aviso": f"O Oráculo encontrou turbulência técnica. Erro: {ultimo_erro[:150] if ultimo_erro else 'Desconhecido'}",
+        "aviso": f"O Oráculo encontrou turbulência. Erro: {ultimo_erro[:100] if ultimo_erro else 'Desconhecido'}",
         "essencia": "O silêncio também é uma mensagem do inconsciente.",
         "arquetipos": [],
         "funcao_compensatoria": "Não foi possível determinar.",

@@ -195,16 +195,211 @@ class _RecordDreamScreenState extends State<RecordDreamScreen> with SingleTicker
   }
 
   Widget _buildBody(ThemeData theme) {
-    if (_transcription != null) return _buildReviewView(theme);
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SizedBox(height: 20),
+          // Dream Text Card
+          Container(
+            padding: const EdgeInsets.all(22),
+            decoration: BoxDecoration(
+              color: AionTheme.deep,
+              border: Border.all(
+                color: _textInputController.text.length > 20 
+                    ? AionTheme.gold.withOpacity(0.6) 
+                    : AionTheme.shadow,
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Relato do Sonho *',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: Colors.white,
+                        fontSize: 12,
+                        letterSpacing: 1,
+                      ),
+                    ),
+                    IconButton(
+                      icon: Icon(
+                        _isRecording ? Icons.stop : Icons.mic_none,
+                        color: _isRecording ? AionTheme.crimson : AionTheme.gold,
+                      ),
+                      onPressed: _isRecording ? _stopRecording : _startRecording,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                if (_isRecording)
+                   const Text(
+                     'Gravando...',
+                     style: TextStyle(color: AionTheme.crimson, fontSize: 12),
+                   ),
+                TextField(
+                  controller: _textInputController,
+                  maxLines: 6,
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                    fontFamily: 'Georgia',
+                    fontSize: 15,
+                    height: 1.85,
+                  ),
+                  decoration: InputDecoration(
+                    border: InputBorder.none,
+                    hintText: 'Descreva seu sonho — personagens, lugares, sensações, cores, emoções, ações...',
+                    hintStyle: theme.textTheme.bodyLarge?.copyWith(
+                      color: Colors.white24,
+                      fontFamily: 'Georgia',
+                      fontSize: 15,
+                    ),
+                  ),
+                  onChanged: (val) => setState(() {}),
+                ),
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: Text(
+                    '${_textInputController.text.length} car. ${_textInputController.text.length < 20 ? "— mínimo 20" : ""}',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: _textInputController.text.length < 20 ? AionTheme.crimson : AionTheme.mist,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
 
-    switch (_currentMode) {
-      case DreamInputMode.selection:
-        return _buildSelectionView(theme);
-      case DreamInputMode.voice:
-        return _buildRecordingView(theme);
-      case DreamInputMode.text:
-        return _buildTextInputView(theme);
-    }
+          // Mood + Context
+          Row(
+            children: [
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.all(18),
+                  decoration: BoxDecoration(
+                    color: AionTheme.deep,
+                    border: Border.all(color: AionTheme.shadow),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Estado ao Acordar', style: TextStyle(color: AionTheme.silver, fontSize: 11)),
+                      const SizedBox(height: 8),
+                      // Mock Dropdown
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 12),
+                        decoration: BoxDecoration(
+                          color: AionTheme.deep,
+                          border: Border.all(color: AionTheme.shadow),
+                        ),
+                        child: Text('Não informar', style: TextStyle(color: AionTheme.silver, fontSize: 13, fontFamily: 'Georgia')),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.all(18),
+                  decoration: BoxDecoration(
+                    color: AionTheme.deep,
+                    border: Border.all(color: AionTheme.shadow),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Contexto de Vida', style: TextStyle(color: AionTheme.silver, fontSize: 11)),
+                      const SizedBox(height: 8),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 12),
+                        decoration: BoxDecoration(
+                          color: AionTheme.deep,
+                          border: Border.all(color: AionTheme.shadow),
+                        ),
+                        child: Text('Ex: transição...', style: TextStyle(color: Colors.white24, fontSize: 13, fontFamily: 'Georgia')),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          // Options
+          Row(
+            children: [
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: AionTheme.darkVoid,
+                    border: Border.all(color: AionTheme.shadow),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.check_box_outline_blank, color: AionTheme.silver, size: 16),
+                      const SizedBox(width: 12),
+                      Text('Sonho recorrente', style: TextStyle(color: AionTheme.silver, fontSize: 13)),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: AionTheme.darkVoid,
+                    border: Border.all(color: AionTheme.shadow),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.check_box_outline_blank, color: AionTheme.amber, size: 16),
+                      const SizedBox(width: 12),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Análise Aprofundada', style: TextStyle(color: AionTheme.silver, fontSize: 13)),
+                          Text('Perguntas guiadas', style: TextStyle(color: AionTheme.mist, fontSize: 10)),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: _textInputController.text.trim().length > 20
+                  ? () => _analyzeAndNavigate(_textInputController.text)
+                  : null,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AionTheme.darkAbyss,
+                foregroundColor: AionTheme.gold,
+                side: BorderSide(color: AionTheme.shadow),
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.zero),
+              ),
+              child: const Text('Invocar o Oráculo ☽', style: TextStyle(fontFamily: 'Georgia', fontSize: 14)),
+            ),
+          ),
+          const SizedBox(height: 40),
+        ],
+      ),
+    );
   }
 
   Widget _buildSelectionView(ThemeData theme) {

@@ -52,52 +52,54 @@ class AnalysisResultScreen extends StatelessWidget {
                     // Aviso
                     Container(
                       width: double.infinity,
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                      margin: const EdgeInsets.only(bottom: 22),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF0D2E2A),
-                        border: Border.all(color: const Color(0xFF1D5A4A), width: 0.5),
+                        color: AionTheme.teal.withOpacity(0.18),
+                        border: Border.all(color: AionTheme.teal.withOpacity(0.4), width: 1),
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
                         '⚠ ${analysis['aviso'] ?? "Reflexão simbólica baseada em Jung e Campbell."}',
-                        style: const TextStyle(color: Color(0xFF5DBFA0), fontSize: 12, height: 1.6),
+                        style: const TextStyle(color: Color(0xFF88C0C8), fontSize: 12, height: 1.7),
                       ),
                     ),
-                    const SizedBox(height: 20),
 
                     // O Sonho
                     _buildCard(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _buildLabel('O SONHO', color: AionTheme.silver),
+                          _buildLabel('O Sonho', color: AionTheme.silver),
                           Text(
                             '"$dream"',
                             style: theme.textTheme.bodyLarge?.copyWith(
                               fontSize: 14,
                               fontStyle: FontStyle.italic,
-                              color: Colors.white.withOpacity(0.9),
+                              color: AionTheme.ghost,
+                              height: 1.85,
                             ),
                           ),
                         ],
                       ),
-                      leftBorderColor: const Color(0xFF888780),
+                      leftBorderColor: AionTheme.veil,
                     ),
                     const SizedBox(height: 16),
 
                     // Essência
                     _buildCard(
+                      padding: const EdgeInsets.all(24),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _buildLabel('✧ ESSÊNCIA', color: AionTheme.gold),
+                          _buildLabel('☽ Essência', color: AionTheme.gold),
                           Text(
                             '"${analysis['essencia']}"',
                             style: theme.textTheme.bodyLarge?.copyWith(
-                              fontSize: 16,
+                              fontSize: 17,
                               fontStyle: FontStyle.italic,
-                              color: Colors.white,
-                              height: 1.9,
+                              color: AionTheme.dawn,
+                              height: 2.0,
                             ),
                           ),
                         ],
@@ -111,27 +113,27 @@ class AnalysisResultScreen extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _buildLabel('DIMENSÕES DO SONHO', color: AionTheme.silver),
-                          const SizedBox(height: 8),
+                          _buildLabel('Dimensões', color: AionTheme.silver),
+                          const SizedBox(height: 14),
                           _buildIntensityBar('Sombra', analysis['intensidade_sombra'] ?? 0, AionTheme.crimson),
                           _buildIntensityBar('Herói', analysis['intensidade_heroi'] ?? 0, AionTheme.gold),
                           _buildIntensityBar('Transformação', analysis['intensidade_transformacao'] ?? 0, AionTheme.teal, isLast: true),
                         ],
                       ),
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 16),
 
                     // Arquétipos
                     if (arquetipos.isNotEmpty) ...[
-                      _buildLabel('⟁ ARQUÉTIPOS PRESENTES', color: AionTheme.gold),
+                      _buildLabel('⟁ Arquétipos Presentes', color: AionTheme.gold),
                       GridView.builder(
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
                         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: isWide ? 3 : (constraints.maxWidth > 350 ? 2 : 1),
-                          mainAxisSpacing: 10,
-                          crossAxisSpacing: 10,
-                          childAspectRatio: isWide ? 0.9 : 0.8,
+                          mainAxisSpacing: 12,
+                          crossAxisSpacing: 12,
+                          childAspectRatio: isWide ? 0.9 : 0.85,
                         ),
                         itemCount: arquetipos.length,
                         itemBuilder: (context, index) {
@@ -143,9 +145,9 @@ class AnalysisResultScreen extends StatelessWidget {
                               color: AionTheme.darkAbyss,
                               border: Border(
                                 top: BorderSide(color: arcColor, width: 3),
-                                bottom: BorderSide(color: AionTheme.veil, width: 0.5),
-                                left: BorderSide(color: AionTheme.veil, width: 0.5),
-                                right: BorderSide(color: AionTheme.veil, width: 0.5),
+                                bottom: const BorderSide(color: AionTheme.shadow, width: 1),
+                                left: const BorderSide(color: AionTheme.shadow, width: 1),
+                                right: const BorderSide(color: AionTheme.shadow, width: 1),
                               ),
                               borderRadius: BorderRadius.circular(4),
                             ),
@@ -159,7 +161,7 @@ class AnalysisResultScreen extends StatelessWidget {
                                 Expanded(
                                   child: Text(
                                     arc['descricao'] ?? '',
-                                    style: const TextStyle(color: AionTheme.silver, fontSize: 12, height: 1.5),
+                                    style: const TextStyle(color: AionTheme.silver, fontSize: 12, height: 1.7),
                                     overflow: TextOverflow.fade,
                                   ),
                                 ),
@@ -181,25 +183,25 @@ class AnalysisResultScreen extends StatelessWidget {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  _buildLabel('⊗ FUNÇÃO COMPENSATÓRIA', color: AionTheme.amber),
+                                  _buildLabel('⊗ Função Compensatória', color: AionTheme.amber),
                                   Text(
                                     analysis['funcao_compensatoria'] ?? '',
-                                    style: const TextStyle(color: Colors.white, fontSize: 13, height: 1.6),
+                                    style: const TextStyle(color: AionTheme.ghost, fontSize: 13, height: 1.8),
                                   ),
                                 ],
                               ),
                             ),
                           ),
-                          const SizedBox(width: 12),
+                          const SizedBox(width: 14),
                           Expanded(
                             child: _buildCard(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  _buildLabel('✦ PROSPECÇÃO', color: AionTheme.silver),
+                                  _buildLabel('✦ Prospecção', color: AionTheme.silver),
                                   Text(
                                     analysis['prospeccao'] ?? '',
-                                    style: const TextStyle(color: Colors.white, fontSize: 13, height: 1.6),
+                                    style: const TextStyle(color: AionTheme.ghost, fontSize: 13, height: 1.8),
                                   ),
                                 ],
                               ),
@@ -214,23 +216,23 @@ class AnalysisResultScreen extends StatelessWidget {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                _buildLabel('⊗ FUNÇÃO COMPENSATÓRIA', color: AionTheme.amber),
+                                _buildLabel('⊗ Função Compensatória', color: AionTheme.amber),
                                 Text(
                                   analysis['funcao_compensatoria'] ?? '',
-                                  style: const TextStyle(color: Colors.white, fontSize: 13, height: 1.6),
+                                  style: const TextStyle(color: AionTheme.ghost, fontSize: 13, height: 1.8),
                                 ),
                               ],
                             ),
                           ),
-                          const SizedBox(height: 12),
+                          const SizedBox(height: 14),
                           _buildCard(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                _buildLabel('✦ PROSPECÇÃO', color: AionTheme.silver),
+                                _buildLabel('✦ Prospecção', color: AionTheme.silver),
                                 Text(
                                   analysis['prospeccao'] ?? '',
-                                  style: const TextStyle(color: Colors.white, fontSize: 13, height: 1.6),
+                                  style: const TextStyle(color: AionTheme.ghost, fontSize: 13, height: 1.8),
                                 ),
                               ],
                             ),
@@ -245,33 +247,33 @@ class AnalysisResultScreen extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            _buildLabel('⋈ SÍMBOLOS & AMPLIAÇÃO', color: AionTheme.gold),
+                            _buildLabel('⋈ Símbolos & Ampliação', color: AionTheme.gold),
                             ...simbolos.asMap().entries.map((entry) {
                               int idx = entry.key;
                               var s = entry.value;
                               bool isLast = idx == simbolos.length - 1;
                               return Container(
-                                padding: const EdgeInsets.only(bottom: 12),
-                                margin: EdgeInsets.only(bottom: isLast ? 0 : 12),
+                                padding: const EdgeInsets.only(bottom: 10),
+                                margin: EdgeInsets.only(bottom: isLast ? 0 : 10),
                                 decoration: BoxDecoration(
-                                  border: isLast ? null : const Border(bottom: BorderSide(color: AionTheme.veil, width: 0.5)),
+                                  border: isLast ? null : const Border(bottom: BorderSide(color: AionTheme.shadow, width: 1)),
                                 ),
                                 child: Row(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     SizedBox(
-                                      width: isWide ? 150 : 100,
+                                      width: isWide ? 130 : 100,
                                       child: Container(
                                         padding: const EdgeInsets.only(right: 14),
                                         decoration: const BoxDecoration(
-                                          border: Border(right: BorderSide(color: AionTheme.veil, width: 0.5)),
+                                          border: Border(right: BorderSide(color: AionTheme.veil, width: 1)),
                                         ),
                                         child: Text(s['elemento'] ?? '', style: const TextStyle(color: AionTheme.amber, fontSize: 12)),
                                       ),
                                     ),
                                     const SizedBox(width: 14),
                                     Expanded(
-                                      child: Text(s['significado'] ?? '', style: const TextStyle(color: AionTheme.silver, fontSize: 12, height: 1.6)),
+                                      child: Text(s['significado'] ?? '', style: const TextStyle(color: AionTheme.silver, fontSize: 12, height: 1.7)),
                                     ),
                                   ],
                                 ),
@@ -288,17 +290,17 @@ class AnalysisResultScreen extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            _buildLabel('⊕ JORNADA DO HERÓI — CAMPBELL', color: AionTheme.gold),
+                            _buildLabel('⊕ Jornada do Herói — Campbell', color: AionTheme.gold),
                             Text(
                               analysis['fase_jornada']['nome'] ?? '',
                               style: const TextStyle(color: AionTheme.amber, fontSize: 15),
                             ),
-                            const SizedBox(height: 10),
+                            const SizedBox(height: 8),
                             Container(
                               height: 4,
                               width: double.infinity,
                               decoration: BoxDecoration(
-                                color: AionTheme.veil,
+                                color: AionTheme.shadow,
                                 borderRadius: BorderRadius.circular(2),
                               ),
                               child: FractionallySizedBox(
@@ -312,10 +314,10 @@ class AnalysisResultScreen extends StatelessWidget {
                                 ),
                               ),
                             ),
-                            const SizedBox(height: 10),
+                            const SizedBox(height: 8),
                             Text(
                               analysis['fase_jornada']['descricao'] ?? '',
-                              style: const TextStyle(color: AionTheme.silver, fontSize: 13, height: 1.6),
+                              style: const TextStyle(color: AionTheme.silver, fontSize: 13, height: 1.8),
                             ),
                           ],
                         ),
@@ -328,27 +330,27 @@ class AnalysisResultScreen extends StatelessWidget {
                         width: double.infinity,
                         padding: const EdgeInsets.all(18),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF12221A),
-                          border: Border.all(color: const Color(0xFF1D5A3A), width: 0.5),
+                          color: AionTheme.indigo.withOpacity(0.28),
+                          border: Border.all(color: AionTheme.indigo.withOpacity(0.55), width: 1),
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            _buildLabel('✧ MITO ESPELHO', color: const Color(0xFF5A9A6A)),
+                            _buildLabel('☽ Mito Espelho', color: const Color(0xFF8888C8)),
                             Text(
                               analysis['mito_espelho']['titulo'] ?? '',
-                              style: const TextStyle(color: Colors.white, fontSize: 14),
+                              style: const TextStyle(color: AionTheme.ghost, fontSize: 14),
                             ),
-                            const SizedBox(height: 10),
+                            const SizedBox(height: 8),
                             Text(
                               analysis['mito_espelho']['paralelo'] ?? '',
-                              style: const TextStyle(color: AionTheme.silver, fontSize: 13, height: 1.6),
+                              style: const TextStyle(color: AionTheme.silver, fontSize: 13, height: 1.8),
                             ),
                           ],
                         ),
                       ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 16),
 
                     // Pergunta
                     if (analysis['pergunta_para_reflexao'] != null)
@@ -356,35 +358,53 @@ class AnalysisResultScreen extends StatelessWidget {
                         width: double.infinity,
                         padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 24),
                         decoration: BoxDecoration(
-                          color: AionTheme.darkAbyss,
-                          border: Border.all(color: const Color(0xFF3A2E14), width: 0.5),
+                          color: AionTheme.deep,
+                          border: Border.all(color: AionTheme.gold.withOpacity(0.28), width: 1),
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: Column(
                           children: [
-                            _buildLabel('PERGUNTA PARA REFLEXÃO', color: AionTheme.gold),
+                            _buildLabel('Pergunta para Reflexão', color: AionTheme.gold),
                             Text(
                               '"${analysis['pergunta_para_reflexao']}"',
                               textAlign: TextAlign.center,
                               style: theme.textTheme.bodyLarge?.copyWith(
-                                fontSize: 17,
+                                fontSize: 18,
                                 fontStyle: FontStyle.italic,
-                                color: Colors.white,
-                                height: 1.6,
+                                color: AionTheme.dawn,
+                                height: 1.9,
                               ),
                             ),
                           ],
                         ),
                       ),
-                    const SizedBox(height: 40),
+                    const SizedBox(height: 24),
 
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: () => Navigator.pop(context),
-                        child: const Text('NOVO RELATO'),
-                      ),
-                    ),
+                    Wrap(
+                      spacing: 10,
+                      runSpacing: 10,
+                      alignment: WrapAlignment.center,
+                      children: [
+                        ElevatedButton(
+                          onPressed: () => Navigator.pop(context),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AionTheme.gold,
+                            foregroundColor: AionTheme.darkVoid,
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                          ),
+                          child: const Text('+ Novo Sonho'),
+                        ),
+                        ElevatedButton(
+                          onPressed: () => Navigator.pop(context),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.transparent,
+                            foregroundColor: AionTheme.silver,
+                            side: const BorderSide(color: AionTheme.veil),
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                          ),
+                          child: const Text('Início'),
+                        ),
+                      ],
                     const SizedBox(height: 40),
                   ],
                 ),
@@ -396,22 +416,24 @@ class AnalysisResultScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildCard({required Widget child, Color? leftBorderColor}) {
+  Widget _buildCard({required Widget child, Color? leftBorderColor, EdgeInsetsGeometry? padding}) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(18),
+      padding: padding ?? const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AionTheme.darkAbyss,
-        border: Border.all(color: AionTheme.veil, width: 0.5),
+        border: Border(
+          top: const BorderSide(color: AionTheme.shadow, width: 1),
+          bottom: const BorderSide(color: AionTheme.shadow, width: 1),
+          right: const BorderSide(color: AionTheme.shadow, width: 1),
+          left: BorderSide(
+            color: leftBorderColor ?? AionTheme.shadow,
+            width: leftBorderColor != null ? 3 : 1,
+          ),
+        ),
         borderRadius: BorderRadius.circular(4),
       ),
-      child: Container(
-        decoration: leftBorderColor != null ? BoxDecoration(
-          border: Border(left: BorderSide(color: leftBorderColor, width: 3)),
-        ) : null,
-        padding: leftBorderColor != null ? const EdgeInsets.only(left: 12) : null,
-        child: child,
-      ),
+      child: child,
     );
   }
 
@@ -420,22 +442,35 @@ class AnalysisResultScreen extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 12),
       child: Text(
         text,
-        style: TextStyle(fontSize: 10, letterSpacing: 3, color: color, fontWeight: FontWeight.bold),
+        style: GoogleFonts.cormorantGaramond(
+          fontSize: 16,
+          color: color,
+        ),
       ),
     );
   }
 
-  Widget _buildIntensityBar(String label, dynamic value, Color color, {bool isLast = false}) {
-    double val = (value is num) ? value.toDouble() : 0.0;
+  Widget _buildIntensityBar(String label, dynamic valueDynamic, Color color, {bool isLast = false}) {
+    double value = 0;
+    if (valueDynamic is num) value = valueDynamic.toDouble();
+    if (valueDynamic is String) value = double.tryParse(valueDynamic) ?? 0;
+    
     return Padding(
       padding: EdgeInsets.only(bottom: isLast ? 0 : 12),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(label, style: const TextStyle(color: AionTheme.silver, fontSize: 12)),
-              Text('${val.toInt()}/10', style: TextStyle(color: color, fontSize: 12)),
+              Text(
+                label,
+                style: const TextStyle(color: AionTheme.silver, fontSize: 12),
+              ),
+              Text(
+                '${(value * 10).toInt()}/10',
+                style: TextStyle(color: color, fontSize: 11),
+              ),
             ],
           ),
           const SizedBox(height: 6),
@@ -443,12 +478,12 @@ class AnalysisResultScreen extends StatelessWidget {
             height: 4,
             width: double.infinity,
             decoration: BoxDecoration(
-              color: AionTheme.veil,
+              color: AionTheme.shadow,
               borderRadius: BorderRadius.circular(2),
             ),
             child: FractionallySizedBox(
               alignment: Alignment.centerLeft,
-              widthFactor: val / 10.0,
+              widthFactor: value > 1 ? value / 10.0 : value,
               child: Container(
                 decoration: BoxDecoration(
                   color: color,
@@ -462,4 +497,3 @@ class AnalysisResultScreen extends StatelessWidget {
     );
   }
 }
-

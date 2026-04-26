@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme.dart';
+import 'aion_logo.dart';
 
 class MandalaSpinner extends StatefulWidget {
   final String message;
@@ -33,31 +34,8 @@ class _MandalaSpinnerState extends State<MandalaSpinner> with SingleTickerProvid
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          RotationTransition(
-            turns: _controller,
-            child: Container(
-              width: 200,
-              height: 200,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(color: AionTheme.gold.withOpacity(0.1), width: 1),
-              ),
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                   // Outer ring
-                  Text('⊕', style: TextStyle(fontSize: 160, color: AionTheme.gold.withOpacity(0.05))),
-                  // Middle ring
-                  RotationTransition(
-                    turns: ReverseAnimation(_controller),
-                    child: Text('⟁', style: TextStyle(fontSize: 100, color: AionTheme.gold.withOpacity(0.1))),
-                  ),
-                  // Center
-                  Text('◯', style: TextStyle(fontSize: 40, color: AionTheme.gold)),
-                ],
-              ),
-            ),
-          ),
+          // Rotating Aion Logo
+          const AionSpinLogo(size: 80),
           const SizedBox(height: 48),
           Text(
             widget.message,

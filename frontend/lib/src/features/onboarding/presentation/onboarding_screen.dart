@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme.dart';
 import '../../dream/presentation/dream_diary_screen.dart';
+import '../../dream/presentation/widgets/aion_logo.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -62,13 +63,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> with SingleTickerPr
           child: Column(
             children: [
               const SizedBox(height: 60),
-              // Moon Icon with Pulse
-              FadeTransition(
-                opacity: Tween(begin: 0.4, end: 1.0).animate(_pulseController),
-                child: const Text('☽', 
-                  style: TextStyle(fontSize: 80, color: Colors.white, fontWeight: FontWeight.w100)
-                ),
-              ),
+              // Aion Logo with Pulse
+              const AionPulseLogo(size: 120),
               const SizedBox(height: 20),
               Text(
                 'MITO & PSIQUE',

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../src/core/theme.dart';
 import 'record_dream_screen.dart';
+import 'widgets/aion_logo.dart';
 
 class DreamDiaryScreen extends StatelessWidget {
   const DreamDiaryScreen({super.key});
@@ -17,9 +18,7 @@ class DreamDiaryScreen extends StatelessWidget {
             children: [
               const SizedBox(height: 60),
               const Center(
-                child: Text('☽', 
-                  style: TextStyle(fontSize: 50, color: Colors.white, fontWeight: FontWeight.w100)
-                ),
+                child: AionPulseLogo(size: 180),
               ),
               const SizedBox(height: 16),
               Text(

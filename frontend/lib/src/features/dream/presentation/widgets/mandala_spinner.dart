@@ -41,9 +41,9 @@ class _MandalaSpinnerState extends State<MandalaSpinner> with SingleTickerProvid
               const AionSpinLogo(size: 96),
               // Pinging border effect
               ScaleTransition(
-                scale: Tween(begin: 1.0, end: 1.2).animate(_controller),
+                scale: Tween<double>(begin: 1.0, end: 1.2).animate(_controller),
                 child: FadeTransition(
-                  opacity: Tween(begin: 0.5, end: 0.0).animate(_controller),
+                  opacity: Tween<double>(begin: 0.5, end: 0.0).animate(_controller),
                   child: Container(
                     width: 100,
                     height: 100,

@@ -106,7 +106,7 @@ class DreamDiaryScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildNavCard(ThemeData theme, String icon, String title, String subtitle) {
+  Widget _buildNavCard(ThemeData theme, String icon, String title, String? subtitle) {
     return Expanded(
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 8),

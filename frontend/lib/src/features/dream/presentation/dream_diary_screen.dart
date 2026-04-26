@@ -21,7 +21,7 @@ class DreamDiaryScreen extends StatelessWidget {
             children: [
               const SizedBox(height: 60),
               const Center(
-                child: AionPulseLogo(size: 160),
+                child: AionPulseLogo(size: 160.0),
               ),
               const SizedBox(height: 24),
               Text(
@@ -101,6 +101,7 @@ class DreamDiaryScreen extends StatelessWidget {
             ],
           ),
         ),
+      ),
       ),
       ),
     );

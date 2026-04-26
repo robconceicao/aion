@@ -38,7 +38,7 @@ class _MandalaSpinnerState extends State<MandalaSpinner> with SingleTickerProvid
             alignment: Alignment.center,
             children: [
               // Rotating Aion Logo
-              const AionSpinLogo(size: 96),
+              const AionSpinLogo(size: 96.0),
               // Pinging border effect
               ScaleTransition(
                 scale: Tween<double>(begin: 1.0, end: 1.2).animate(_controller),

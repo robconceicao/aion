@@ -38,11 +38,11 @@ INSTRUÇÃO CRÍTICA: Responda APENAS com um JSON válido, sem markdown, sem blo
 
 async def analyze_dream(dream_text: str, context: dict = None) -> dict:
     """Analisa o sonho usando Claude (Anthropic)."""
-    print(f"[AI_SERVICE] Iniciando análise com Claude. Chave configurada: {'Sim' if settings.ANTHROPIC_API_KEY else 'NÃO!'}")
+    print(f"[AI_SERVICE] Iniciando análise com Claude. Chave configurada: {'Sim' if settings.ANTHROPIC_API_KEY else 'NAO!'}")
 
     modelos = [
-        "claude-3-5-haiku-20241022",   # Rápido, inteligente e generoso no free tier
-        "claude-3-haiku-20240307",      # Fallback clássico
+        "claude-3-5-haiku-20241022",
+        "claude-3-haiku-20240307",
     ]
 
     ultimo_erro = None
@@ -62,7 +62,6 @@ async def analyze_dream(dream_text: str, context: dict = None) -> dict:
             content = message.content[0].text
             print(f"[AI_SERVICE] Resposta recebida de {model_name}!")
 
-            # Limpa markdown se presente
             if "```json" in content:
                 content = content.split("```json")[1].split("```")[0]
             elif "```" in content:
@@ -77,8 +76,7 @@ async def analyze_dream(dream_text: str, context: dict = None) -> dict:
             print(f"[AI_SERVICE] Erro com {model_name}: {ultimo_erro}")
             continue
 
-    # Fallback caso todos os modelos falhem
-    print(f"[AI_SERVICE] TODOS OS MODELOS FALHARAM. Último erro: {ultimo_erro}")
+    print(f"[AI_SERVICE] TODOS OS MODELOS FALHARAM. Ultimo erro: {ultimo_erro}")
     return {
         "aviso": f"O Oráculo encontrou turbulência. Erro: {ultimo_erro[:100] if ultimo_erro else 'Desconhecido'}",
         "essencia": "O silêncio também é uma mensagem do inconsciente.",

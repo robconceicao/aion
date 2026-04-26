@@ -41,8 +41,8 @@ async def analyze_dream(dream_text: str, context: dict = None) -> dict:
     print(f"[AI_SERVICE] Iniciando análise com Claude. Chave configurada: {'Sim' if settings.ANTHROPIC_API_KEY else 'NAO!'}")
 
     modelos = [
-        "claude-3-5-haiku-20241022",
-        "claude-3-haiku-20240307",
+        "claude-3-haiku-20240307",      # Mais rápido e universalmente disponível
+        "claude-3-sonnet-20240229",     # Fallback mais robusto
     ]
 
     ultimo_erro = None

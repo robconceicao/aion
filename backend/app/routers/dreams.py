@@ -30,9 +30,9 @@ async def create_dream(
     
     # 3. Save to Supabase (Table 'sonhos')
     try:
-        # Nota: Estamos enviando apenas id, relato e interpretacao
         res = supabase.table("sonhos").insert(dream_data).execute()
-        return dream_data
+        # Retorna a análise diretamente (o que o frontend espera na raiz)
+        return analysis
     except Exception as e:
         # Se falhar aqui, o log do Render mostrará o erro do Supabase
         print(f"[ERRO SUPABASE]: {str(e)}")

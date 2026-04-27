@@ -2,9 +2,13 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from app.models.dream import DreamCreate, DreamModel
 from app.routers.auth import get_current_user
 from app.database import get_supabase
-from app.services.ai_service import analyze_dream
+from app.services.ai_service import analyze_dream, analyze_dream_narrative
 from datetime import datetime
 import uuid
+from pydantic import BaseModel
+
+class NarrativeResponse(BaseModel):
+    narrative: str
 
 router = APIRouter()
 
@@ -53,3 +57,19 @@ async def get_dream(dream_id: str):
         raise HTTPException(status_code=404, detail="Sonho não encontrado")
     
     return res.data[0]
+
+
+@router.post("/narrative", response_model=NarrativeResponse)
+async def get_narrative_interpretation(dream_data: DreamCreate):
+    """
+    Retorna a interpretação narrativa (poética/junguiana) do sonho.
+    Endpoint separado para permitir carregamento paralelo no frontend.
+    """
+    try:
+        narrative_text = await analyze_dream_narrative(dream_data.text)
+        return NarrativeResponse(narrative=narrative_text)
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Erro ao gerar interpretação narrativa: {str(e)}"
+        )

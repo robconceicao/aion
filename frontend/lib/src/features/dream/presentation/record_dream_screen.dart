@@ -11,6 +11,7 @@ import 'audio_recorder.dart';
 import 'audio_recorder_platform.dart';
 import 'archetypes_screen.dart';
 import 'canal_screen.dart';
+import 'dream_choice_screen.dart';
 
 enum DreamInputMode { selection, voice, text }
 
@@ -122,22 +123,38 @@ class _RecordDreamScreenState extends State<RecordDreamScreen> with SingleTicker
   // --- Common Analysis Logic ---
   Future<void> _analyzeAndNavigate(String text) async {
     if (text.trim().isEmpty) return;
-    
+
     setState(() => _isProcessing = true);
     final dio = Dio();
     try {
-      final response = await dio.post(
-        AionConfig.analyzeUrl, 
-        data: {'text': text},
-      );
-      
+      // Chamadas paralelas: análise detalhada + interpretação narrativa
+      final results = await Future.wait([
+        dio.post(
+          AionConfig.analyzeUrl,
+          data: {
+            'text': text,
+            'emotion': _mood != 'Não informar' ? _mood : null,
+            if (_tags.isNotEmpty) 'tags': _tags,
+            'is_recurrent': _recurring,
+          },
+        ),
+        dio.post(
+          AionConfig.narrativeUrl,
+          data: {'text': text},
+        ),
+      ]);
+
+      final detailedAnalysis = results[0].data as Map<String, dynamic>;
+      final narrativeText = results[1].data['narrative'] as String;
+
       if (mounted) {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (context) => AnalysisResultScreen(
-              analysis: response.data,
-              dreamText: text, // Pass original text here
+            builder: (_) => DreamChoiceScreen(
+              dreamText: text,
+              detailedAnalysis: detailedAnalysis,
+              narrativeText: narrativeText,
             ),
           ),
         );

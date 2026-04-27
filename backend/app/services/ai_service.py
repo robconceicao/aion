@@ -1,9 +1,11 @@
 import json
 import anthropic
+from google import genai
 from app.core.config import settings
 
-# Cliente oficial da Anthropic (Claude)
-client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
+# Clientes de IA
+claude_client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
+gemini_client = genai.Client(api_key=settings.GEMINI_API_KEY)
 
 PROMPT_TEMPLATE = """
 Atue como Aion, um mentor sábio e profundo que conhece a alma humana, mas que fala de forma simples e clara para que qualquer pessoa entenda.
@@ -39,82 +41,67 @@ INSTRUÇÃO CRÍTICA: Responda APENAS com um JSON válido, seguindo exatamente e
 """
 
 async def analyze_dream(dream_text: str, context: dict = None) -> dict:
-    """Analisa o sonho usando Claude (Anthropic)."""
-    print(f"[AI_SERVICE] Iniciando análise com Claude. Chave configurada: {'Sim' if settings.ANTHROPIC_API_KEY else 'NAO!'}")
+    """Analisa o sonho priorizando velocidade (Gemini Flash) e profundidade."""
+    print(f"[AI_SERVICE] Iniciando análise ultra-rápida...")
+    
+    prompt = PROMPT_TEMPLATE.format(texto=dream_text)
 
-    # Descobre dinamicamente os modelos disponíveis nesta conta
-    modelos = []
+    # 1. TENTATIVA COM GEMINI 1.5 FLASH (Focado em velocidade: ~2 segundos)
     try:
-        print("[AI_SERVICE] Listando modelos disponíveis na conta...")
-        page = client.models.list()
-        todos = list(page)
-        print(f"[AI_SERVICE] Total de modelos encontrados: {len(todos)}")
-        for m in todos:
-            model_id = m.id if hasattr(m, 'id') else str(m)
-            print(f"[AI_SERVICE] >> Modelo: {model_id}")
-            if "claude" in model_id.lower():
-                modelos.append(model_id)
-        modelos.sort(reverse=True)
+        print("[AI_SERVICE] >> Tentando Gemini 1.5 Flash (Alta Velocidade)...")
+        response = gemini_client.models.generate_content(
+            model="gemini-1.5-flash",
+            contents=prompt
+        )
+        
+        content = response.text
+        return _parse_ai_json(content)
     except Exception as e:
-        print(f"[AI_SERVICE] Erro ao listar modelos: {e}")
+        print(f"[AI_SERVICE] Gemini falhou ou demorou: {e}")
 
-    if not modelos:
-        # Tenta modelos Claude 4 (geração atual em 2025/2026)
-        modelos = [
-            "claude-opus-4-5",
-            "claude-sonnet-4-5",
-            "claude-haiku-4-5",
-            "claude-opus-4",
-            "claude-sonnet-4",
-            "claude-haiku-4",
-            "claude-3-5-sonnet-20241022",
-            "claude-3-5-haiku-20241022",
-        ]
-
-    print(f"[AI_SERVICE] Modelos a tentar: {modelos[:5]}")
-
-    ultimo_erro = None
-    for model_name in modelos:
+    # 2. FALLBACK PARA CLAUDE (Caso Gemini falhe)
+    modelos_claude = ["claude-3-5-haiku-20241022", "claude-3-5-sonnet-20241022"]
+    
+    for model_name in modelos_claude:
         try:
-            print(f"[AI_SERVICE] Tentando modelo: {model_name}")
-            prompt = PROMPT_TEMPLATE.format(texto=dream_text)
-
-            message = client.messages.create(
+            print(f"[AI_SERVICE] >> Fallback: Tentando Claude ({model_name})...")
+            message = claude_client.messages.create(
                 model=model_name,
                 max_tokens=2048,
-                messages=[
-                    {"role": "user", "content": prompt}
-                ]
+                messages=[{"role": "user", "content": prompt}]
             )
-
             content = message.content[0].text
-            print(f"[AI_SERVICE] Resposta recebida de {model_name}!")
-
-            if "```json" in content:
-                content = content.split("```json")[1].split("```")[0]
-            elif "```" in content:
-                content = content.split("```")[1].split("```")[0]
-
-            resultado = json.loads(content.strip())
-            print(f"[AI_SERVICE] JSON parseado com sucesso!")
-            return resultado
-
+            return _parse_ai_json(content)
         except Exception as e:
-            ultimo_erro = str(e)
-            print(f"[AI_SERVICE] Erro com {model_name}: {ultimo_erro}")
+            print(f"[AI_SERVICE] Erro com {model_name}: {e}")
             continue
 
-    print(f"[AI_SERVICE] TODOS OS MODELOS FALHARAM. Ultimo erro: {ultimo_erro}")
+    return _get_error_response("O Oráculo está temporariamente indisponível.")
+
+def _parse_ai_json(content: str) -> dict:
+    """Limpa e parseia o JSON da resposta da IA."""
+    try:
+        if "```json" in content:
+            content = content.split("```json")[1].split("```")[0]
+        elif "```" in content:
+            content = content.split("```")[1].split("```")[0]
+        
+        return json.loads(content.strip())
+    except Exception as e:
+        print(f"[AI_SERVICE] Erro ao parsear JSON: {e}")
+        raise e
+
+def _get_error_response(error_msg: str) -> dict:
     return {
-        "aviso": f"O Oráculo encontrou turbulência. Erro: {ultimo_erro[:100] if ultimo_erro else 'Desconhecido'}",
+        "aviso": f"Instabilidade momentânea: {error_msg[:50]}",
         "essencia": "O silêncio também é uma mensagem do inconsciente.",
         "arquetipos": [],
-        "funcao_compensatoria": "Não foi possível determinar.",
+        "funcao_compensatoria": "Tente novamente em breve.",
         "simbolos_chave": [],
-        "fase_jornada": {"nome": "O Limiar", "descricao": "Uma passagem está sendo tentada."},
-        "prospeccao": "Tente novamente em alguns instantes.",
-        "mito_espelho": {"titulo": "A Espera", "paralelo": "Como Jó, o silêncio precede a revelação."},
-        "pergunta_para_reflexao": "O que este sonho faz você sentir agora?",
+        "fase_jornada": {"nome": "O Limiar", "descricao": "Aguardando clareza."},
+        "prospeccao": "Aguarde um momento.",
+        "mito_espelho": {"titulo": "O Silêncio de Jó", "paralelo": "A resposta virá no tempo certo."},
+        "pergunta_para_reflexao": "O que você sente neste momento de espera?",
         "intensidade_sombra": 0,
         "intensidade_heroi": 0,
         "intensidade_transformacao": 0

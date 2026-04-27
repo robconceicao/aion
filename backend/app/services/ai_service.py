@@ -55,24 +55,15 @@ async def analyze_dream(dream_text: str, context: dict = None) -> dict:
     
     prompt = PROMPT_TEMPLATE.format(texto=dream_text)
 
-    # Modelos Claude (Tentando dos mais novos para os mais estáveis)
+    # Modelos Claude Geração 4 (Identificados na sua conta para 2026)
     modelos = [
-        "claude-3-5-sonnet-latest",
-        "claude-3-5-sonnet-20241022",
-        "claude-3-5-sonnet-20240620",
-        "claude-3-5-haiku-latest",
-        "claude-3-5-haiku-20241022",
-        "claude-3-haiku-20240307",
-        "claude-3-opus-20240229"
+        "claude-sonnet-4-6",
+        "claude-sonnet-4-5-20250929",
+        "claude-opus-4-7",
+        "claude-opus-4-6",
+        "claude-haiku-4-5-20251001",
+        "claude-3-5-sonnet-latest" # Fallback para compatibilidade
     ]
-
-    # DIAGNÓSTICO: Listar modelos disponíveis na conta para debug
-    try:
-        print("[DEBUG_CONTA] Verificando modelos disponíveis para esta chave...")
-        available = client.models.list()
-        print(f"[DEBUG_CONTA] Modelos que sua conta PODE ver: {[m.id for m in available]}")
-    except Exception as e:
-        print(f"[DEBUG_CONTA] Falha ao listar modelos (provável problema na chave): {e}")
 
     ultimo_erro = None
     for model_name in modelos:

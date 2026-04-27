@@ -13,21 +13,8 @@ class AuthScreen extends StatefulWidget {
 
 class _AuthScreenState extends State<AuthScreen> {
   bool _isLogin = true;
-  final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-
-  void _submit() {
-    Navigator.of(context).pushReplacementNamed('/onboarding');
-  }
-
-  @override
-  void dispose() {
-    _nameController.dispose();
-    _emailController.dispose();
-    _passwordController.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -38,213 +25,180 @@ class _AuthScreenState extends State<AuthScreen> {
       body: CinematicBackground(
         child: SafeArea(
           child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 400),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  // LOGO
-                  const SizedBox(height: 24),
-                  const AionPulseLogo(size: 180),
-                  const SizedBox(height: 24),
-
-                  // TITLES
-                  Text(
-                    'MITO & PSIQUE',
-                    style: GoogleFonts.cormorantGaramond(
-                      fontSize: 10,
-                      letterSpacing: 4,
-                      color: AionTheme.silver,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'AION',
-                    style: GoogleFonts.cormorantGaramond(
-                      fontSize: 32,
-                      letterSpacing: 8,
-                      color: AionTheme.gold,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'O Diário do Sonho',
-                    style: GoogleFonts.cormorantGaramond(
-                      fontSize: 13,
-                      fontStyle: FontStyle.italic,
-                      color: AionTheme.silver,
-                      letterSpacing: 2,
-                    ),
-                  ),
-                  const SizedBox(height: 48),
-
-                  // TABS
-                  Row(
-                    children: [
-                      Expanded(
-                        child: GestureDetector(
-                          onTap: () => setState(() => _isLogin = true),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            decoration: BoxDecoration(
-                              border: Border(
-                                bottom: BorderSide(
-                                  color: _isLogin ? AionTheme.gold : AionTheme.veil,
-                                  width: _isLogin ? 2 : 1,
-                                ),
-                              ),
-                            ),
-                            child: Text(
-                              'ENTRAR',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                color: _isLogin ? AionTheme.gold : AionTheme.silver,
-                                fontSize: 12,
-                                letterSpacing: 3,
-                                fontFamily: 'Georgia',
-                                fontWeight: _isLogin ? FontWeight.bold : FontWeight.normal,
-                              ),
-                            ),
-                          ),
-                        ),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 400),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const AionPulseLogo(size: 180),
+                    const SizedBox(height: 16),
+                    
+                    // HEADER PADRÃO
+                    Text(
+                      'MITO & PSIQUE',
+                      style: GoogleFonts.ptSerif(
+                        fontSize: 10,
+                        letterSpacing: 6,
+                        color: AionTheme.gold,
+                        fontWeight: FontWeight.bold,
                       ),
-                      Expanded(
-                        child: GestureDetector(
-                          onTap: () => setState(() => _isLogin = false),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            decoration: BoxDecoration(
-                              border: Border(
-                                bottom: BorderSide(
-                                  color: !_isLogin ? AionTheme.gold : AionTheme.veil,
-                                  width: !_isLogin ? 2 : 1,
-                                ),
-                              ),
-                            ),
-                            child: Text(
-                              'CRIAR CONTA',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                color: !_isLogin ? AionTheme.gold : AionTheme.silver,
-                                fontSize: 12,
-                                letterSpacing: 3,
-                                fontFamily: 'Georgia',
-                                fontWeight: !_isLogin ? FontWeight.bold : FontWeight.normal,
-                              ),
-                            ),
-                          ),
-                        ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'AION',
+                      style: theme.textTheme.displayLarge?.copyWith(
+                        fontSize: 32,
+                        letterSpacing: 8,
+                        color: AionTheme.amber,
                       ),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'O Diário do Sonho',
+                      style: GoogleFonts.ptSerif(
+                        fontSize: 13,
+                        fontStyle: FontStyle.italic,
+                        color: AionTheme.ghost,
+                        letterSpacing: 1,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    Text(
+                      'Bem-Vindo(a)',
+                      style: GoogleFonts.cormorantGaramond(
+                        fontSize: 30,
+                        fontWeight: FontWeight.w600,
+                        color: AionTheme.dawn,
+                        letterSpacing: 3,
+                      ),
+                    ),
+                    const SizedBox(height: 48),
+                    
+                    // Login/Register Toggle
+                    Container(
+                      decoration: const BoxDecoration(
+                        border: Border(bottom: BorderSide(color: AionTheme.veil, width: 1)),
+                      ),
+                      child: Row(
+                        children: [
+                          _buildTab(context, 'ENTRAR', _isLogin, () => setState(() => _isLogin = true)),
+                          _buildTab(context, 'CRIAR ESSÊNCIA', !_isLogin, () => setState(() => _isLogin = false)),
+                        ],
+                      ),
+                    ),
                     const SizedBox(height: 32),
 
-                    // FORM
-                    if (!_isLogin) ...[
-                      _buildInput(controller: _nameController, hint: 'NOME'),
-                      const SizedBox(height: 16),
-                    ],
-                    _buildInput(controller: _emailController, hint: 'E-MAIL'),
+                    _buildInput(
+                      controller: _emailController,
+                      hint: 'E-MAIL',
+                    ),
                     const SizedBox(height: 16),
-                    _buildInput(controller: _passwordController, hint: 'SENHA', isPassword: true),
+                    _buildInput(
+                      controller: _passwordController,
+                      hint: 'SENHA',
+                      isPassword: true,
+                    ),
                     
                     if (_isLogin)
                       Align(
                         alignment: Alignment.centerRight,
-                        child: Padding(
-                          padding: const EdgeInsets.only(top: 16, bottom: 32),
+                        child: TextButton(
+                          onPressed: () {},
                           child: Text(
                             'Esqueci a senha',
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: AionTheme.silver,
-                              letterSpacing: 1,
-                              fontFamily: 'Georgia',
-                            ),
-                          ),
-                        ),
-                      )
-                    else
-                      const SizedBox(height: 32),
-
-                    // SUBMIT BUTTON
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: _submit,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AionTheme.gold,
-                          foregroundColor: AionTheme.darkVoid,
-                          padding: const EdgeInsets.symmetric(vertical: 18),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(0)),
-                          elevation: 4,
-                        ),
-                        child: Text(
-                          _isLogin ? 'ENTRAR' : 'INICIAR JORNADA',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: 4,
-                            fontFamily: 'Georgia',
+                            style: theme.textTheme.bodySmall?.copyWith(color: AionTheme.silver),
                           ),
                         ),
                       ),
-                    ),
+                    
+                    const SizedBox(height: 32),
 
-                    // SOCIAL LOGIN
-                    const SizedBox(height: 40),
-                    Row(
-                      children: [
-                        Expanded(child: Container(height: 1, color: AionTheme.veil)),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          child: Text(
-                            'OU',
-                            style: TextStyle(
-                              fontSize: 10,
-                              color: AionTheme.silver,
-                              letterSpacing: 2,
-                              fontFamily: 'Georgia',
-                            ),
-                          ),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.pushReplacementNamed(context, '/onboarding');
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AionTheme.gold,
+                          foregroundColor: AionTheme.darkVoid,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: const RoundedRectangleBorder(),
                         ),
-                        Expanded(child: Container(height: 1, color: AionTheme.veil)),
+                        child: Text(_isLogin ? 'ENTRAR' : 'COMEÇAR'),
+                      ),
+                    ),
+                    
+                    const SizedBox(height: 24),
+                    
+                    const Row(
+                      children: [
+                        Expanded(child: Divider(color: AionTheme.veil)),
+                        Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 16),
+                          child: Text('OU', style: TextStyle(color: AionTheme.silver, fontSize: 10, letterSpacing: 2)),
+                        ),
+                        Expanded(child: Divider(color: AionTheme.veil)),
                       ],
                     ),
+                    
                     const SizedBox(height: 24),
                     
                     SizedBox(
                       width: double.infinity,
                       child: OutlinedButton.icon(
-                        onPressed: _submit,
-                        icon: const Icon(Icons.g_mobiledata, color: Colors.white, size: 24),
-                        label: const Text(
-                          'CONTINUAR COM GOOGLE',
-                          style: TextStyle(
-                            fontSize: 11,
-                            letterSpacing: 2,
-                            fontFamily: 'Georgia',
-                            color: AionTheme.silver,
-                          ),
+                        onPressed: () {},
+                        icon: const Icon(Icons.g_mobiledata, size: 28),
+                        label: Text(
+                          _isLogin ? 'ENTRAR COM GOOGLE' : 'REGISTRAR COM GOOGLE',
+                          style: const TextStyle(fontSize: 11, letterSpacing: 1),
                         ),
                         style: OutlinedButton.styleFrom(
                           foregroundColor: AionTheme.silver,
                           side: const BorderSide(color: AionTheme.veil),
                           padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(0)),
+                          shape: const RoundedRectangleBorder(),
                         ),
                       ),
                     ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
         ),
       ),
-    ),
+    );
+  }
+
+  Widget _buildTab(BuildContext context, String text, bool active, VoidCallback onTap) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+            border: Border(
+              bottom: BorderSide(
+                color: active ? AionTheme.gold : Colors.transparent,
+                width: 2,
+              ),
+            ),
+          ),
+          child: Text(
+            text,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: active ? AionTheme.gold : AionTheme.silver,
+              fontSize: 11,
+              fontWeight: active ? FontWeight.bold : FontWeight.normal,
+              letterSpacing: 2,
+            ),
+          ),
+        ),
+      ),
     );
   }
 
@@ -255,28 +209,18 @@ class _AuthScreenState extends State<AuthScreen> {
   }) {
     return Container(
       decoration: BoxDecoration(
-        color: AionTheme.darkAbyss,
+        color: AionTheme.darkAbyss.withOpacity(0.3),
         border: Border.all(color: AionTheme.veil),
       ),
       child: TextField(
         controller: controller,
         obscureText: isPassword,
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 14,
-          fontFamily: 'Georgia',
-          letterSpacing: 1,
-        ),
+        style: const TextStyle(color: Colors.white, fontSize: 14),
         decoration: InputDecoration(
           hintText: hint,
-          hintStyle: TextStyle(
-            color: AionTheme.silver,
-            fontSize: 14,
-            fontFamily: 'Georgia',
-            letterSpacing: 1,
-          ),
+          hintStyle: TextStyle(color: AionTheme.silver.withOpacity(0.5), fontSize: 11, letterSpacing: 2),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
           border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         ),
       ),
     );

@@ -39,14 +39,14 @@ class _AionPulseLogoState extends State<AionPulseLogo> with SingleTickerProvider
             shape: BoxShape.circle,
             boxShadow: [
               BoxShadow(
-                color: AionTheme.gold.withOpacity(0.15 * _controller.value),
-                blurRadius: 40 * _controller.value,
-                spreadRadius: 10 * _controller.value,
+                color: AionTheme.gold.withOpacity(0.12 * _controller.value),
+                blurRadius: 45 * _controller.value,
+                spreadRadius: 8 * _controller.value,
               ),
             ],
           ),
           child: Opacity(
-            opacity: 0.6 + (0.4 * _controller.value),
+            opacity: 0.65 + (0.35 * _controller.value),
             child: Image.asset(
               'assets/images/logo.jpg',
               fit: BoxFit.contain,
@@ -74,7 +74,7 @@ class _AionSpinLogoState extends State<AionSpinLogo> with SingleTickerProviderSt
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 15),
+      duration: const Duration(seconds: 20),
     )..repeat();
   }
 
@@ -89,17 +89,16 @@ class _AionSpinLogoState extends State<AionSpinLogo> with SingleTickerProviderSt
     return Stack(
       alignment: Alignment.center,
       children: [
-        // Aura estática sutil
         Container(
-          width: widget.size * 0.8,
-          height: widget.size * 0.8,
+          width: widget.size * 0.85,
+          height: widget.size * 0.85,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             boxShadow: [
               BoxShadow(
-                color: AionTheme.gold.withOpacity(0.2),
-                blurRadius: 30,
-                spreadRadius: 5,
+                color: AionTheme.gold.withOpacity(0.15),
+                blurRadius: 35,
+                spreadRadius: 4,
               ),
             ],
           ),

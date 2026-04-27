@@ -10,19 +10,10 @@ class CinematicBackground extends StatelessWidget {
   Widget build(BuildContext context) {
     return Stack(
       children: [
-        // 1. Solid Base
         Container(color: AionTheme.darkVoid),
-        
-        // 2. Simulated Ambient Lighting (Radial Gradients)
         const Positioned.fill(child: _AmbientLighting()),
-        
-        // 3. Stardust Particles
         const Positioned.fill(child: _StardustField()),
-        
-        // 4. Film Grain Overlay
         const Positioned.fill(child: _FilmGrain()),
-        
-        // 5. The Actual Content
         child,
       ],
     );
@@ -31,42 +22,27 @@ class CinematicBackground extends StatelessWidget {
 
 class _AmbientLighting extends StatelessWidget {
   const _AmbientLighting();
-
   @override
   Widget build(BuildContext context) {
     return Stack(
       children: [
         Positioned(
-          top: -100,
-          right: -100,
+          top: -100, right: -100,
           child: Container(
-            width: 400,
-            height: 400,
+            width: 400, height: 400,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              gradient: RadialGradient(
-                colors: [
-                  AionTheme.gold.withOpacity(0.03),
-                  Colors.transparent,
-                ],
-              ),
+              gradient: RadialGradient(colors: [AionTheme.gold.withOpacity(0.03), Colors.transparent]),
             ),
           ),
         ),
         Positioned(
-          bottom: -150,
-          left: -100,
+          bottom: -150, left: -100,
           child: Container(
-            width: 500,
-            height: 500,
+            width: 500, height: 500,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              gradient: RadialGradient(
-                colors: [
-                  AionTheme.indigo.withOpacity(0.04),
-                  Colors.transparent,
-                ],
-              ),
+              gradient: RadialGradient(colors: [AionTheme.indigo.withOpacity(0.04), Colors.transparent]),
             ),
           ),
         ),
@@ -77,39 +53,25 @@ class _AmbientLighting extends StatelessWidget {
 
 class _StardustField extends StatefulWidget {
   const _StardustField();
-
   @override
   State<_StardustField> createState() => _StardustFieldState();
 }
 
 class _StardustFieldState extends State<_StardustField> with SingleTickerProviderStateMixin {
   late AnimationController _controller;
-  final List<_Star> _stars = List.generate(40, (_) => _Star());
-
+  final List<_Star> _stars = List.generate(45, (_) => _Star());
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 20),
-    )..repeat();
+    _controller = AnimationController(vsync: this, duration: const Duration(seconds: 30))..repeat();
   }
-
   @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
+  void dispose() { _controller.dispose(); super.dispose(); }
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: _controller,
-      builder: (context, child) {
-        return CustomPaint(
-          painter: _StardustPainter(_stars, _controller.value),
-        );
-      },
+      builder: (context, child) => CustomPaint(painter: _StardustPainter(_stars, _controller.value)),
     );
   }
 }
@@ -119,49 +81,37 @@ class _Star {
   final double y = Random().nextDouble();
   final double size = Random().nextDouble() * 1.5 + 0.5;
   final double speed = Random().nextDouble() * 0.02 + 0.005;
-  final double drift = Random().nextDouble() * 0.05 - 0.025;
+  final double drift = Random().nextDouble() * 0.04 - 0.02;
 }
 
 class _StardustPainter extends CustomPainter {
   final List<_Star> stars;
   final double progress;
   _StardustPainter(this.stars, this.progress);
-
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = AionTheme.silver.withOpacity(0.3);
+    final paint = Paint()..color = AionTheme.silver.withOpacity(0.25);
     for (var star in stars) {
       final x = (star.x * size.width + (star.drift * size.width * progress)) % size.width;
       final y = (star.y * size.height - (star.speed * size.height * progress)) % size.height;
-      
       canvas.drawCircle(Offset(x, y), star.size, paint);
-      
-      // Subtle glow for some stars
-      if (star.size > 1.5) {
-        canvas.drawCircle(
-          Offset(x, y), 
-          star.size * 2, 
-          Paint()..color = AionTheme.gold.withOpacity(0.1)
-        );
+      if (star.size > 1.4) {
+        canvas.drawCircle(Offset(x, y), star.size * 2, Paint()..color = AionTheme.gold.withOpacity(0.08));
       }
     }
   }
-
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
+  bool shouldRepaint(CustomPainter old) => true;
 }
 
 class _FilmGrain extends StatelessWidget {
   const _FilmGrain();
-
   @override
   Widget build(BuildContext context) {
     return IgnorePointer(
       child: Opacity(
-        opacity: 0.03,
-        child: CustomPaint(
-          painter: _GrainPainter(),
-        ),
+        opacity: 0.035,
+        child: CustomPaint(painter: _GrainPainter()),
       ),
     );
   }
@@ -172,19 +122,10 @@ class _GrainPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final random = Random();
     final paint = Paint()..color = Colors.white;
-    for (var i = 0; i < 1000; i++) {
-      canvas.drawRect(
-        Rect.fromLTWH(
-          random.nextDouble() * size.width,
-          random.nextDouble() * size.height,
-          1,
-          1,
-        ),
-        paint,
-      );
+    for (var i = 0; i < 1200; i++) {
+      canvas.drawRect(Rect.fromLTWH(random.nextDouble() * size.width, random.nextDouble() * size.height, 1, 1), paint);
     }
   }
-
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(CustomPainter old) => false;
 }

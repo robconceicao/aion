@@ -5,64 +5,36 @@ import '../../../core/widgets/cinematic_background.dart';
 
 // ── TOKENS ───────────────────────────────────────────────────────
 const _cVoid   = Color(0xFF070810);
-const _cDeep   = Color(0xFF0d0c18);
-const _cAbyss  = Color(0xFF121120);
-const _cShadow = Color(0xFF1a1830);
-const _cVeil   = Color(0xFF252340);
-const _cMist   = Color(0xFF332f58);
-
-const _cGold   = Color(0xFFc8a84a);
-const _cAmber  = Color(0xFFe8c46a);
-const _cDawn   = Color(0xFFf5dfa0);
-const _cSilver = Color(0xFF9898b8);
-const _cGhost  = Color(0xFFcccce0);
-const _cWhite  = Color(0xFFeeeef8);
-const _cCrimson= Color(0xFFa83030);
-const _cTeal   = Color(0xFF2a8070);
-
-// Mito Espelho
-const _cIndigoBg = Color(0x2E3A3870);
-const _cIndigoBd = Color(0x8C3A3870);
-const _cIndigoLabel = Color(0xFF8888c8);
-
-// Episódios / Aviso
-const _cGreenBg   = Color(0x2E2a5a3a);
-const _cGreenBd   = Color(0x662a5a3a);
-const _cGreenText = Color(0xFF5a9a6a);
-const _cTealBg    = Color(0x2E2a8070);
-const _cTealBd    = Color(0x662a8070);
-const _cTealText  = Color(0xFF88c0c8);
+const _cGold   = Color(0xFFC8A84A);
+const _cSilver = Color(0xFF9898B8);
+const _cVeil   = Color(0xFF1A1B2E);
+const _cDeep   = Color(0xFF0D0E1A);
+const _cShadow = Color(0xFF05060A);
+const _cMist   = Color(0xFF63637E);
 
 class AnalysisResultScreen extends StatelessWidget {
   final Map<String, dynamic> analysis;
   final String? dreamText;
 
-  const AnalysisResultScreen({super.key, required this.analysis, this.dreamText});
+  const AnalysisResultScreen({
+    super.key, 
+    required this.analysis,
+    this.dreamText,
+  });
 
-  Color _arcColor(String name) {
-    final n = name.toLowerCase();
-    if (n.contains('mãe'))    return const Color(0xFF5a8a5a);
-    if (n.contains('self'))   return _cAmber;
-    if (n.contains('herói') || n.contains('heroi')) return _cGold;
-    if (n.contains('sombra')) return _cCrimson;
-    if (n.contains('anima') && !n.contains('animus')) return const Color(0xFF9b6b9b);
-    if (n.contains('animus')) return const Color(0xFF5a7a9b);
-    if (n.contains('sábio') || n.contains('sabio')) return _cSilver;
-    if (n.contains('trickster')) return _cTeal;
-    if (n.contains('persona'))   return const Color(0xFF7a7a9b);
-    if (n.contains('jovem'))     return const Color(0xFFc87870);
-    if (n.contains('inimigo'))   return const Color(0xFF8b4040);
-    if (n.contains('guerreiro')) return const Color(0xFFa87040);
-    return _cSilver;
-  }
-
-  // Índice da fase da jornada (0-11)
-  static const _fases = [
-    'o mundo comum','o chamado da aventura','a recusa do chamado',
-    'o encontro com o mentor','a travessia do primeiro limiar',
-    'testes, aliados e inimigos','a aproximação da caverna oculta',
-    'a provação suprema','a recompensa','o caminho de volta',
-    'a ressurreição','o retorno com o elixir',
+  static const List<String> _fases = [
+    'O Chamado à Aventura',
+    'Recusa do Chamado',
+    'Ajuda Sobrenatural',
+    'A Travessia do Limiar',
+    'O Ventre da Baleia',
+    'A Estrada de Provas',
+    'O Encontro com a Deusa',
+    'A Mulher como Tentação',
+    'A Apoteose',
+    'A Benção Última',
+    'A Travessia do Limiar de Retorno',
+    'O Retorno com o Elixir'
   ];
 
   @override
@@ -71,12 +43,11 @@ class AnalysisResultScreen extends StatelessWidget {
     final simbolos   = (analysis['simbolos_chave'] as List? ?? []);
     final dream      = dreamText ?? 'Sonho registrado.';
 
-    return CinematicBackground(
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        appBar: AppBar(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
+    return Scaffold(
+      backgroundColor: _cVoid,
+      appBar: AppBar(
+        backgroundColor: _cVoid,
+        elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: _cGold),
           onPressed: () => Navigator.pop(context),
@@ -90,361 +61,226 @@ class AnalysisResultScreen extends StatelessWidget {
           ],
         ),
         centerTitle: true,
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(1),
-          child: Container(height: 1, color: _cGold.withOpacity(0.2)),
-        ),
       ),
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 820),
+      body: CinematicBackground(
+        child: SafeArea(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(20, 36, 20, 80),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-
-                // ① AVISO ÉTICO
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-                  decoration: BoxDecoration(
-                    color: _cTealBg,
-                    border: Border.all(color: _cTealBd),
-                  ),
-                  child: const Text(
-                    '⚠ Esta análise é uma reflexão simbólica baseada em Jung e Campbell — não substitui acompanhamento psicológico profissional.',
-                    style: TextStyle(color: _cTealText, fontSize: 12, height: 1.7),
-                  ),
-                ),
-                const SizedBox(height: 14),
-
-                // ② O SONHO
-                _Card(
-                  leftBorder: BorderSide(color: _cVeil, width: 3),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _Label('O SONHO', color: _cSilver),
-                      Text('"$dream"',
-                        style: const TextStyle(color: _cGhost, fontSize: 14, fontStyle: FontStyle.italic, height: 1.85)),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 14),
-
-                // ③ ESSÊNCIA
-                _Card(
-                  padding: const EdgeInsets.all(24),
-                  leftBorder: const BorderSide(color: _cGold, width: 3),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _Label('☽  ESSÊNCIA', color: _cGold),
-                      Text('"${analysis['essencia'] ?? ''}"',
-                        style: const TextStyle(color: _cDawn, fontSize: 17, fontStyle: FontStyle.italic, height: 2.0)),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 14),
-
-                // ④ DIMENSÕES
-                _Card(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _Label('DIMENSÕES DO SONHO', color: _cSilver),
-                      const SizedBox(height: 4),
-                      LayoutBuilder(builder: (ctx, c) {
-                        final narrow = c.maxWidth < 400;
-                        return narrow
-                          ? Column(children: [
-                              _DimBar('Sombra',       analysis['intensidade_sombra'] ?? 0,        _cCrimson, grad: [_cCrimson, const Color(0x88c03030)]),
-                              const SizedBox(height: 12),
-                              _DimBar('Herói',        analysis['intensidade_heroi'] ?? 0,          _cGold,   grad: [_cGold, _cAmber]),
-                              const SizedBox(height: 12),
-                              _DimBar('Transformação',analysis['intensidade_transformacao'] ?? 0,  _cTeal,   grad: [_cTeal, const Color(0x882a8070)]),
-                            ])
-                          : Row(children: [
-                              Expanded(child: _DimBar('Sombra',       analysis['intensidade_sombra'] ?? 0,        _cCrimson, grad: [_cCrimson, const Color(0x88c03030)])),
-                              const SizedBox(width: 14),
-                              Expanded(child: _DimBar('Herói',        analysis['intensidade_heroi'] ?? 0,          _cGold,   grad: [_cGold, _cAmber])),
-                              const SizedBox(width: 14),
-                              Expanded(child: _DimBar('Transformação',analysis['intensidade_transformacao'] ?? 0,  _cTeal,   grad: [_cTeal, const Color(0x882a8070)])),
-                            ]);
-                      }),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 14),
-
-                // ⑤ ARQUÉTIPOS
-                if (arquetipos.isNotEmpty) ...[
-                  _Label('⟁  ARQUÉTIPOS PRESENTES', color: _cGold),
-                  const SizedBox(height: 12),
-                  LayoutBuilder(builder: (ctx, c) {
-                    final wide = c.maxWidth > 460;
-                    Widget arcCard(dynamic arc) {
-                      final cor = _arcColor(arc['nome'] ?? '');
-                      return Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: _cAbyss,
-                          border: Border(
-                            top:    BorderSide(color: cor, width: 3),
-                            bottom: const BorderSide(color: _cShadow),
-                            left:   const BorderSide(color: _cShadow),
-                            right:  const BorderSide(color: _cShadow),
-                          ),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(arc['simbolo'] ?? '⌘', style: const TextStyle(fontSize: 22)),
-                            const SizedBox(height: 8),
-                            Text(arc['nome'] ?? '', style: TextStyle(color: cor, fontSize: 13, letterSpacing: 1)),
-                            const SizedBox(height: 8),
-                            Text(arc['descricao'] ?? '',
-                              style: const TextStyle(color: _cSilver, fontSize: 12, height: 1.7)),
-                          ],
-                        ),
-                      );
-                    }
-                    if (wide && arquetipos.length >= 2) {
-                      final rows = <Widget>[];
-                      for (int i = 0; i < arquetipos.length; i += 2) {
-                        final hasNext = i + 1 < arquetipos.length;
-                        rows.add(Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(child: arcCard(arquetipos[i])),
-                            if (hasNext) const SizedBox(width: 12),
-                            if (hasNext) Expanded(child: arcCard(arquetipos[i + 1]))
-                            else const Spacer(),
-                          ],
-                        ));
-                        if (i + 2 < arquetipos.length) rows.add(const SizedBox(height: 12));
-                      }
-                      return Column(children: rows);
-                    }
-                    return Column(
-                      children: arquetipos.asMap().entries.map((e) => Padding(
-                        padding: EdgeInsets.only(bottom: e.key < arquetipos.length - 1 ? 12 : 0),
-                        child: arcCard(e.value),
-                      )).toList(),
-                    );
-                  }),
-                  const SizedBox(height: 14),
-                ],
-
-                // ⑥ FUNÇÃO COMPENSATÓRIA + PROSPECÇÃO
-                LayoutBuilder(builder: (ctx, c) {
-                  final wide = c.maxWidth > 500;
-                  final cardComp = _Card(
-                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      _Label('⊗  FUNÇÃO COMPENSATÓRIA', color: _cAmber),
-                      Text(analysis['funcao_compensatoria'] ?? '',
-                        style: const TextStyle(color: _cGhost, fontSize: 13, height: 1.8)),
-                    ]),
-                  );
-                  final cardProsp = _Card(
-                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      _Label('✦  PROSPECÇÃO', color: _cSilver),
-                      Text(analysis['prospeccao'] ?? '',
-                        style: const TextStyle(color: _cGhost, fontSize: 13, height: 1.8)),
-                    ]),
-                  );
-                  if (wide) {
-                    return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Expanded(child: cardComp),
-                      const SizedBox(width: 14),
-                      Expanded(child: cardProsp),
-                    ]);
-                  }
-                  return Column(children: [cardComp, const SizedBox(height: 14), cardProsp]);
-                }),
-                const SizedBox(height: 14),
-
-                // ⑦ SÍMBOLOS & AMPLIAÇÃO
-                if (simbolos.isNotEmpty)
-                  _Card(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _Label('⋈  SÍMBOLOS & AMPLIAÇÃO', color: _cGold),
-                        ...List.generate(simbolos.length, (i) {
-                          final s = simbolos[i];
-                          final isLast = i == simbolos.length - 1;
-                          return Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Padding(
-                                padding: EdgeInsets.only(bottom: isLast ? 0 : 12),
-                                child: Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    SizedBox(
-                                      width: 120,
-                                      child: Padding(
-                                        padding: const EdgeInsets.only(right: 14, top: 2),
-                                        child: Text(s['elemento'] ?? '',
-                                          style: const TextStyle(color: _cAmber, fontSize: 12)),
-                                      ),
-                                    ),
-                                    Container(width: 1, height: 40, color: _cVeil),
-                                    const SizedBox(width: 14),
-                                    Expanded(
-                                      child: Text(s['significado'] ?? '',
-                                        style: const TextStyle(color: _cSilver, fontSize: 12, height: 1.7)),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              if (!isLast) ...[
-                                const SizedBox(height: 12),
-                                Container(height: 1, color: _cShadow),
-                                const SizedBox(height: 12),
-                              ],
-                            ],
-                          );
-                        }),
-                      ],
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _sectionHeader('RELATO DO SONHO'),
+                  _card(
+                    borderColor: const Color(0xFF2E2A5C),
+                    backgroundColor: const Color(0xFF0D0C1F),
+                    child: Text(
+                      '"$dream"',
+                      style: GoogleFonts.cormorantGaramond(
+                        fontSize: 18,
+                        color: const Color(0xFFB4B4D1),
+                        fontStyle: FontStyle.italic,
+                        height: 1.5,
+                      ),
                     ),
                   ),
-                const SizedBox(height: 14),
-
-                // ⑧ JORNADA DO HERÓI
-                if (analysis['fase_jornada'] != null) ...[
-                  _Card(
+                  const SizedBox(height: 32),
+  
+                  _sectionHeader('SÍMBOLOS CHAVE'),
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 12,
+                    children: simbolos.map((s) => _symbolCard(s['termo'] ?? 'Símbolo', s['significado'] ?? '')).toList(),
+                  ),
+                  const SizedBox(height: 32),
+  
+                  _sectionHeader('FORÇAS ARQUETÍPICAS'),
+                  LayoutBuilder(builder: (context, constraints) {
+                    return Wrap(
+                      spacing: 16,
+                      runSpacing: 16,
+                      children: arquetipos.map((a) {
+                        final w = constraints.maxWidth > 600 ? (constraints.maxWidth / 2) - 8 : constraints.maxWidth;
+                        return SizedBox(
+                          width: w,
+                          child: _archetypeCard(a['nome'] ?? 'Arquétipo', a['papel'] ?? ''),
+                        );
+                      }).toList(),
+                    );
+                  }),
+                  const SizedBox(height: 32),
+  
+                  _sectionHeader('ESTÁGIO DA JORNADA'),
+                  _card(
+                    backgroundColor: _cDeep,
+                    borderColor: _cVeil,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _Label('⊕  JORNADA DO HERÓI — CAMPBELL', color: _cGold),
-                        Text(analysis['fase_jornada']['nome'] ?? '',
-                          style: const TextStyle(color: _cAmber, fontSize: 15)),
-                        const SizedBox(height: 8),
-                        _journeyBar(analysis['fase_jornada']['nome'] ?? ''),
-                        const SizedBox(height: 4),
-                        Row(
+                        Text(
+                          analysis['jornada_estagio']?.toString().toUpperCase() ?? 'DESCONHECIDO',
+                          style: const TextStyle(color: _cGold, fontSize: 13, fontWeight: FontWeight.bold, letterSpacing: 2),
+                        ),
+                        const SizedBox(height: 12),
+                        _journeyBar(analysis['jornada_estagio']?.toString() ?? ''),
+                        const SizedBox(height: 12),
+                        Text(
+                          analysis['jornada_analise'] ?? 'Análise da jornada não disponível.',
+                          style: TextStyle(color: _cMist, fontSize: 11, height: 1.6),
+                        ),
+                        const SizedBox(height: 24),
+                        const Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text('O Mundo Comum', style: TextStyle(color: _cMist, fontSize: 10)),
                             Text('O Retorno com o Elixir', style: TextStyle(color: _cMist, fontSize: 10)),
                           ],
                         ),
-                        const SizedBox(height: 14),
-                        Text(analysis['fase_jornada']['descricao'] ?? '',
-                          style: const TextStyle(color: _cSilver, fontSize: 13, height: 1.8)),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 14),
-                ],
-
-                // ⑨ MITO ESPELHO
-                if (analysis['mito_espelho'] != null) ...[
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: _cIndigoBg,
-                      border: Border.all(color: _cIndigoBd),
-                    ),
+                  const SizedBox(height: 32),
+  
+                  _sectionHeader('O ESPELHO DO MITO'),
+                  _card(
+                    borderColor: const Color(0xFF2E2A5C),
+                    backgroundColor: const Color(0xFF0D0C1F),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _Label('☽  MITO ESPELHO', color: _cIndigoLabel),
-                        Text(analysis['mito_espelho']['titulo'] ?? '',
-                          style: const TextStyle(color: _cGhost, fontSize: 14)),
-                        const SizedBox(height: 10),
-                        Text(analysis['mito_espelho']['paralelo'] ?? '',
-                          style: const TextStyle(color: _cSilver, fontSize: 13, height: 1.8)),
+                        Text(
+                          analysis['mito_comparativo'] ?? 'Mito Ancestral',
+                          style: const TextStyle(color: Color(0xFFB4B4D1), fontSize: 14, fontWeight: FontWeight.bold, letterSpacing: 1),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          analysis['interpretacao_mitologica'] ?? 'Interpretação mitológica não disponível.',
+                          style: const TextStyle(color: Color(0xFF9898B8), fontSize: 12, height: 1.7),
+                        ),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 14),
-                ],
-
-                // ⑩ PERGUNTA PARA REFLEXÃO
-                if (analysis['pergunta_para_reflexao'] != null) ...[
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 24),
-                    decoration: BoxDecoration(
-                      color: _cDeep,
-                      border: Border.all(color: _cGold.withOpacity(0.28)),
-                    ),
+                  const SizedBox(height: 32),
+  
+                  _sectionHeader('DIMENSÕES PSÍQUICAS'),
+                  _card(
+                    backgroundColor: _cDeep,
+                    borderColor: _cVeil,
                     child: Column(
                       children: [
-                        _Label('PERGUNTA PARA REFLEXÃO', color: _cGold, centered: true),
-                        const SizedBox(height: 4),
-                        Text('"${analysis['pergunta_para_reflexao']}"',
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(color: _cDawn, fontSize: 18, fontStyle: FontStyle.italic, height: 1.9)),
+                        _dimensionRow('PERSONA', (analysis['dimensoes']?['persona'] ?? 5) / 10.0, const Color(0xFFE25454)),
+                        const SizedBox(height: 16),
+                        _dimensionRow('ANIMA/US', (analysis['dimensoes']?['anima'] ?? 5) / 10.0, _cGold),
+                        const SizedBox(height: 16),
+                        _dimensionRow('SOMBRA',   (analysis['dimensoes']?['sombra'] ?? 5) / 10.0, const Color(0xFF4AC8C1)),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 14),
-                ],
-
-                // ⑪ EPISÓDIOS RECOMENDADOS
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: _cGreenBg,
-                    border: Border.all(color: _cGreenBd),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  const SizedBox(height: 48),
+  
+                  Row(
                     children: [
-                      _Label('▶  EPISÓDIOS RECOMENDADOS — MITO & PSIQUE', color: _cGreenText),
-                      const Text('Baseado nos arquétipos identificados neste sonho:',
-                        style: TextStyle(color: _cMist, fontSize: 12)),
-                      const SizedBox(height: 16),
-                      _EpisodeCard(num: 'EP07', color: const Color(0xFF5a8a5a),
-                        title: 'A Grande Deusa',
-                        sub: 'Magna Mater — o arquétipo que as civilizações temeram e veneraram'),
-                      const SizedBox(height: 8),
-                      _EpisodeCard(num: 'EP08', color: _cDawn,
-                        title: 'O Retorno do Herói',
-                        sub: 'A individuação — tornar-se quem você sempre foi'),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () {},
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: _cGold, foregroundColor: _cVoid,
+                            shape: const RoundedRectangleBorder(),
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                          ),
+                          child: const Text('SALVAR NO DIÁRIO', style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1)),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      ElevatedButton(
+                        onPressed: () => Navigator.pop(context),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.transparent, foregroundColor: _cSilver,
+                          side: const BorderSide(color: _cVeil),
+                          shape: const RoundedRectangleBorder(),
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                        ),
+                        child: const Text('Início'),
+                      ),
                     ],
                   ),
-                ),
-                const SizedBox(height: 24),
-
-                // Botões
-                Wrap(
-                  spacing: 10, runSpacing: 10,
-                  alignment: WrapAlignment.center,
-                  children: [
-                    ElevatedButton(
-                      onPressed: () => Navigator.pop(context),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: _cGold, foregroundColor: _cVoid,
-                        shape: const RoundedRectangleBorder(),
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                      ),
-                      child: const Text('+ Novo Sonho'),
-                    ),
-                    ElevatedButton(
-                      onPressed: () => Navigator.pop(context),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.transparent, foregroundColor: _cSilver,
-                        side: const BorderSide(color: _cVeil),
-                        shape: const RoundedRectangleBorder(),
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                      ),
-                      child: const Text('Início'),
-                    ),
-                  ],
-                ),
+                  const SizedBox(height: 40),
                 ],
               ),
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _sectionHeader(String title) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16, left: 4),
+      child: Text(
+        title,
+        style: const TextStyle(color: _cMist, fontSize: 9, letterSpacing: 5, fontWeight: FontWeight.bold),
+      ),
+    );
+  }
+
+  Widget _card({required Widget child, Color? backgroundColor, Color? borderColor}) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: backgroundColor ?? _cDeep,
+        border: Border.all(color: borderColor ?? _cVeil, width: 1),
+      ),
+      child: child,
+    );
+  }
+
+  Widget _symbolCard(String term, String meaning) {
+    return Container(
+      width: 130,
+      height: 130,
+      decoration: BoxDecoration(
+        color: _cDeep,
+        border: Border.all(color: _cVeil),
+      ),
+      child: Stack(
+        children: [
+          Positioned(
+            left: 0, top: 20, bottom: 20,
+            child: Container(width: 2, color: _cGold),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(term.toUpperCase(), style: const TextStyle(color: _cGold, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1)),
+                const SizedBox(height: 8),
+                Text(meaning, style: TextStyle(color: _cSilver, fontSize: 9, height: 1.4), maxLines: 4, overflow: TextOverflow.ellipsis),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _archetypeCard(String name, String role) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: const BoxDecoration(
+        color: _cShadow,
+        border: Border(left: BorderSide(color: _cGold, width: 2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(name.toUpperCase(), style: const TextStyle(color: _cGold, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 2)),
+          const SizedBox(height: 4),
+          Text(role, style: TextStyle(color: _cMist, fontSize: 10, height: 1.5)),
+        ],
       ),
     );
   }
@@ -458,132 +294,32 @@ class AnalysisResultScreen extends StatelessWidget {
       child: FractionallySizedBox(
         alignment: Alignment.centerLeft,
         widthFactor: width,
-        child: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(colors: [_cGold, _cAmber]),
+        child: Container(color: _cGold),
+      ),
+    );
+  }
+
+  Widget _dimensionRow(String label, double value, Color color) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(label, style: const TextStyle(color: _cSilver, fontSize: 9, letterSpacing: 2)),
+            Text('${(value * 100).toInt()}%', style: TextStyle(color: color, fontSize: 9, fontWeight: FontWeight.bold)),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Container(
+          height: 2, color: _cShadow,
+          child: FractionallySizedBox(
+            alignment: Alignment.centerLeft,
+            widthFactor: value,
+            child: Container(color: color),
           ),
         ),
-      ),
-    );
-  }
-}
-
-// ── WIDGET: Label ────────────────────────────────────────────────
-class _Label extends StatelessWidget {
-  final String text;
-  final Color color;
-  final bool centered;
-  const _Label(this.text, {required this.color, this.centered = false});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Text(
-        text,
-        textAlign: centered ? TextAlign.center : TextAlign.start,
-        style: TextStyle(
-          color: color,
-          fontSize: 9,
-          letterSpacing: 5,
-          fontFamily: 'Georgia',
-        ),
-      ),
-    );
-  }
-}
-
-// ── WIDGET: Card angular ─────────────────────────────────────────
-class _Card extends StatelessWidget {
-  final Widget child;
-  final EdgeInsetsGeometry? padding;
-  final BorderSide? leftBorder;
-  const _Card({required this.child, this.padding, this.leftBorder});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: padding ?? const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: const Color(0xFF121120),
-        border: Border(
-          top:    const BorderSide(color: Color(0xFF1a1830)),
-          bottom: const BorderSide(color: Color(0xFF1a1830)),
-          right:  const BorderSide(color: Color(0xFF1a1830)),
-          left:   leftBorder ?? const BorderSide(color: Color(0xFF1a1830)),
-        ),
-      ),
-      child: child,
-    );
-  }
-}
-
-// ── WIDGET: Barra de dimensão com gradiente ──────────────────────
-class _DimBar extends StatelessWidget {
-  final String label;
-  final dynamic valueDyn;
-  final Color color;
-  final List<Color> grad;
-  const _DimBar(this.label, this.valueDyn, this.color, {required this.grad});
-
-  @override
-  Widget build(BuildContext context) {
-    double v = 0;
-    if (valueDyn is num)    v = (valueDyn as num).toDouble();
-    if (valueDyn is String) v = double.tryParse(valueDyn) ?? 0;
-    final pct = (v > 1 ? v / 10.0 : v).clamp(0.0, 1.0);
-    final display = '${(v > 1 ? v : v * 10).round()}/10';
-
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-        Text(label, style: const TextStyle(color: Color(0xFF9898b8), fontSize: 12)),
-        Text(display, style: TextStyle(color: color, fontSize: 12)),
-      ]),
-      const SizedBox(height: 5),
-      Container(
-        height: 4, color: const Color(0xFF1a1830),
-        child: FractionallySizedBox(
-          alignment: Alignment.centerLeft,
-          widthFactor: pct,
-          child: Container(decoration: BoxDecoration(gradient: LinearGradient(colors: grad))),
-        ),
-      ),
-    ]);
-  }
-}
-
-// ── WIDGET: Episódio ─────────────────────────────────────────────
-class _EpisodeCard extends StatelessWidget {
-  final String num, title, sub;
-  final Color color;
-  const _EpisodeCard({required this.num, required this.color, required this.title, required this.sub});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: const Color(0xFF121120),
-        border: Border(
-          top:    const BorderSide(color: Color(0xFF1a1830)),
-          bottom: const BorderSide(color: Color(0xFF1a1830)),
-          right:  const BorderSide(color: Color(0xFF1a1830)),
-          left:   BorderSide(color: color, width: 3),
-        ),
-      ),
-      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        SizedBox(
-          width: 42,
-          child: Text(num, style: TextStyle(color: color, fontSize: 18, fontWeight: FontWeight.w300, letterSpacing: 1)),
-        ),
-        const SizedBox(width: 16),
-        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(title, style: const TextStyle(color: Color(0xFFf5dfa0), fontSize: 13)),
-          const SizedBox(height: 3),
-          Text(sub,   style: const TextStyle(color: Color(0xFF9898b8), fontSize: 11)),
-        ])),
-      ]),
+      ],
     );
   }
 }

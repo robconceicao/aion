@@ -101,18 +101,16 @@ def _get_error_response(error_msg: str) -> dict:
     # Se o erro for de autenticação (401), avisa explicitamente
     print(f"[DEBUG_ORACULO] Gerando resposta de erro: {error_msg}")
     
-    contexto_erro = "Verifique sua ANTHROPIC_API_KEY no Vercel." if "401" in error_msg or "api_key" in error_msg.lower() else "Tente novamente em breve."
-    
     return {
-        "aviso": f"O Oráculo encontrou um obstáculo técnico: {error_msg[:100]}",
-        "essencia": f"A conexão com o inconsciente foi interrompida. {contexto_erro}",
+        "aviso": "Obstáculo técnico detectado.",
+        "essencia": f"ERRO BRUTO: {error_msg}",
         "arquetipos": [],
-        "funcao_compensatoria": "O sistema de análise precisa de um ajuste técnico.",
+        "funcao_compensatoria": "Verifique os logs do Vercel para mais detalhes.",
         "simbolos_chave": [],
-        "fase_jornada": {"nome": "O Limiar", "descricao": "Estamos trabalhando para restabelecer a visão."},
-        "prospeccao": "Aguarde o próximo deploy ou verifique as chaves de API.",
-        "mito_espelho": {"titulo": "O Labirinto", "paralelo": "Perdemos o fio de Ariadne momentaneamente."},
-        "pergunta_para_reflexao": "Como você lida com o silêncio e a incerteza?",
+        "fase_jornada": {"nome": "O Limiar", "descricao": "Erro técnico impedindo a análise."},
+        "prospeccao": "Aguarde o próximo deploy.",
+        "mito_espelho": {"titulo": "O Labirinto", "paralelo": "Erro de conexão."},
+        "pergunta_para_reflexao": "Como você lida com falhas técnicas?",
         "intensidade_sombra": 0,
         "intensidade_heroi": 0,
         "intensidade_transformacao": 0

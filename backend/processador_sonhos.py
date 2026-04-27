@@ -25,21 +25,41 @@ if not api_key:
 client = anthropic.Anthropic(api_key=api_key)
 
 PROMPT_TEMPLATE = """
-Atue como Aion, o Oráculo de Mito & Psique — analista junguiano e especialista em mitologia campbelliana.
-Analise o relato abaixo e responda APENAS com um JSON válido, sem markdown, seguindo exatamente este esquema:
+Atue como Aion, o Oráculo de Mito & Psique — um analista junguiano de senioridade excepcional e profundo conhecedor da jornada do herói de Joseph Campbell.
+
+Sua tarefa é realizar uma 'Amplificação Junguiana' do relato do sonho abaixo. Não se limite a descrever; conecte os elementos a imagens universais, arquétipos e dinâmicas psíquicas (Persona, Sombra, Anima/Animus, Self).
+
+Responda APENAS com um JSON válido, sem qualquer texto adicional ou blocos de markdown, seguindo exatamente este esquema:
 {{
-  "aviso": "Aviso compassivo lembrando que é reflexão simbólica.",
-  "essencia": "2-3 frases poéticas sobre o sonho.",
-  "arquetipos": [{{ "nome": "...", "simbolo": "emoji", "descricao": "..." }}],
-  "funcao_compensatoria": "Equilíbrio psíquico.",
-  "simbolos_chave": [{{ "elemento": "...", "significado": "..." }}],
-  "fase_jornada": {{ "nome": "...", "descricao": "..." }},
-  "prospeccao": "O que o sonho antecipa.",
-  "pergunta_para_reflexao": "Uma pergunta poderosa.",
-  "mito_espelho": {{ "titulo": "...", "paralelo": "..." }},
-  "intensidade_sombra": 7,
-  "intensidade_heroi": 5,
-  "intensidade_transformacao": 8
+  "aviso": "Uma breve nota ética e compassiva sobre a natureza simbólica da análise.",
+  "essencia": "Uma síntese poética e profunda (2-3 frases) do 'mythos' que este sonho está tecendo.",
+  "arquetipos": [
+    {{ 
+      "nome": "Nome do Arquétipo (ex: A Sombra, O Mentor, O Puer Aeternus)", 
+      "simbolo": "emoji", 
+      "descricao": "Como esta força está se manifestando no sonho." 
+    }}
+  ],
+  "funcao_compensatoria": "Explique o que o inconsciente está tentando equilibrar em relação à atitude consciente do sonhador.",
+  "simbolos_chave": [
+    {{ 
+      "elemento": "O objeto ou ação", 
+      "significado": "A amplificação simbólica (ex: a água não é apenas água, é o fluxo do inconsciente)." 
+    }}
+  ],
+  "fase_jornada": {{ 
+    "nome": "Um dos 12 estágios da Jornada do Herói", 
+    "descricao": "Por que o sonhador se encontra neste estágio específico agora." 
+  }},
+  "prospeccao": "O que este sonho sinaliza sobre o futuro desenvolvimento da psique (função prospectiva).",
+  "pergunta_para_reflexao": "Uma pergunta que leve o sonhador a olhar para onde ele mais teme.",
+  "mito_espelho": {{ 
+    "titulo": "Nome de um Mito, Conto de Fadas ou Lenda Universal", 
+    "paralelo": "A conexão direta entre a história milenar e o sonho atual." 
+  }},
+  "intensidade_sombra": 1-10,
+  "intensidade_heroi": 1-10,
+  "intensidade_transformacao": 1-10
 }}
 
 RELATO DO SONHO: "{relato}"
@@ -60,9 +80,10 @@ def processar_novo_sonho():
         relato_usuario = sonho_data['relato']
 
         modelos = [
+            "claude-3-5-sonnet-20241022",
             "claude-3-5-haiku-20241022",
-            "claude-3-haiku-20240307",
         ]
+
         
         sucesso = False
         for model_name in modelos:

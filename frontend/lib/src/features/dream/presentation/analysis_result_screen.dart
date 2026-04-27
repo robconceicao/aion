@@ -446,7 +446,6 @@ class AnalysisResultScreen extends StatelessWidget {
           ),
         ),
       ),
-    ),
     );
   }
 

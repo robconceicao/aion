@@ -116,13 +116,13 @@ class DreamDiaryScreen extends StatelessWidget {
                   ),
                 ),
               ),
-              const SizedBox(height: 40),
             ],
           ),
         ),
-          ),
-        ),
       ),
+    ),
+    ),
+    ),
     );
   }
 

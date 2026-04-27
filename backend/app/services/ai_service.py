@@ -62,8 +62,17 @@ async def analyze_dream(dream_text: str, context: dict = None) -> dict:
         "claude-3-5-sonnet-20240620",
         "claude-3-5-haiku-latest",
         "claude-3-5-haiku-20241022",
+        "claude-3-haiku-20240307",
         "claude-3-opus-20240229"
     ]
+
+    # DIAGNÓSTICO: Listar modelos disponíveis na conta para debug
+    try:
+        print("[DEBUG_CONTA] Verificando modelos disponíveis para esta chave...")
+        available = client.models.list()
+        print(f"[DEBUG_CONTA] Modelos que sua conta PODE ver: {[m.id for m in available]}")
+    except Exception as e:
+        print(f"[DEBUG_CONTA] Falha ao listar modelos (provável problema na chave): {e}")
 
     ultimo_erro = None
     for model_name in modelos:

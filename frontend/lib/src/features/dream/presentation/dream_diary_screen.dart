@@ -6,6 +6,7 @@ import 'archetypes_screen.dart';
 import 'canal_screen.dart';
 import 'widgets/aion_logo.dart';
 import '../../../core/widgets/cinematic_background.dart';
+import '../../profile/presentation/profile_screen.dart';
 
 class DreamDiaryScreen extends StatelessWidget {
   const DreamDiaryScreen({super.key});
@@ -89,7 +90,12 @@ class DreamDiaryScreen extends StatelessWidget {
   
                     const SizedBox(height: 32),
                     TextButton(
-                      onPressed: () {},
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const ProfileScreen()),
+                        );
+                      },
                       child: Text(
                         'editar perfil',
                         style: theme.textTheme.bodyMedium?.copyWith(

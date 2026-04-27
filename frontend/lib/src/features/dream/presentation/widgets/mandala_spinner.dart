@@ -37,35 +37,35 @@ class _MandalaSpinnerState extends State<MandalaSpinner> with SingleTickerProvid
           Stack(
             alignment: Alignment.center,
             children: [
-              // Rotating Aion Logo
-              const AionSpinLogo(size: 96.0),
-              // Pinging border effect
+              // Anel de pulso externo
               ScaleTransition(
-                scale: Tween<double>(begin: 1.0, end: 1.2).animate(_controller),
+                scale: Tween<double>(begin: 1.0, end: 1.15).animate(_controller),
                 child: FadeTransition(
-                  opacity: Tween<double>(begin: 0.5, end: 0.0).animate(_controller),
+                  opacity: Tween<double>(begin: 0.35, end: 0.0).animate(_controller),
                   child: Container(
-                    width: 100,
-                    height: 100,
+                    width: 300,
+                    height: 300,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      border: Border.all(color: AionTheme.gold.withOpacity(0.2), width: 1),
+                      border: Border.all(color: AionTheme.gold.withOpacity(0.25), width: 1.5),
                     ),
                   ),
                 ),
               ),
+              // Mandala girando
+              const AionSpinLogo(size: 280.0),
             ],
           ),
-          const SizedBox(height: 48),
+          const SizedBox(height: 40),
           Text(
             widget.message.toUpperCase(),
             textAlign: TextAlign.center,
             style: const TextStyle(
-              fontSize: 16,
+              fontSize: 11,
               color: Colors.white,
-              letterSpacing: 4,
+              letterSpacing: 3,
               fontWeight: FontWeight.w300,
-              height: 1.8,
+              height: 1.9,
             ),
           ),
           const SizedBox(height: 24),

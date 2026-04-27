@@ -106,16 +106,18 @@ class _OnboardingScreenState extends State<OnboardingScreen> with SingleTickerPr
                           ),
                         ),
                         const SizedBox(height: 24),
-                        Text(
-                          'Bem-Vindo(a)',
-                          style: GoogleFonts.cormorantGaramond(
-                            fontSize: 30,
-                            fontWeight: FontWeight.w600,
-                            color: AionTheme.dawn,
-                            letterSpacing: 3,
+                        if (_currentStep == 2) ...[
+                          Text(
+                            'Bem-Vindo(a)',
+                            style: GoogleFonts.cormorantGaramond(
+                              fontSize: 30,
+                              fontWeight: FontWeight.w600,
+                              color: AionTheme.dawn,
+                              letterSpacing: 3,
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 32),
+                          const SizedBox(height: 32),
+                        ],
                         // Progress Bar
                         Row(
                           children: List.generate(_totalSteps, (index) {

@@ -35,126 +35,110 @@ class _AuthScreenState extends State<AuthScreen> {
     return Scaffold(
       backgroundColor: AionTheme.darkVoid,
       body: SafeArea(
-        child: Container(
-          // Radial gradient mock background
-          decoration: BoxDecoration(
-            gradient: RadialGradient(
-              center: Alignment.center,
-              radius: 1.0,
-              colors: [
-                AionTheme.gold.withOpacity(0.05),
-                Colors.transparent,
-              ],
-              stops: const [0.0, 0.7],
-            ),
-          ),
-          child: Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 400),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    // LOGO
-                    const SizedBox(height: 24),
-                    const AionPulseLogo(size: 180),
-                    const SizedBox(height: 24),
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 400),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  // LOGO
+                  const SizedBox(height: 24),
+                  const AionPulseLogo(size: 180),
+                  const SizedBox(height: 24),
 
-                    // TITLES
-                    Text(
-                      'MITO & PSIQUE',
-                      style: GoogleFonts.ptSerif(
-                        fontSize: 10,
-                        letterSpacing: 6,
-                        color: AionTheme.gold,
-                        fontWeight: FontWeight.bold,
-                      ),
+                  // TITLES (Padronizado com Mito & Psique)
+                  Text(
+                    'MITO & PSIQUE',
+                    style: GoogleFonts.cormorantGaramond(
+                      fontSize: 10,
+                      letterSpacing: 4,
+                      color: AionTheme.silver,
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'AION',
-                      style: theme.textTheme.displayLarge?.copyWith(
-                        fontSize: 32,
-                        letterSpacing: 8,
-                        color: AionTheme.amber,
-                      ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'AION',
+                    style: GoogleFonts.cormorantGaramond(
+                      fontSize: 32,
+                      letterSpacing: 8,
+                      color: AionTheme.gold,
+                      fontWeight: FontWeight.bold,
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'O Diário do Sonho',
-                      style: GoogleFonts.ptSerif(
-                        fontSize: 13,
-                        fontStyle: FontStyle.italic,
-                        color: AionTheme.ghost,
-                        letterSpacing: 1,
-                      ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'O Diário do Sonho',
+                    style: GoogleFonts.cormorantGaramond(
+                      fontSize: 13,
+                      fontStyle: FontStyle.italic,
+                      color: AionTheme.silver,
+                      letterSpacing: 2,
                     ),
-                    const SizedBox(height: 40),
+                  ),
+                  const SizedBox(height: 48),
 
-                    // TABS
-                    Container(
-                      decoration: const BoxDecoration(
-                        border: Border(bottom: BorderSide(color: AionTheme.veil)),
-                      ),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: GestureDetector(
-                              onTap: () => setState(() => _isLogin = true),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(vertical: 16),
-                                decoration: BoxDecoration(
-                                  border: Border(
-                                    bottom: BorderSide(
-                                      color: _isLogin ? AionTheme.gold : Colors.transparent,
-                                      width: 2,
-                                    ),
-                                  ),
-                                ),
-                                child: Text(
-                                  'ENTRAR',
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    color: _isLogin ? AionTheme.gold : AionTheme.silver,
-                                    fontSize: 12,
-                                    letterSpacing: 3,
-                                    fontFamily: 'Georgia',
-                                  ),
+                  // TABS (Sem borda dupla)
+                  Row(
+                    children: [
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () => setState(() => _isLogin = true),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            decoration: BoxDecoration(
+                              border: Border(
+                                bottom: BorderSide(
+                                  color: _isLogin ? AionTheme.gold : AionTheme.veil,
+                                  width: _isLogin ? 2 : 1,
                                 ),
                               ),
                             ),
-                          ),
-                          Expanded(
-                            child: GestureDetector(
-                              onTap: () => setState(() => _isLogin = false),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(vertical: 16),
-                                decoration: BoxDecoration(
-                                  border: Border(
-                                    bottom: BorderSide(
-                                      color: !_isLogin ? AionTheme.gold : Colors.transparent,
-                                      width: 2,
-                                    ),
-                                  ),
-                                ),
-                                child: Text(
-                                  'CRIAR CONTA',
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    color: !_isLogin ? AionTheme.gold : AionTheme.silver,
-                                    fontSize: 12,
-                                    letterSpacing: 3,
-                                    fontFamily: 'Georgia',
-                                  ),
-                                ),
+                            child: Text(
+                              'ENTRAR',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: _isLogin ? AionTheme.gold : AionTheme.silver,
+                                fontSize: 12,
+                                letterSpacing: 3,
+                                fontFamily: 'Georgia',
+                                fontWeight: _isLogin ? FontWeight.bold : FontWeight.normal,
                               ),
                             ),
                           ),
-                        ],
+                        ),
                       ),
-                    ),
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () => setState(() => _isLogin = false),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            decoration: BoxDecoration(
+                              border: Border(
+                                bottom: BorderSide(
+                                  color: !_isLogin ? AionTheme.gold : AionTheme.veil,
+                                  width: !_isLogin ? 2 : 1,
+                                ),
+                              ),
+                            ),
+                            child: Text(
+                              'CRIAR CONTA',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: !_isLogin ? AionTheme.gold : AionTheme.silver,
+                                fontSize: 12,
+                                letterSpacing: 3,
+                                fontFamily: 'Georgia',
+                                fontWeight: !_isLogin ? FontWeight.bold : FontWeight.normal,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                     const SizedBox(height: 32),
 
                     // FORM

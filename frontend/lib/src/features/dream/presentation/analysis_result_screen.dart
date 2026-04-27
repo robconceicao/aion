@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme.dart';
+import '../../../core/widgets/cinematic_background.dart';
 
 // ── TOKENS ───────────────────────────────────────────────────────
 const _cVoid   = Color(0xFF070810);
@@ -70,11 +71,12 @@ class AnalysisResultScreen extends StatelessWidget {
     final simbolos   = (analysis['simbolos_chave'] as List? ?? []);
     final dream      = dreamText ?? 'Sonho registrado.';
 
-    return Scaffold(
-      backgroundColor: _cVoid,
-      appBar: AppBar(
-        backgroundColor: _cVoid,
-        elevation: 0,
+    return CinematicBackground(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: _cGold),
           onPressed: () => Navigator.pop(context),
@@ -325,7 +327,7 @@ class AnalysisResultScreen extends StatelessWidget {
                         const SizedBox(height: 4),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: const [
+                          children: [
                             Text('O Mundo Comum', style: TextStyle(color: _cMist, fontSize: 10)),
                             Text('O Retorno com o Elixir', style: TextStyle(color: _cMist, fontSize: 10)),
                           ],
@@ -438,12 +440,13 @@ class AnalysisResultScreen extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 40),
-              ],
+                ],
+              ),
             ),
           ),
         ),
       ),
+    ),
     );
   }
 

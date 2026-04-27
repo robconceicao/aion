@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme.dart';
 import '../../dream/presentation/widgets/aion_logo.dart';
+import '../../../core/widgets/cinematic_background.dart';
 
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
@@ -34,22 +35,22 @@ class _AuthScreenState extends State<AuthScreen> {
     
     return Scaffold(
       backgroundColor: AionTheme.darkVoid,
-      body: SafeArea(
-        child: Center(
+      body: CinematicBackground(
+        child: SafeArea(
+          child: Center(
           child: SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 400),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   // LOGO
                   const SizedBox(height: 24),
                   const AionPulseLogo(size: 180),
                   const SizedBox(height: 24),
 
-                  // TITLES (Padronizado com Mito & Psique)
+                  // TITLES
                   Text(
                     'MITO & PSIQUE',
                     style: GoogleFonts.cormorantGaramond(
@@ -80,7 +81,7 @@ class _AuthScreenState extends State<AuthScreen> {
                   ),
                   const SizedBox(height: 48),
 
-                  // TABS (Sem borda dupla)
+                  // TABS
                   Row(
                     children: [
                       Expanded(
@@ -237,8 +238,7 @@ class _AuthScreenState extends State<AuthScreen> {
                         ),
                       ),
                     ),
-                  ],
-                ),
+                ],
               ),
             ),
           ),

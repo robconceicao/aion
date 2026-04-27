@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme.dart';
 import '../../dream/presentation/dream_diary_screen.dart';
 import '../../dream/presentation/widgets/aion_logo.dart';
+import '../../../core/widgets/cinematic_background.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -57,8 +58,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> with SingleTickerPr
 
     return Scaffold(
       backgroundColor: AionTheme.darkVoid,
-      body: SafeArea(
-        child: LayoutBuilder(
+      body: CinematicBackground(
+        child: SafeArea(
+          child: LayoutBuilder(
           builder: (context, constraints) {
             return Scrollbar(
               thumbVisibility: true,
@@ -202,15 +204,15 @@ class _OnboardingScreenState extends State<OnboardingScreen> with SingleTickerPr
                       ],
                     ),
                   ),
-                    ),
-                  ),
                 ),
               ),
-              ),
-            );
-          },
+            ),
+          ),
         ),
-      ),
+      );
+    },
+  ),
+),
     );
   }
 

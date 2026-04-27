@@ -5,6 +5,7 @@ import 'record_dream_screen.dart';
 import 'archetypes_screen.dart';
 import 'canal_screen.dart';
 import 'widgets/aion_logo.dart';
+import '../../../core/widgets/cinematic_background.dart';
 
 class DreamDiaryScreen extends StatelessWidget {
   const DreamDiaryScreen({super.key});
@@ -15,7 +16,8 @@ class DreamDiaryScreen extends StatelessWidget {
     
     return Scaffold(
       backgroundColor: AionTheme.darkVoid,
-      body: SafeArea(
+      body: CinematicBackground(
+        child: SafeArea(
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 820),
@@ -118,8 +120,8 @@ class DreamDiaryScreen extends StatelessWidget {
             ],
           ),
         ),
-      ),
-      ),
+          ),
+        ),
       ),
     );
   }

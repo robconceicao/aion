@@ -64,7 +64,7 @@ async def analyze_dream(dream_text: str, context: dict = None) -> dict:
     ultimo_erro = None
     for model_name in modelos:
         try:
-            print(f"[AI_SERVICE] Tentando modelo: {model_name}")
+            print(f"[AI_SERVICE] Tentando modelo: {model_name}...")
             message = client.messages.create(
                 model=model_name,
                 max_tokens=2048,
@@ -76,35 +76,43 @@ async def analyze_dream(dream_text: str, context: dict = None) -> dict:
 
         except Exception as e:
             ultimo_erro = str(e)
-            print(f"[AI_SERVICE] Erro com {model_name}: {ultimo_erro}")
+            print(f"[AI_SERVICE] Erro crítico com {model_name}: {ultimo_erro}")
             continue
 
-    return _get_error_response(f"Erro na conexão com o Oráculo: {ultimo_erro}")
+    return _get_error_response(f"Falha técnica: {ultimo_erro}")
 
 def _parse_ai_json(content: str) -> dict:
-    """Limpa e parseia o JSON da resposta da IA."""
+    """Limpa e parseia o JSON de forma robusta, ignorando textos extras."""
     try:
-        if "```json" in content:
-            content = content.split("```json")[1].split("```")[0]
-        elif "```" in content:
-            content = content.split("```")[1].split("```")[0]
+        # Tenta encontrar o início e fim do JSON real
+        start = content.find('{')
+        end = content.rfind('}')
         
+        if start != -1 and end != -1:
+            json_str = content[start:end+1]
+            return json.loads(json_str)
+            
         return json.loads(content.strip())
     except Exception as e:
-        print(f"[AI_SERVICE] Erro ao parsear JSON: {e}")
-        raise e
+        print(f"[AI_SERVICE] Falha ao decodificar JSON. Conteúdo bruto: {content[:100]}")
+        raise ValueError(f"Formato de resposta inválido: {str(e)}")
 
 def _get_error_response(error_msg: str) -> dict:
+    # Se o erro for de autenticação (401), avisa explicitamente
+    print(f"[DEBUG_ORACULO] Gerando resposta de erro: {error_msg}")
+    
+    contexto_erro = "Verifique sua ANTHROPIC_API_KEY no Vercel." if "401" in error_msg or "api_key" in error_msg.lower() else "Tente novamente em breve."
+    
     return {
-        "aviso": "Instabilidade momentânea no Oráculo.",
-        "essencia": "O silêncio também é uma mensagem do inconsciente.",
+        "aviso": f"O Oráculo encontrou um obstáculo técnico: {error_msg[:100]}",
+        "essencia": f"A conexão com o inconsciente foi interrompida. {contexto_erro}",
         "arquetipos": [],
-        "funcao_compensatoria": "Tente novamente em breve.",
+        "funcao_compensatoria": "O sistema de análise precisa de um ajuste técnico.",
         "simbolos_chave": [],
-        "fase_jornada": {"nome": "O Limiar", "descricao": "Aguardando clareza."},
-        "prospeccao": "Aguarde um momento.",
-        "mito_espelho": {"titulo": "O Silêncio", "paralelo": "A resposta virá no tempo certo."},
-        "pergunta_para_reflexao": "O que você sente nesta espera?",
+        "fase_jornada": {"nome": "O Limiar", "descricao": "Estamos trabalhando para restabelecer a visão."},
+        "prospeccao": "Aguarde o próximo deploy ou verifique as chaves de API.",
+        "mito_espelho": {"titulo": "O Labirinto", "paralelo": "Perdemos o fio de Ariadne momentaneamente."},
+        "pergunta_para_reflexao": "Como você lida com o silêncio e a incerteza?",
         "intensidade_sombra": 0,
         "intensidade_heroi": 0,
         "intensidade_transformacao": 0

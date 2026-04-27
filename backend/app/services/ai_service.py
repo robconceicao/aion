@@ -55,10 +55,14 @@ async def analyze_dream(dream_text: str, context: dict = None) -> dict:
     
     prompt = PROMPT_TEMPLATE.format(texto=dream_text)
 
-    # Modelos Claude (Sonnet é mais profundo, Haiku é mais rápido)
+    # Modelos Claude (Tentando dos mais novos para os mais estáveis)
     modelos = [
+        "claude-3-5-sonnet-latest",
         "claude-3-5-sonnet-20241022",
-        "claude-3-5-haiku-20241022"
+        "claude-3-5-sonnet-20240620",
+        "claude-3-5-haiku-latest",
+        "claude-3-5-haiku-20241022",
+        "claude-3-opus-20240229"
     ]
 
     ultimo_erro = None
@@ -102,15 +106,15 @@ def _get_error_response(error_msg: str) -> dict:
     print(f"[DEBUG_ORACULO] Gerando resposta de erro: {error_msg}")
     
     return {
-        "aviso": "Obstáculo técnico detectado.",
-        "essencia": f"ERRO BRUTO: {error_msg}",
+        "aviso": "O Oráculo está em silêncio profundo.",
+        "essencia": "O silêncio também é uma mensagem do inconsciente. Tente novamente em instantes.",
         "arquetipos": [],
-        "funcao_compensatoria": "Verifique os logs do Vercel para mais detalhes.",
+        "funcao_compensatoria": "Aguardando clareza técnica.",
         "simbolos_chave": [],
-        "fase_jornada": {"nome": "O Limiar", "descricao": "Erro técnico impedindo a análise."},
-        "prospeccao": "Aguarde o próximo deploy.",
-        "mito_espelho": {"titulo": "O Labirinto", "paralelo": "Erro de conexão."},
-        "pergunta_para_reflexao": "Como você lida com falhas técnicas?",
+        "fase_jornada": {"nome": "O Limiar", "descricao": "O Oráculo está se reequilibrando."},
+        "prospeccao": "Aguarde o próximo momento.",
+        "mito_espelho": {"titulo": "O Silêncio de Jó", "paralelo": "A resposta virá no tempo certo."},
+        "pergunta_para_reflexao": "O que o silêncio faz você sentir?",
         "intensidade_sombra": 0,
         "intensidade_heroi": 0,
         "intensidade_transformacao": 0

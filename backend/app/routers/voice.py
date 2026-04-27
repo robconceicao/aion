@@ -17,7 +17,7 @@ async def transcribe_voice(
     """
     # Verify file type (basic extension check)
     extension = os.path.splitext(file.filename)[1]
-    if extension not in ['.m4a', '.mp3', '.wav', '.ogg', '.aac']:
+    if extension not in ['.m4a', '.mp3', '.wav', '.ogg', '.aac', '.webm', '.flac']:
          raise HTTPException(status_code=400, detail="Unsupported audio format")
 
     temp_filename = f"temp_{uuid.uuid4()}{extension}"

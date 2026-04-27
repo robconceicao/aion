@@ -5,4 +5,6 @@ class AionConfig {
   static const String transcribeUrl = '$apiBaseUrl/voice/transcribe';
   // Ajustado: O endpoint correto no FastAPI é apenas /dreams/
   static const String analyzeUrl = '$apiBaseUrl/dreams/';
+  static const String episodesUrl = '$apiBaseUrl/episodes/';
 }
+

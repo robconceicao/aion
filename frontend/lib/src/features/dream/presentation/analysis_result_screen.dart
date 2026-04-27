@@ -106,8 +106,10 @@ class AnalysisResultScreen extends StatelessWidget {
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-                  color: _cTealBg,
-                  foregroundDecoration: BoxDecoration(border: Border.all(color: _cTealBd)),
+                  decoration: BoxDecoration(
+                    color: _cTealBg,
+                    border: Border.all(color: _cTealBd),
+                  ),
                   child: const Text(
                     '⚠ Esta análise é uma reflexão simbólica baseada em Jung e Campbell — não substitui acompanhamento psicológico profissional.',
                     style: TextStyle(color: _cTealText, fontSize: 12, height: 1.7),
@@ -178,42 +180,58 @@ class AnalysisResultScreen extends StatelessWidget {
                 if (arquetipos.isNotEmpty) ...[
                   _Label('⟁  ARQUÉTIPOS PRESENTES', color: _cGold),
                   const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 12,
-                    runSpacing: 12,
-                    children: arquetipos.map<Widget>((arc) {
+                  LayoutBuilder(builder: (ctx, c) {
+                    final wide = c.maxWidth > 460;
+                    Widget arcCard(dynamic arc) {
                       final cor = _arcColor(arc['nome'] ?? '');
-                      return ConstrainedBox(
-                        constraints: const BoxConstraints(minWidth: 160),
-                        child: FractionallySizedBox(
-                          widthFactor: 0.5 - 0.01,
-                          child: Container(
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: _cAbyss,
-                              border: Border(
-                                top:    BorderSide(color: cor, width: 3),
-                                bottom: const BorderSide(color: _cShadow),
-                                left:   const BorderSide(color: _cShadow),
-                                right:  const BorderSide(color: _cShadow),
-                              ),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(arc['simbolo'] ?? '⌘', style: const TextStyle(fontSize: 22)),
-                                const SizedBox(height: 8),
-                                Text(arc['nome'] ?? '', style: TextStyle(color: cor, fontSize: 13, letterSpacing: 1)),
-                                const SizedBox(height: 8),
-                                Text(arc['descricao'] ?? '',
-                                  style: const TextStyle(color: _cSilver, fontSize: 12, height: 1.7)),
-                              ],
-                            ),
+                      return Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: _cAbyss,
+                          border: Border(
+                            top:    BorderSide(color: cor, width: 3),
+                            bottom: const BorderSide(color: _cShadow),
+                            left:   const BorderSide(color: _cShadow),
+                            right:  const BorderSide(color: _cShadow),
                           ),
                         ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(arc['simbolo'] ?? '⌘', style: const TextStyle(fontSize: 22)),
+                            const SizedBox(height: 8),
+                            Text(arc['nome'] ?? '', style: TextStyle(color: cor, fontSize: 13, letterSpacing: 1)),
+                            const SizedBox(height: 8),
+                            Text(arc['descricao'] ?? '',
+                              style: const TextStyle(color: _cSilver, fontSize: 12, height: 1.7)),
+                          ],
+                        ),
                       );
-                    }).toList(),
-                  ),
+                    }
+                    if (wide && arquetipos.length >= 2) {
+                      final rows = <Widget>[];
+                      for (int i = 0; i < arquetipos.length; i += 2) {
+                        final hasNext = i + 1 < arquetipos.length;
+                        rows.add(Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(child: arcCard(arquetipos[i])),
+                            if (hasNext) const SizedBox(width: 12),
+                            if (hasNext) Expanded(child: arcCard(arquetipos[i + 1]))
+                            else const Spacer(),
+                          ],
+                        ));
+                        if (i + 2 < arquetipos.length) rows.add(const SizedBox(height: 12));
+                      }
+                      return Column(children: rows);
+                    }
+                    return Column(
+                      children: arquetipos.asMap().entries.map((e) => Padding(
+                        padding: EdgeInsets.only(bottom: e.key < arquetipos.length - 1 ? 12 : 0),
+                        child: arcCard(e.value),
+                      )).toList(),
+                    );
+                  }),
                   const SizedBox(height: 14),
                 ],
 

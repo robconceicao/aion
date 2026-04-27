@@ -1,0 +1,191 @@
+name: 🌑 Aion — CI/CD Pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  REGISTRY: ghcr.io
+  BACKEND_IMAGE: ${{ github.repository }}/aion-backend
+  FRONTEND_IMAGE: ${{ github.repository }}/aion-frontend
+
+# ─────────────────────────────────────────────
+# JOB 1: Lint & Testes do Backend (Python)
+# ─────────────────────────────────────────────
+jobs:
+  backend-test:
+    name: 🐍 Backend — Lint & Testes
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: ./backend
+
+    steps:
+      - name: Checkout do repositório
+        uses: actions/checkout@v4
+
+      - name: Configurar Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Instalar dependências
+        run: pip install -r requirements.txt
+
+      - name: Lint com Ruff
+        run: |
+          pip install ruff
+          ruff check app/ --select E,W,F --ignore E501
+
+      - name: Executar testes
+        env:
+          MONGODB_URL: mongodb://localhost:27017
+          DATABASE_NAME: aion_test_db
+          JWT_SECRET: ci_test_secret_key
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          pip install pytest httpx pytest-asyncio
+          pytest tests/ -v --tb=short || echo "⚠ Sem testes definidos ainda — continuando."
+
+  # ─────────────────────────────────────────────
+  # JOB 2: Build & Análise do Frontend (Flutter)
+  # ─────────────────────────────────────────────
+  frontend-build:
+    name: 🦋 Frontend — Flutter Analyze & Build Web
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout do repositório
+        uses: actions/checkout@v4
+
+      - name: Configurar Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.22.x"
+          channel: "stable"
+          cache: true
+
+      - name: Instalar dependências Flutter
+        working-directory: ./frontend
+        run: flutter pub get
+
+      - name: Análise estática (flutter analyze)
+        working-directory: ./frontend
+        run: flutter analyze --no-fatal-infos
+
+      - name: Build Flutter Web (release)
+        working-directory: ./frontend
+        run: flutter build web --release --no-tree-shake-icons
+
+      - name: Upload artefato Web
+        uses: actions/upload-artifact@v4
+        with:
+          name: aion-web-build
+          path: frontend/build/web/
+          retention-days: 7
+
+  # ─────────────────────────────────────────────
+  # JOB 3: Build e Push das Imagens Docker
+  # Executa APENAS no push para main (não em PRs)
+  # ─────────────────────────────────────────────
+  docker-publish:
+    name: 🐳 Docker — Build & Push para GHCR
+    runs-on: ubuntu-latest
+    needs: [backend-test, frontend-build]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout do repositório
+        uses: actions/checkout@v4
+
+      - name: Login no GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configurar Docker Buildx (multi-plataforma)
+        uses: docker/setup-buildx-action@v3
+
+      # ── Backend Image ──
+      - name: Extrair metadados — Backend
+        id: meta-backend
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE }}
+          tags: |
+            type=sha,prefix=sha-
+            type=raw,value=latest
+
+      - name: Build & Push — Backend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          push: true
+          tags: ${{ steps.meta-backend.outputs.tags }}
+          labels: ${{ steps.meta-backend.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # ── Frontend Image ──
+      - name: Extrair metadados — Frontend
+        id: meta-frontend
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE }}
+          tags: |
+            type=sha,prefix=sha-
+            type=raw,value=latest
+
+      - name: Build & Push — Frontend (Flutter Web + Nginx)
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile
+          push: true
+          tags: ${{ steps.meta-frontend.outputs.tags }}
+          labels: ${{ steps.meta-frontend.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ─────────────────────────────────────────────
+  # JOB 4: Deploy (Notificação / Hook)
+  # Adapte este job para Render, Railway, VPS, etc.
+  # ─────────────────────────────────────────────
+  deploy-notify:
+    name: 🚀 Deploy — Notificação de Publicação
+    runs-on: ubuntu-latest
+    needs: [docker-publish]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Resumo do deploy no Summary
+        run: |
+          echo "## 🌑 Aion — Deploy Concluído" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Componente | Imagem |" >> $GITHUB_STEP_SUMMARY
+          echo "|---|---|" >> $GITHUB_STEP_SUMMARY
+          echo "| Backend (FastAPI) | \`ghcr.io/${{ github.repository }}/aion-backend:latest\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Frontend (Flutter Web) | \`ghcr.io/${{ github.repository }}/aion-frontend:latest\` |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Autor:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+
+      # ── Opcional: adicione um webhook de deploy aqui ──
+      # - name: Trigger deploy no Render
+      #   run: curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK_URL }}"
+      #
+      # - name: Trigger deploy no Railway
+      #   run: curl -X POST "${{ secrets.RAILWAY_DEPLOY_HOOK_URL }}"

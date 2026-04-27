@@ -1,31 +1,40 @@
 #!/bin/bash
 set -e
 
-# Configurações iniciais
-FLUTTER_PATH="$PWD/flutter"
-export PATH="$FLUTTER_PATH/bin:$PATH"
-
 echo "=== INICIANDO BUILD DIRETO (AION) ==="
 
+# Configurações de Caminho
+PROJECT_ROOT=$PWD
+FLUTTER_SDK=$PROJECT_ROOT/flutter
+FLUTTER_BIN=$FLUTTER_SDK/bin/flutter
+
 # 1. Garantir Flutter SDK
-if [ ! -d "$FLUTTER_PATH" ]; then
-  echo "Baixando Flutter..."
-  git clone https://github.com/flutter/flutter.git --depth 1 -b stable "$FLUTTER_PATH"
+if [ ! -f "$FLUTTER_BIN" ]; then
+  echo "Flutter não encontrado em $FLUTTER_BIN. Iniciando download..."
+  rm -rf "$FLUTTER_SDK"
+  git clone https://github.com/flutter/flutter.git --depth 1 -b stable "$FLUTTER_SDK"
+  echo "Download concluído."
 fi
 
-# 2. Configurações para evitar erro de Root e Memória
+# Adicionar ao PATH para esta sessão
+export PATH="$FLUTTER_SDK/bin:$PATH"
+
+# Verificar se o comando agora funciona
+echo "Verificando versão do Flutter..."
+$FLUTTER_BIN --version
+
+# 2. Configurações de ambiente
 export FLUTTER_ALLOW_HTTP=true
 export NO_PROXY=localhost,127.0.0.1
 
-echo "Limpando caches anteriores..."
-flutter clean || true
+echo "Limpando caches..."
+$FLUTTER_BIN clean || true
 
 echo "Instalando dependências..."
-flutter pub get
+$FLUTTER_BIN pub get
 
-echo "Iniciando compilação WEB (Modo Standard)..."
-# Removendo --web-renderer e --no-tree-shake-icons para evitar erro de opção
-# Deixando apenas o básico que funciona em qualquer versão
-flutter build web --release --base-href / --no-source-maps
+echo "Iniciando compilação WEB..."
+$FLUTTER_BIN build web --release --base-href / --no-source-maps
 
-echo "=== BUILD FINALIZADO! ==="
+echo "=== BUILD FINALIZADO COM SUCESSO! ==="
+

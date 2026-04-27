@@ -127,4 +127,4 @@ if __name__ == "__main__":
     print("O Oráculo está em vigília... (Modo Worker Ativo)")
     while True:
         processar_novo_sonho()
-        time.sleep(30)
+        time.sleep(5)

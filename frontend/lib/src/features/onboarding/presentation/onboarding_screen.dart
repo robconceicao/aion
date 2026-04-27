@@ -76,17 +76,46 @@ class _OnboardingScreenState extends State<OnboardingScreen> with SingleTickerPr
                               const SizedBox(height: 60),
                               // Aion Logo with Pulse
                               const AionPulseLogo(size: 180),
-                        const SizedBox(height: 20),
+                        const SizedBox(height: 16),
                         Text(
                           'MITO & PSIQUE',
-                          style: theme.textTheme.displayLarge?.copyWith(fontSize: 10, letterSpacing: 8),
+                          style: GoogleFonts.ptSerif(
+                            fontSize: 10,
+                            letterSpacing: 6,
+                            color: AionTheme.gold,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 8),
                         Text(
-                          'BEM-VINDO(A)',
-                          style: theme.textTheme.displayLarge?.copyWith(fontSize: 32),
+                          'AION',
+                          style: theme.textTheme.displayLarge?.copyWith(
+                            fontSize: 32,
+                            letterSpacing: 8,
+                            color: AionTheme.amber,
+                          ),
                         ),
-                        const SizedBox(height: 48),
+                        const SizedBox(height: 8),
+                        Text(
+                          'O Diário do Sonho',
+                          style: GoogleFonts.ptSerif(
+                            fontSize: 13,
+                            fontStyle: FontStyle.italic,
+                            color: AionTheme.ghost,
+                            letterSpacing: 1,
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        Text(
+                          'Bem-Vindo(a)',
+                          style: GoogleFonts.cormorantGaramond(
+                            fontSize: 30,
+                            fontWeight: FontWeight.w600,
+                            color: AionTheme.dawn,
+                            letterSpacing: 3,
+                          ),
+                        ),
+                        const SizedBox(height: 32),
                         // Progress Bar
                         Row(
                           children: List.generate(_totalSteps, (index) {
@@ -106,7 +135,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> with SingleTickerPr
                         const SizedBox(height: 24),
                         Text(
                           '$_currentStep DE $_totalSteps',
-                          style: GoogleFonts.ptSerif(fontSize: 10, letterSpacing: 4, color: AionTheme.silver),
+                          style: GoogleFonts.ptSerif(fontSize: 10, letterSpacing: 4, color: AionTheme.ghost),
                         ),
                         const Spacer(),
                         const SizedBox(height: 32),
@@ -163,7 +192,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> with SingleTickerPr
                               onPressed: _nextStep,
                               child: Text(
                                 'pular esta etapa',
-                                style: GoogleFonts.ptSerif(fontSize: 11, letterSpacing: 2, color: AionTheme.mist),
+                                style: GoogleFonts.ptSerif(fontSize: 11, letterSpacing: 2, color: AionTheme.silver),
                               ),
                             ),
                           ),
@@ -198,7 +227,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> with SingleTickerPr
           style: theme.textTheme.bodyLarge?.copyWith(fontSize: 16),
           decoration: InputDecoration(
             hintText: 'Seu nome ou como prefere ser chamado...',
-            hintStyle: theme.textTheme.bodyMedium?.copyWith(color: AionTheme.mist),
+            hintStyle: theme.textTheme.bodyMedium?.copyWith(color: AionTheme.ghost),
             contentPadding: const EdgeInsets.symmetric(vertical: 24, horizontal: 18),
             fillColor: AionTheme.deep,
             filled: true,
@@ -216,7 +245,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> with SingleTickerPr
         const SizedBox(height: 12),
         Text(
           'Usado para personalizar sua experiência. Nunca compartilhado.',
-          style: theme.textTheme.bodyMedium?.copyWith(fontSize: 11, color: AionTheme.mist),
+          style: theme.textTheme.bodyMedium?.copyWith(fontSize: 11, color: AionTheme.silver),
         ),
       ],
     );

@@ -57,14 +57,15 @@ class _MandalaSpinnerState extends State<MandalaSpinner> with SingleTickerProvid
             ],
           ),
           const SizedBox(height: 48),
-          const Text(
-            'TECENDO\nSÍMBOLOS',
+          Text(
+            widget.message.toUpperCase(),
             textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 20,
+            style: const TextStyle(
+              fontSize: 16,
               color: Colors.white,
               letterSpacing: 4,
               fontWeight: FontWeight.w300,
+              height: 1.8,
             ),
           ),
           const SizedBox(height: 24),

@@ -2,609 +2,568 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme.dart';
 
+// ── TOKENS ───────────────────────────────────────────────────────
+const _cVoid   = Color(0xFF070810);
+const _cDeep   = Color(0xFF0d0c18);
+const _cAbyss  = Color(0xFF121120);
+const _cShadow = Color(0xFF1a1830);
+const _cVeil   = Color(0xFF252340);
+const _cMist   = Color(0xFF332f58);
+
+const _cGold   = Color(0xFFc8a84a);
+const _cAmber  = Color(0xFFe8c46a);
+const _cDawn   = Color(0xFFf5dfa0);
+const _cSilver = Color(0xFF9898b8);
+const _cGhost  = Color(0xFFcccce0);
+const _cWhite  = Color(0xFFeeeef8);
+const _cCrimson= Color(0xFFa83030);
+const _cTeal   = Color(0xFF2a8070);
+
+// Mito Espelho
+const _cIndigoBg = Color(0x2E3A3870);
+const _cIndigoBd = Color(0x8C3A3870);
+const _cIndigoLabel = Color(0xFF8888c8);
+
+// Episódios / Aviso
+const _cGreenBg   = Color(0x2E2a5a3a);
+const _cGreenBd   = Color(0x662a5a3a);
+const _cGreenText = Color(0xFF5a9a6a);
+const _cTealBg    = Color(0x2E2a8070);
+const _cTealBd    = Color(0x662a8070);
+const _cTealText  = Color(0xFF88c0c8);
+
 class AnalysisResultScreen extends StatelessWidget {
   final Map<String, dynamic> analysis;
-  final String? dreamText; // Passing the original dream text if possible
+  final String? dreamText;
 
   const AnalysisResultScreen({super.key, required this.analysis, this.dreamText});
 
-  Color _getArcColor(String name) {
-    name = name.toLowerCase();
-    if (name.contains('mãe')) return const Color(0xFF5A8A5A);
-    if (name.contains('self')) return AionTheme.amber;
-    if (name.contains('sombra')) return AionTheme.crimson;
-    if (name.contains('anima') && !name.contains('animus')) return const Color(0xFF9B6B9B);
-    if (name.contains('animus')) return const Color(0xFF5A7A9B);
-    if (name.contains('sábio')) return AionTheme.silver;
-    if (name.contains('trickster')) return AionTheme.teal;
-    if (name.contains('persona')) return const Color(0xFF7A7A9B);
-    if (name.contains('jovem')) return const Color(0xFFC87870);
-    return AionTheme.mist;
+  Color _arcColor(String name) {
+    final n = name.toLowerCase();
+    if (n.contains('mãe'))    return const Color(0xFF5a8a5a);
+    if (n.contains('self'))   return _cAmber;
+    if (n.contains('herói') || n.contains('heroi')) return _cGold;
+    if (n.contains('sombra')) return _cCrimson;
+    if (n.contains('anima') && !n.contains('animus')) return const Color(0xFF9b6b9b);
+    if (n.contains('animus')) return const Color(0xFF5a7a9b);
+    if (n.contains('sábio') || n.contains('sabio')) return _cSilver;
+    if (n.contains('trickster')) return _cTeal;
+    if (n.contains('persona'))   return const Color(0xFF7a7a9b);
+    if (n.contains('jovem'))     return const Color(0xFFc87870);
+    if (n.contains('inimigo'))   return const Color(0xFF8b4040);
+    if (n.contains('guerreiro')) return const Color(0xFFa87040);
+    return _cSilver;
   }
+
+  // Índice da fase da jornada (0-11)
+  static const _fases = [
+    'o mundo comum','o chamado da aventura','a recusa do chamado',
+    'o encontro com o mentor','a travessia do primeiro limiar',
+    'testes, aliados e inimigos','a aproximação da caverna oculta',
+    'a provação suprema','a recompensa','o caminho de volta',
+    'a ressurreição','o retorno com o elixir',
+  ];
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final arquetipos = (analysis['arquetipos'] as List? ?? []);
-    final simbolos = (analysis['simbolos_chave'] as List? ?? []);
-    final dream = dreamText ?? "Sonho registrado.";
+    final simbolos   = (analysis['simbolos_chave'] as List? ?? []);
+    final dream      = dreamText ?? 'Sonho registrado.';
 
     return Scaffold(
-      backgroundColor: AionTheme.darkVoid,
+      backgroundColor: _cVoid,
       appBar: AppBar(
-        title: Text('Significado segundo o contexto do sonhador', style: AionTheme.serifStyle(fontSize: 14, color: AionTheme.gold, letterSpacing: 1)),
+        backgroundColor: _cVoid,
+        elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AionTheme.gold),
+          icon: const Icon(Icons.arrow_back, color: _cGold),
           onPressed: () => Navigator.pop(context),
         ),
+        title: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('MITO & PSIQUE', style: GoogleFonts.cormorantGaramond(fontSize: 10, color: _cSilver, letterSpacing: 3)),
+            Text('AION', style: GoogleFonts.cormorantGaramond(fontSize: 15, color: _cGold, letterSpacing: 6, fontWeight: FontWeight.bold)),
+            Text('O Diário do Sonho', style: GoogleFonts.cormorantGaramond(fontSize: 10, color: _cSilver, letterSpacing: 2, fontStyle: FontStyle.italic)),
+          ],
+        ),
+        centerTitle: true,
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1),
+          child: Container(height: 1, color: _cGold.withOpacity(0.2)),
+        ),
       ),
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          final isWide = constraints.maxWidth > 600;
-          return Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 820),
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Aviso
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-                      margin: const EdgeInsets.only(bottom: 22),
-                      decoration: BoxDecoration(
-                        color: AionTheme.teal.withOpacity(0.18),
-                        border: Border.all(color: AionTheme.teal.withOpacity(0.4), width: 1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        '⚠ ${analysis['aviso'] ?? "Reflexão simbólica baseada em Jung e Campbell."}',
-                        style: const TextStyle(color: Color(0xFF88C0C8), fontSize: 12, height: 1.7),
-                      ),
-                    ),
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 820),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(20, 36, 20, 80),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
 
-                    // O Sonho
-                    _buildCard(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildLabel('O Sonho', color: AionTheme.silver),
-                          Text(
-                            '"$dream"',
-                            style: theme.textTheme.bodyLarge?.copyWith(
-                              fontSize: 14,
-                              fontStyle: FontStyle.italic,
-                              color: AionTheme.ghost,
-                              height: 1.85,
+                // ① AVISO ÉTICO
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                  color: _cTealBg,
+                  foregroundDecoration: BoxDecoration(border: Border.all(color: _cTealBd)),
+                  child: const Text(
+                    '⚠ Esta análise é uma reflexão simbólica baseada em Jung e Campbell — não substitui acompanhamento psicológico profissional.',
+                    style: TextStyle(color: _cTealText, fontSize: 12, height: 1.7),
+                  ),
+                ),
+                const SizedBox(height: 14),
+
+                // ② O SONHO
+                _Card(
+                  leftBorder: BorderSide(color: _cVeil, width: 3),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _Label('O SONHO', color: _cSilver),
+                      Text('"$dream"',
+                        style: const TextStyle(color: _cGhost, fontSize: 14, fontStyle: FontStyle.italic, height: 1.85)),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 14),
+
+                // ③ ESSÊNCIA
+                _Card(
+                  padding: const EdgeInsets.all(24),
+                  leftBorder: const BorderSide(color: _cGold, width: 3),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _Label('☽  ESSÊNCIA', color: _cGold),
+                      Text('"${analysis['essencia'] ?? ''}"',
+                        style: const TextStyle(color: _cDawn, fontSize: 17, fontStyle: FontStyle.italic, height: 2.0)),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 14),
+
+                // ④ DIMENSÕES
+                _Card(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _Label('DIMENSÕES DO SONHO', color: _cSilver),
+                      const SizedBox(height: 4),
+                      LayoutBuilder(builder: (ctx, c) {
+                        final narrow = c.maxWidth < 400;
+                        return narrow
+                          ? Column(children: [
+                              _DimBar('Sombra',       analysis['intensidade_sombra'] ?? 0,        _cCrimson, grad: [_cCrimson, const Color(0x88c03030)]),
+                              const SizedBox(height: 12),
+                              _DimBar('Herói',        analysis['intensidade_heroi'] ?? 0,          _cGold,   grad: [_cGold, _cAmber]),
+                              const SizedBox(height: 12),
+                              _DimBar('Transformação',analysis['intensidade_transformacao'] ?? 0,  _cTeal,   grad: [_cTeal, const Color(0x882a8070)]),
+                            ])
+                          : Row(children: [
+                              Expanded(child: _DimBar('Sombra',       analysis['intensidade_sombra'] ?? 0,        _cCrimson, grad: [_cCrimson, const Color(0x88c03030)])),
+                              const SizedBox(width: 14),
+                              Expanded(child: _DimBar('Herói',        analysis['intensidade_heroi'] ?? 0,          _cGold,   grad: [_cGold, _cAmber])),
+                              const SizedBox(width: 14),
+                              Expanded(child: _DimBar('Transformação',analysis['intensidade_transformacao'] ?? 0,  _cTeal,   grad: [_cTeal, const Color(0x882a8070)])),
+                            ]);
+                      }),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 14),
+
+                // ⑤ ARQUÉTIPOS
+                if (arquetipos.isNotEmpty) ...[
+                  _Label('⟁  ARQUÉTIPOS PRESENTES', color: _cGold),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 12,
+                    children: arquetipos.map<Widget>((arc) {
+                      final cor = _arcColor(arc['nome'] ?? '');
+                      return ConstrainedBox(
+                        constraints: const BoxConstraints(minWidth: 160),
+                        child: FractionallySizedBox(
+                          widthFactor: 0.5 - 0.01,
+                          child: Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: _cAbyss,
+                              border: Border(
+                                top:    BorderSide(color: cor, width: 3),
+                                bottom: const BorderSide(color: _cShadow),
+                                left:   const BorderSide(color: _cShadow),
+                                right:  const BorderSide(color: _cShadow),
+                              ),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(arc['simbolo'] ?? '⌘', style: const TextStyle(fontSize: 22)),
+                                const SizedBox(height: 8),
+                                Text(arc['nome'] ?? '', style: TextStyle(color: cor, fontSize: 13, letterSpacing: 1)),
+                                const SizedBox(height: 8),
+                                Text(arc['descricao'] ?? '',
+                                  style: const TextStyle(color: _cSilver, fontSize: 12, height: 1.7)),
+                              ],
                             ),
                           ),
-                        ],
-                      ),
-                      leftBorderColor: AionTheme.veil,
-                    ),
-                    const SizedBox(height: 16),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 14),
+                ],
 
-                    // Essência
-                    _buildCard(
-                      padding: const EdgeInsets.all(24),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildLabel('☽ Essência', color: AionTheme.gold),
-                          Text(
-                            '"${analysis['essencia']}"',
-                            style: theme.textTheme.bodyLarge?.copyWith(
-                              fontSize: 17,
-                              fontStyle: FontStyle.italic,
-                              color: AionTheme.dawn,
-                              height: 2.0,
-                            ),
-                          ),
-                        ],
-                      ),
-                      leftBorderColor: AionTheme.gold,
-                    ),
-                    const SizedBox(height: 16),
+                // ⑥ FUNÇÃO COMPENSATÓRIA + PROSPECÇÃO
+                LayoutBuilder(builder: (ctx, c) {
+                  final wide = c.maxWidth > 500;
+                  final cardComp = _Card(
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      _Label('⊗  FUNÇÃO COMPENSATÓRIA', color: _cAmber),
+                      Text(analysis['funcao_compensatoria'] ?? '',
+                        style: const TextStyle(color: _cGhost, fontSize: 13, height: 1.8)),
+                    ]),
+                  );
+                  final cardProsp = _Card(
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      _Label('✦  PROSPECÇÃO', color: _cSilver),
+                      Text(analysis['prospeccao'] ?? '',
+                        style: const TextStyle(color: _cGhost, fontSize: 13, height: 1.8)),
+                    ]),
+                  );
+                  if (wide) {
+                    return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Expanded(child: cardComp),
+                      const SizedBox(width: 14),
+                      Expanded(child: cardProsp),
+                    ]);
+                  }
+                  return Column(children: [cardComp, const SizedBox(height: 14), cardProsp]);
+                }),
+                const SizedBox(height: 14),
 
-                    // Dimensões
-                    _buildCard(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildLabel('Dimensões do sonho', color: AionTheme.silver),
-                          const SizedBox(height: 14),
-                          Row(
+                // ⑦ SÍMBOLOS & AMPLIAÇÃO
+                if (simbolos.isNotEmpty)
+                  _Card(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _Label('⋈  SÍMBOLOS & AMPLIAÇÃO', color: _cGold),
+                        ...List.generate(simbolos.length, (i) {
+                          final s = simbolos[i];
+                          final isLast = i == simbolos.length - 1;
+                          return Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Expanded(child: _buildIntensityBar('Sombra', analysis['intensidade_sombra'] ?? 0, AionTheme.crimson, isLast: true)),
-                              const SizedBox(width: 12),
-                              Expanded(child: _buildIntensityBar('Herói', analysis['intensidade_heroi'] ?? 0, AionTheme.gold, isLast: true)),
-                              const SizedBox(width: 12),
-                              Expanded(child: _buildIntensityBar('Transform.', analysis['intensidade_transformacao'] ?? 0, AionTheme.teal, isLast: true)),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Arquétipos
-                    if (arquetipos.isNotEmpty) ...[
-                      _buildLabel('⟁ Arquétipos Presentes', color: AionTheme.gold),
-                      IntrinsicHeight(
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: arquetipos.map<Widget>((arc) {
-                            final arcColor = _getArcColor(arc['nome'] ?? '');
-                            return Expanded(
-                              child: Container(
-                                margin: EdgeInsets.only(right: arc == arquetipos.last ? 0 : 12),
-                                padding: const EdgeInsets.all(16),
-                                decoration: BoxDecoration(
-                                  color: AionTheme.darkAbyss,
-                                  border: Border(
-                                    top: BorderSide(color: arcColor, width: 3),
-                                    bottom: const BorderSide(color: AionTheme.shadow, width: 1),
-                                    left: const BorderSide(color: AionTheme.shadow, width: 1),
-                                    right: const BorderSide(color: AionTheme.shadow, width: 1),
-                                  ),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Column(
+                              Padding(
+                                padding: EdgeInsets.only(bottom: isLast ? 0 : 12),
+                                child: Row(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text(arc['simbolo'] ?? '⌘', style: const TextStyle(fontSize: 22)),
-                                    const SizedBox(height: 8),
-                                    Text(arc['nome'] ?? '', style: TextStyle(color: arcColor, fontSize: 13)),
-                                    const SizedBox(height: 8),
-                                    Expanded(
-                                      child: Text(
-                                        arc['descricao'] ?? '',
-                                        style: const TextStyle(color: AionTheme.silver, fontSize: 12, height: 1.7),
-                                        overflow: TextOverflow.fade,
+                                    SizedBox(
+                                      width: 120,
+                                      child: Padding(
+                                        padding: const EdgeInsets.only(right: 14, top: 2),
+                                        child: Text(s['elemento'] ?? '',
+                                          style: const TextStyle(color: _cAmber, fontSize: 12)),
                                       ),
+                                    ),
+                                    Container(width: 1, height: 40, color: _cVeil),
+                                    const SizedBox(width: 14),
+                                    Expanded(
+                                      child: Text(s['significado'] ?? '',
+                                        style: const TextStyle(color: _cSilver, fontSize: 12, height: 1.7)),
                                     ),
                                   ],
                                 ),
                               ),
-                            );
-                          }).toList(),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                    ],
-
-                    // 2-Col: Função e Prospecção
-                    if (isWide)
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            child: _buildCard(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  _buildLabel('⊗ Função Compensatória', color: AionTheme.amber),
-                                  Text(
-                                    analysis['funcao_compensatoria'] ?? '',
-                                    style: const TextStyle(color: AionTheme.ghost, fontSize: 13, height: 1.8),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 14),
-                          Expanded(
-                            child: _buildCard(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  _buildLabel('✦ Prospecção', color: AionTheme.silver),
-                                  Text(
-                                    analysis['prospeccao'] ?? '',
-                                    style: const TextStyle(color: AionTheme.ghost, fontSize: 13, height: 1.8),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-                      )
-                    else
-                      Column(
-                        children: [
-                          _buildCard(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                _buildLabel('⊗ Função Compensatória', color: AionTheme.amber),
-                                Text(
-                                  analysis['funcao_compensatoria'] ?? '',
-                                  style: const TextStyle(color: AionTheme.ghost, fontSize: 13, height: 1.8),
-                                ),
+                              if (!isLast) ...[
+                                const SizedBox(height: 12),
+                                Container(height: 1, color: _cShadow),
+                                const SizedBox(height: 12),
                               ],
-                            ),
-                          ),
-                          const SizedBox(height: 14),
-                          _buildCard(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                _buildLabel('✦ Prospecção', color: AionTheme.silver),
-                                Text(
-                                  analysis['prospeccao'] ?? '',
-                                  style: const TextStyle(color: AionTheme.ghost, fontSize: 13, height: 1.8),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    const SizedBox(height: 16),
-
-                    // Símbolos
-                    if (simbolos.isNotEmpty)
-                      _buildCard(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _buildLabel('⋈ Símbolos & Ampliação', color: AionTheme.gold),
-                            Wrap(
-                              spacing: 12,
-                              runSpacing: 12,
-                              children: simbolos.map<Widget>((s) {
-                                return Container(
-                                  width: isWide ? 300 : constraints.maxWidth / 2 - 28,
-                                  padding: const EdgeInsets.all(16),
-                                  decoration: BoxDecoration(
-                                    color: AionTheme.darkAbyss,
-                                    border: Border.all(color: AionTheme.shadow, width: 1),
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(s['elemento'] ?? '', style: const TextStyle(color: AionTheme.amber, fontSize: 13, fontWeight: FontWeight.bold)),
-                                      const SizedBox(height: 8),
-                                      Text(s['significado'] ?? '', style: const TextStyle(color: AionTheme.silver, fontSize: 12, height: 1.7)),
-                                    ],
-                                  ),
-                                );
-                              }).toList(),
-                            ),
-                          ],
-                        ),
-                      ),
-                    const SizedBox(height: 16),
-
-                    // Jornada
-                    if (analysis['fase_jornada'] != null)
-                      _buildCard(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _buildLabel('⊕ Jornada do Herói — Campbell', color: AionTheme.gold),
-                            Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                color: AionTheme.darkVoid,
-                                border: Border.all(color: AionTheme.shadow, width: 1),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    analysis['fase_jornada']['nome'] ?? '',
-                                    style: const TextStyle(color: AionTheme.amber, fontSize: 15),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Container(
-                                    height: 4,
-                                    width: double.infinity,
-                                    decoration: BoxDecoration(
-                                      color: AionTheme.shadow,
-                                      borderRadius: BorderRadius.circular(2),
-                                    ),
-                                    child: FractionallySizedBox(
-                                      alignment: Alignment.centerLeft,
-                                      widthFactor: 0.3, // Mock progression
-                                      child: Container(
-                                        decoration: BoxDecoration(
-                                          gradient: const LinearGradient(colors: [AionTheme.gold, AionTheme.amber]),
-                                          borderRadius: BorderRadius.circular(2),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    analysis['fase_jornada']['descricao'] ?? '',
-                                    style: const TextStyle(color: AionTheme.silver, fontSize: 13, height: 1.8),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    const SizedBox(height: 16),
-
-                    // Mito Espelho
-                    if (analysis['mito_espelho'] != null)
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(24),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF111D15), // Fundo esverdeado escuro
-                          border: Border.all(color: const Color(0xFF2A5A3A).withOpacity(0.6), width: 1),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Padding(
-                              padding: const EdgeInsets.only(bottom: 16),
-                              child: Text('☽ MITO ESPELHO', style: GoogleFonts.cormorantGaramond(color: const Color(0xFF6B9B7B), fontSize: 14, letterSpacing: 4, fontWeight: FontWeight.bold)),
-                            ),
-                            Text(
-                              analysis['mito_espelho']['titulo'] ?? 'Yggdrasil — a Árvore do Mundo',
-                              style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
-                            ),
-                            const SizedBox(height: 12),
-                            Text(
-                              analysis['mito_espelho']['paralelo'] ?? '',
-                              style: const TextStyle(color: AionTheme.silver, fontSize: 13, height: 1.8),
-                            ),
-                          ],
-                        ),
-                      ),
-                    const SizedBox(height: 16),
-
-                    // Pergunta
-                    if (analysis['pergunta_para_reflexao'] != null)
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 24),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF1A1815), // Fundo amarronzado escuro
-                          border: Border.all(color: AionTheme.gold.withOpacity(0.15), width: 1),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Column(
-                          children: [
-                            Padding(
-                              padding: const EdgeInsets.only(bottom: 24),
-                              child: Text('PERGUNTA PARA REFLEXÃO', style: GoogleFonts.cormorantGaramond(color: AionTheme.gold, fontSize: 14, letterSpacing: 5, fontWeight: FontWeight.bold)),
-                            ),
-                            Text(
-                              '"${analysis['pergunta_para_reflexao']}"',
-                              textAlign: TextAlign.center,
-                              style: theme.textTheme.bodyLarge?.copyWith(
-                                fontSize: 18,
-                                fontStyle: FontStyle.italic,
-                                color: Colors.white,
-                                height: 1.7,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    const SizedBox(height: 16),
-
-                    // Episódios Recomendados
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(24),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF111D15),
-                        border: Border.all(color: const Color(0xFF2A5A3A).withOpacity(0.6), width: 1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 12),
-                            child: Text('▶ EPISÓDIOS RECOMENDADOS — MITO & PSIQUE', style: GoogleFonts.cormorantGaramond(color: const Color(0xFF6B9B7B), fontSize: 14, letterSpacing: 4, fontWeight: FontWeight.bold)),
-                          ),
-                          const Text(
-                            'Baseado nos arquétipos identificados neste sonho:',
-                            style: TextStyle(color: Color(0xFF4A7A5A), fontSize: 13),
-                          ),
-                          const SizedBox(height: 20),
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(16),
-                            margin: const EdgeInsets.only(bottom: 12),
-                            decoration: BoxDecoration(
-                              color: AionTheme.darkVoid,
-                              border: Border.all(color: const Color(0xFF6B9B7B).withOpacity(0.3)),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: IntrinsicHeight(
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: [
-                                  Container(width: 4, decoration: BoxDecoration(color: const Color(0xFF6B9B7B), borderRadius: BorderRadius.circular(4))),
-                                  const SizedBox(width: 16),
-                                  const Align(
-                                    alignment: Alignment.centerLeft,
-                                    child: Text('EP07', style: TextStyle(color: Color(0xFF6B9B7B), fontSize: 18, fontFamily: 'Georgia')),
-                                  ),
-                                  const SizedBox(width: 16),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: const [
-                                        Text('A Grande Deusa', style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold)),
-                                        SizedBox(height: 4),
-                                        Text('Magna Mater — o arquétipo que as civilizações temeram e veneraram', style: TextStyle(color: AionTheme.silver, fontSize: 13)),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: AionTheme.darkVoid,
-                              border: Border.all(color: AionTheme.gold.withOpacity(0.3)),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: IntrinsicHeight(
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: [
-                                  Container(width: 4, decoration: BoxDecoration(color: AionTheme.gold, borderRadius: BorderRadius.circular(4))),
-                                  const SizedBox(width: 16),
-                                  const Align(
-                                    alignment: Alignment.centerLeft,
-                                    child: Text('EP08', style: TextStyle(color: AionTheme.gold, fontSize: 18, fontFamily: 'Georgia')),
-                                  ),
-                                  const SizedBox(width: 16),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: const [
-                                        Text('O Retorno do Herói', style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold)),
-                                        SizedBox(height: 4),
-                                        Text('A individuação — tornar-se quem você sempre foi', style: TextStyle(color: AionTheme.silver, fontSize: 13)),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-
-                    Wrap(
-                      spacing: 10,
-                      runSpacing: 10,
-                      alignment: WrapAlignment.center,
-                      children: [
-                        ElevatedButton(
-                          onPressed: () => Navigator.pop(context),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AionTheme.gold,
-                            foregroundColor: AionTheme.darkVoid,
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                          ),
-                          child: const Text('+ Novo Sonho'),
-                        ),
-                        ElevatedButton(
-                          onPressed: () => Navigator.pop(context),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.transparent,
-                            foregroundColor: AionTheme.silver,
-                            side: const BorderSide(color: AionTheme.veil),
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                          ),
-                          child: const Text('Início'),
-                        ),
+                            ],
+                          );
+                        }),
                       ],
                     ),
-                    const SizedBox(height: 40),
+                  ),
+                const SizedBox(height: 14),
+
+                // ⑧ JORNADA DO HERÓI
+                if (analysis['fase_jornada'] != null) ...[
+                  _Card(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _Label('⊕  JORNADA DO HERÓI — CAMPBELL', color: _cGold),
+                        Text(analysis['fase_jornada']['nome'] ?? '',
+                          style: const TextStyle(color: _cAmber, fontSize: 15)),
+                        const SizedBox(height: 8),
+                        _journeyBar(analysis['fase_jornada']['nome'] ?? ''),
+                        const SizedBox(height: 4),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: const [
+                            Text('O Mundo Comum', style: TextStyle(color: _cMist, fontSize: 10)),
+                            Text('O Retorno com o Elixir', style: TextStyle(color: _cMist, fontSize: 10)),
+                          ],
+                        ),
+                        const SizedBox(height: 14),
+                        Text(analysis['fase_jornada']['descricao'] ?? '',
+                          style: const TextStyle(color: _cSilver, fontSize: 13, height: 1.8)),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                ],
+
+                // ⑨ MITO ESPELHO
+                if (analysis['mito_espelho'] != null) ...[
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: _cIndigoBg,
+                      border: Border.all(color: _cIndigoBd),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _Label('☽  MITO ESPELHO', color: _cIndigoLabel),
+                        Text(analysis['mito_espelho']['titulo'] ?? '',
+                          style: const TextStyle(color: _cGhost, fontSize: 14)),
+                        const SizedBox(height: 10),
+                        Text(analysis['mito_espelho']['paralelo'] ?? '',
+                          style: const TextStyle(color: _cSilver, fontSize: 13, height: 1.8)),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                ],
+
+                // ⑩ PERGUNTA PARA REFLEXÃO
+                if (analysis['pergunta_para_reflexao'] != null) ...[
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 24),
+                    decoration: BoxDecoration(
+                      color: _cDeep,
+                      border: Border.all(color: _cGold.withOpacity(0.28)),
+                    ),
+                    child: Column(
+                      children: [
+                        _Label('PERGUNTA PARA REFLEXÃO', color: _cGold, centered: true),
+                        const SizedBox(height: 4),
+                        Text('"${analysis['pergunta_para_reflexao']}"',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(color: _cDawn, fontSize: 18, fontStyle: FontStyle.italic, height: 1.9)),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                ],
+
+                // ⑪ EPISÓDIOS RECOMENDADOS
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: _cGreenBg,
+                    border: Border.all(color: _cGreenBd),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _Label('▶  EPISÓDIOS RECOMENDADOS — MITO & PSIQUE', color: _cGreenText),
+                      const Text('Baseado nos arquétipos identificados neste sonho:',
+                        style: TextStyle(color: _cMist, fontSize: 12)),
+                      const SizedBox(height: 16),
+                      _EpisodeCard(num: 'EP07', color: const Color(0xFF5a8a5a),
+                        title: 'A Grande Deusa',
+                        sub: 'Magna Mater — o arquétipo que as civilizações temeram e veneraram'),
+                      const SizedBox(height: 8),
+                      _EpisodeCard(num: 'EP08', color: _cDawn,
+                        title: 'O Retorno do Herói',
+                        sub: 'A individuação — tornar-se quem você sempre foi'),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                // Botões
+                Wrap(
+                  spacing: 10, runSpacing: 10,
+                  alignment: WrapAlignment.center,
+                  children: [
+                    ElevatedButton(
+                      onPressed: () => Navigator.pop(context),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _cGold, foregroundColor: _cVoid,
+                        shape: const RoundedRectangleBorder(),
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      ),
+                      child: const Text('+ Novo Sonho'),
+                    ),
+                    ElevatedButton(
+                      onPressed: () => Navigator.pop(context),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.transparent, foregroundColor: _cSilver,
+                        side: const BorderSide(color: _cVeil),
+                        shape: const RoundedRectangleBorder(),
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      ),
+                      child: const Text('Início'),
+                    ),
                   ],
                 ),
-              ),
+                const SizedBox(height: 40),
+              ],
             ),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildCard({required Widget child, Color? leftBorderColor, EdgeInsetsGeometry? padding}) {
-    return Container(
-      width: double.infinity,
-      padding: padding ?? const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AionTheme.darkAbyss,
-        border: Border(
-          top: const BorderSide(color: AionTheme.shadow, width: 1),
-          bottom: const BorderSide(color: AionTheme.shadow, width: 1),
-          right: const BorderSide(color: AionTheme.shadow, width: 1),
-          left: BorderSide(
-            color: leftBorderColor ?? AionTheme.shadow,
-            width: leftBorderColor != null ? 3 : 1,
           ),
         ),
-        borderRadius: BorderRadius.circular(12),
       ),
-      child: child,
     );
   }
 
-  Widget _buildLabel(String text, {required Color color}) {
+  Widget _journeyBar(String nomeFase) {
+    final idx = _fases.indexWhere((f) => nomeFase.toLowerCase().contains(f.split(' ').first.toLowerCase()));
+    final phase = idx >= 0 ? idx : 0;
+    final width = (phase + 1) / 12.0;
+    return Container(
+      height: 4, color: _cShadow,
+      child: FractionallySizedBox(
+        alignment: Alignment.centerLeft,
+        widthFactor: width,
+        child: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(colors: [_cGold, _cAmber]),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── WIDGET: Label ────────────────────────────────────────────────
+class _Label extends StatelessWidget {
+  final String text;
+  final Color color;
+  final bool centered;
+  const _Label(this.text, {required this.color, this.centered = false});
+
+  @override
+  Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Text(
         text,
-        style: GoogleFonts.cormorantGaramond(
-          fontSize: 16,
+        textAlign: centered ? TextAlign.center : TextAlign.start,
+        style: TextStyle(
           color: color,
+          fontSize: 9,
+          letterSpacing: 5,
+          fontFamily: 'Georgia',
         ),
       ),
     );
   }
+}
 
-  Widget _buildIntensityBar(String label, dynamic valueDynamic, Color color, {bool isLast = false}) {
-    double value = 0;
-    if (valueDynamic is num) value = valueDynamic.toDouble();
-    if (valueDynamic is String) value = double.tryParse(valueDynamic) ?? 0;
-    
-    return Padding(
-      padding: EdgeInsets.only(bottom: isLast ? 0 : 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                label,
-                style: const TextStyle(color: AionTheme.silver, fontSize: 12),
-              ),
-              Text(
-                '${(value * 10).toInt()}/10',
-                style: TextStyle(color: color, fontSize: 11),
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Container(
-            height: 4,
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: AionTheme.shadow,
-              borderRadius: BorderRadius.circular(2),
-            ),
-            child: FractionallySizedBox(
-              alignment: Alignment.centerLeft,
-              widthFactor: value > 1 ? value / 10.0 : value,
-              child: Container(
-                decoration: BoxDecoration(
-                  color: color,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-          ),
-        ],
+// ── WIDGET: Card angular ─────────────────────────────────────────
+class _Card extends StatelessWidget {
+  final Widget child;
+  final EdgeInsetsGeometry? padding;
+  final BorderSide? leftBorder;
+  const _Card({required this.child, this.padding, this.leftBorder});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: padding ?? const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: const Color(0xFF121120),
+        border: Border(
+          top:    const BorderSide(color: Color(0xFF1a1830)),
+          bottom: const BorderSide(color: Color(0xFF1a1830)),
+          right:  const BorderSide(color: Color(0xFF1a1830)),
+          left:   leftBorder ?? const BorderSide(color: Color(0xFF1a1830)),
+        ),
       ),
+      child: child,
+    );
+  }
+}
+
+// ── WIDGET: Barra de dimensão com gradiente ──────────────────────
+class _DimBar extends StatelessWidget {
+  final String label;
+  final dynamic valueDyn;
+  final Color color;
+  final List<Color> grad;
+  const _DimBar(this.label, this.valueDyn, this.color, {required this.grad});
+
+  @override
+  Widget build(BuildContext context) {
+    double v = 0;
+    if (valueDyn is num)    v = (valueDyn as num).toDouble();
+    if (valueDyn is String) v = double.tryParse(valueDyn) ?? 0;
+    final pct = (v > 1 ? v / 10.0 : v).clamp(0.0, 1.0);
+    final display = '${(v > 1 ? v : v * 10).round()}/10';
+
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+        Text(label, style: const TextStyle(color: Color(0xFF9898b8), fontSize: 12)),
+        Text(display, style: TextStyle(color: color, fontSize: 12)),
+      ]),
+      const SizedBox(height: 5),
+      Container(
+        height: 4, color: const Color(0xFF1a1830),
+        child: FractionallySizedBox(
+          alignment: Alignment.centerLeft,
+          widthFactor: pct,
+          child: Container(decoration: BoxDecoration(gradient: LinearGradient(colors: grad))),
+        ),
+      ),
+    ]);
+  }
+}
+
+// ── WIDGET: Episódio ─────────────────────────────────────────────
+class _EpisodeCard extends StatelessWidget {
+  final String num, title, sub;
+  final Color color;
+  const _EpisodeCard({required this.num, required this.color, required this.title, required this.sub});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFF121120),
+        border: Border(
+          top:    const BorderSide(color: Color(0xFF1a1830)),
+          bottom: const BorderSide(color: Color(0xFF1a1830)),
+          right:  const BorderSide(color: Color(0xFF1a1830)),
+          left:   BorderSide(color: color, width: 3),
+        ),
+      ),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        SizedBox(
+          width: 42,
+          child: Text(num, style: TextStyle(color: color, fontSize: 18, fontWeight: FontWeight.w300, letterSpacing: 1)),
+        ),
+        const SizedBox(width: 16),
+        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(title, style: const TextStyle(color: Color(0xFFf5dfa0), fontSize: 13)),
+          const SizedBox(height: 3),
+          Text(sub,   style: const TextStyle(color: Color(0xFF9898b8), fontSize: 11)),
+        ])),
+      ]),
     );
   }
 }

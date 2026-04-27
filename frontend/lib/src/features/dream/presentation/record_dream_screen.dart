@@ -9,6 +9,8 @@ import 'widgets/mandala_spinner.dart';
 import 'analysis_result_screen.dart';
 import 'audio_recorder.dart';
 import 'audio_recorder_platform.dart';
+import 'archetypes_screen.dart';
+import 'canal_screen.dart';
 
 enum DreamInputMode { selection, voice, text }
 
@@ -204,10 +206,16 @@ class _RecordDreamScreenState extends State<RecordDreamScreen> with SingleTicker
                 _navBtn(context, 'INÍCIO', false, () => Navigator.pop(context)),
                 _navBtn(context, '+ SONHO', true, () {}),
                 _navBtn(context, 'ARQUÉTIPOS', false, () {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Em breve...')));
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const ArchetypesScreen()),
+                  );
                 }),
                 _navBtn(context, 'CANAL', false, () {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Em breve...')));
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const CanalScreen()),
+                  );
                 }),
               ],
             ),
@@ -313,7 +321,7 @@ class _RecordDreamScreenState extends State<RecordDreamScreen> with SingleTicker
                     '${_textInputController.text.length} car. ${_textInputController.text.length < 20 ? "— mínimo 20" : ""}',
                     style: TextStyle(
                       fontSize: 11,
-                      color: _textInputController.text.length < 20 ? AionTheme.crimson : AionTheme.mist,
+                      color: _textInputController.text.length < 20 ? AionTheme.crimson : AionTheme.silver,
                     ),
                   ),
                 ),
@@ -386,7 +394,6 @@ class _RecordDreamScreenState extends State<RecordDreamScreen> with SingleTicker
                           ),
                           child: TextField(
                             controller: _ctxController,
-                            readOnly: true,
                             style: const TextStyle(color: AionTheme.silver, fontSize: 13, fontFamily: 'Georgia'),
                             decoration: const InputDecoration(
                               border: InputBorder.none,
@@ -476,7 +483,7 @@ class _RecordDreamScreenState extends State<RecordDreamScreen> with SingleTicker
                         const SizedBox(width: 8),
                         InkWell(
                           onTap: () => setState(() => _tags.remove(t)),
-                          child: const Icon(Icons.close, size: 14, color: AionTheme.mist),
+                          child: const Icon(Icons.close, size: 14, color: AionTheme.silver),
                         ),
                       ],
                     ),
@@ -531,7 +538,7 @@ class _RecordDreamScreenState extends State<RecordDreamScreen> with SingleTicker
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: const [
                               Text('Análise Aprofundada', style: TextStyle(color: AionTheme.silver, fontSize: 13, fontFamily: 'Georgia')),
-                              Text('Perguntas guiadas', style: TextStyle(color: AionTheme.mist, fontSize: 10, fontFamily: 'Georgia')),
+                              Text('Perguntas guiadas', style: TextStyle(color: AionTheme.silver, fontSize: 10, fontFamily: 'Georgia')),
                             ],
                           ),
                         ],
@@ -565,7 +572,7 @@ class _RecordDreamScreenState extends State<RecordDreamScreen> with SingleTicker
             '"Um mesmo sonho não possui um significado único, fixo ou determinado por dicionários de sonhos, mas sim inúmeras possibilidades de análise e significados que dependem do contexto do sonhador."',
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: AionTheme.mist,
+              color: AionTheme.silver,
               fontSize: 10,
               fontStyle: FontStyle.italic,
               fontFamily: 'Georgia',

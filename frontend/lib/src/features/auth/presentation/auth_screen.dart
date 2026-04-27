@@ -59,7 +59,7 @@ class _AuthScreenState extends State<AuthScreen> {
                   children: [
                     // LOGO
                     const SizedBox(height: 24),
-                    const AionPulseLogo(size: 120),
+                    const AionPulseLogo(size: 180),
                     const SizedBox(height: 24),
 
                     // TITLES
@@ -87,7 +87,7 @@ class _AuthScreenState extends State<AuthScreen> {
                       style: GoogleFonts.ptSerif(
                         fontSize: 13,
                         fontStyle: FontStyle.italic,
-                        color: AionTheme.mist,
+                        color: AionTheme.ghost,
                         letterSpacing: 1,
                       ),
                     ),
@@ -117,7 +117,7 @@ class _AuthScreenState extends State<AuthScreen> {
                                   'ENTRAR',
                                   textAlign: TextAlign.center,
                                   style: TextStyle(
-                                    color: _isLogin ? AionTheme.gold : AionTheme.mist,
+                                    color: _isLogin ? AionTheme.gold : AionTheme.silver,
                                     fontSize: 12,
                                     letterSpacing: 3,
                                     fontFamily: 'Georgia',
@@ -143,7 +143,7 @@ class _AuthScreenState extends State<AuthScreen> {
                                   'CRIAR CONTA',
                                   textAlign: TextAlign.center,
                                   style: TextStyle(
-                                    color: !_isLogin ? AionTheme.gold : AionTheme.mist,
+                                    color: !_isLogin ? AionTheme.gold : AionTheme.silver,
                                     fontSize: 12,
                                     letterSpacing: 3,
                                     fontFamily: 'Georgia',
@@ -175,7 +175,7 @@ class _AuthScreenState extends State<AuthScreen> {
                             'Esqueci a senha',
                             style: TextStyle(
                               fontSize: 11,
-                              color: AionTheme.mist,
+                              color: AionTheme.silver,
                               letterSpacing: 1,
                               fontFamily: 'Georgia',
                             ),
@@ -220,7 +220,7 @@ class _AuthScreenState extends State<AuthScreen> {
                             'OU',
                             style: TextStyle(
                               fontSize: 10,
-                              color: AionTheme.mist,
+                              color: AionTheme.silver,
                               letterSpacing: 2,
                               fontFamily: 'Georgia',
                             ),
@@ -285,7 +285,7 @@ class _AuthScreenState extends State<AuthScreen> {
         decoration: InputDecoration(
           hintText: hint,
           hintStyle: TextStyle(
-            color: AionTheme.mist,
+            color: AionTheme.silver,
             fontSize: 14,
             fontFamily: 'Georgia',
             letterSpacing: 1,

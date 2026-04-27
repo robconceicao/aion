@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../src/core/theme.dart';
 import 'record_dream_screen.dart';
+import 'archetypes_screen.dart';
+import 'canal_screen.dart';
 import 'widgets/aion_logo.dart';
 
 class DreamDiaryScreen extends StatelessWidget {
@@ -49,7 +51,7 @@ class DreamDiaryScreen extends StatelessWidget {
                 style: GoogleFonts.ptSerif(
                   fontSize: 13,
                   fontStyle: FontStyle.italic,
-                  color: AionTheme.mist,
+                  color: AionTheme.ghost,
                   letterSpacing: 1,
                 ),
               ),
@@ -91,7 +93,7 @@ class DreamDiaryScreen extends StatelessWidget {
                 child: Text(
                   'editar perfil',
                   style: theme.textTheme.bodyMedium?.copyWith(
-                    color: AionTheme.mist,
+                    color: AionTheme.silver,
                     fontSize: 11,
                     letterSpacing: 2,
                   ),
@@ -107,7 +109,7 @@ class DreamDiaryScreen extends StatelessWidget {
                   textAlign: TextAlign.center,
                   style: theme.textTheme.bodyMedium?.copyWith(
                     fontSize: 10, 
-                    color: AionTheme.mist,
+                    color: AionTheme.silver,
                     height: 1.8
                   ),
                 ),
@@ -156,12 +158,15 @@ class DreamDiaryScreen extends StatelessWidget {
           if (transcription != null && transcription.isNotEmpty) {
             debugPrint('Relato recebido: $transcription');
           }
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('$text em breve...'),
-              duration: const Duration(seconds: 2),
-            ),
+        } else if (text == 'ARQUÉTIPOS') {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const ArchetypesScreen()),
+          );
+        } else if (text == 'CANAL') {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const CanalScreen()),
           );
         }
       },

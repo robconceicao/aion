@@ -126,26 +126,37 @@ class _RecordDreamScreenState extends State<RecordDreamScreen> with SingleTicker
 
     setState(() => _isProcessing = true);
     final dio = Dio();
-    try {
-      // Chamadas paralelas: análise detalhada + interpretação narrativa
-      final results = await Future.wait([
-        dio.post(
-          AionConfig.analyzeUrl,
-          data: {
-            'text': text,
-            'emotion': _mood != 'Não informar' ? _mood : null,
-            if (_tags.isNotEmpty) 'tags': _tags,
-            'is_recurrent': _recurring,
-          },
-        ),
-        dio.post(
-          AionConfig.narrativeUrl,
-          data: {'text': text},
-        ),
-      ]);
 
-      final detailedAnalysis = results[0].data as Map<String, dynamic>;
-      final narrativeText = results[1].data['narrative'] as String;
+    // Recupera e-mail salvo localmente (simples SharedPreferences ou fallback)
+    // Por ora usamos um identificador persistido em memória
+    const userEmail = 'usuario@aion.app'; // Substituir por auth real
+
+    try {
+      // 1ª chamada: análise estruturada (com e-mail para histórico)
+      final analysisResponse = await dio.post(
+        AionConfig.analyzeUrl,
+        options: Options(headers: {'x-user-email': userEmail}),
+        data: {
+          'text': text,
+          'emotion': _mood != 'Não informar' ? _mood : null,
+          if (_tags.isNotEmpty) 'tags': _tags,
+          'is_recurrent': _recurring,
+        },
+      );
+
+      final detailedAnalysis = analysisResponse.data as Map<String, dynamic>;
+
+      // 2ª chamada: narrativa — passa contexto da análise para coerência
+      final narrativeResponse = await dio.post(
+        AionConfig.narrativeUrl,
+        data: {
+          'text': text,
+          'analysis_context': detailedAnalysis,
+          'user_email': userEmail,
+        },
+      );
+
+      final narrativeText = narrativeResponse.data['narrative'] as String;
 
       if (mounted) {
         Navigator.pushReplacement(

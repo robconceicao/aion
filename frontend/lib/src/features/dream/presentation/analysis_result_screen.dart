@@ -17,10 +17,27 @@ class AnalysisResultScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AionTheme.darkVoid,
+      appBar: AppBar(
+        backgroundColor: AionTheme.darkVoid,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios, color: AionTheme.gold, size: 18),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: Text(
+          'MAPA ARQUETÍPICO',
+          style: GoogleFonts.ptSerif(
+            fontSize: 10,
+            letterSpacing: 4,
+            color: AionTheme.gold,
+          ),
+        ),
+        centerTitle: true,
+      ),
       body: CinematicBackground(
         child: SafeArea(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 36),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
             child: Center(
               child: Container(
                 constraints: const BoxConstraints(maxWidth: 820),
@@ -58,6 +75,7 @@ class AnalysisResultScreen extends StatelessWidget {
       ),
     );
   }
+
 
   // ① AVISO ÉTICO
   Widget _buildEthicalWarning() {

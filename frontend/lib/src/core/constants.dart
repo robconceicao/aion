@@ -6,6 +6,7 @@ class AionConfig {
   // Ajustado: O endpoint correto no FastAPI é apenas /dreams/
   static const String analyzeUrl = '$apiBaseUrl/dreams/';
   static const String narrativeUrl = '$apiBaseUrl/dreams/narrative';
+  static const String historyUrl = '$apiBaseUrl/dreams/history';
   static const String episodesUrl = '$apiBaseUrl/episodes/';
 }
 

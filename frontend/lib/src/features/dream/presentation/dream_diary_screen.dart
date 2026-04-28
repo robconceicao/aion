@@ -4,6 +4,7 @@ import '../../../../src/core/theme.dart';
 import 'record_dream_screen.dart';
 import 'archetypes_screen.dart';
 import 'canal_screen.dart';
+import 'dream_history_screen.dart';
 import 'widgets/aion_logo.dart';
 import '../../../core/widgets/cinematic_background.dart';
 import '../../profile/presentation/profile_screen.dart';
@@ -82,6 +83,7 @@ class DreamDiaryScreen extends StatelessWidget {
                         alignment: WrapAlignment.center,
                         children: [
                           _buildBtn(context, 'REGISTRAR SONHO', isPrimary: true),
+                          _buildBtn(context, 'HISTÓRICO', isPrimary: false),
                           _buildBtn(context, 'ARQUÉTIPOS', isPrimary: false),
                           _buildBtn(context, 'CANAL', isPrimary: false),
                         ],

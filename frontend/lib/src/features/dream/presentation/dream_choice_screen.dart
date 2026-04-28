@@ -82,7 +82,7 @@ class _DreamChoiceScreenState extends State<DreamChoiceScreen>
                       ),
                       const SizedBox(height: 20),
                       Text(
-                        'Como você deseja\nolhar para ele?',
+                        'Duas leituras\ndo seu sonho',
                         textAlign: TextAlign.center,
                         style: GoogleFonts.cormorantGaramond(
                           fontSize: 34,
@@ -92,7 +92,17 @@ class _DreamChoiceScreenState extends State<DreamChoiceScreen>
                           fontStyle: FontStyle.italic,
                         ),
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 6),
+                      Text(
+                        'Ambas estão disponíveis a qualquer momento',
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.ptSerif(
+                          fontSize: 11,
+                          color: AionTheme.silver.withOpacity(0.5),
+                          letterSpacing: 0.5,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
 
                       // — Sonho ecoado
                       Container(
@@ -141,7 +151,7 @@ class _DreamChoiceScreenState extends State<DreamChoiceScreen>
                               description:
                                   'Uma interpretação poética e pessoal — Jung e Campbell em diálogo com o seu sonho.',
                               accentColor: AionTheme.gold,
-                              onTap: () => Navigator.pushReplacement(
+                              onTap: () => Navigator.push(
                                 context,
                                 MaterialPageRoute(
                                   builder: (_) => NarrativeResultScreen(
@@ -161,7 +171,7 @@ class _DreamChoiceScreenState extends State<DreamChoiceScreen>
                               description:
                                   'Arquétipos, símbolos, Jornada do Herói, Mito Espelho e dimensões psíquicas detalhadas.',
                               accentColor: AionTheme.teal,
-                              onTap: () => Navigator.pushReplacement(
+                              onTap: () => Navigator.push(
                                 context,
                                 MaterialPageRoute(
                                   builder: (_) => AnalysisResultScreen(
@@ -176,18 +186,6 @@ class _DreamChoiceScreenState extends State<DreamChoiceScreen>
                       ),
 
                       const SizedBox(height: 48),
-
-                      // — Nota de rodapé
-                      Text(
-                        'Você pode acessar a outra leitura a qualquer momento.',
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.ptSerif(
-                          fontSize: 11,
-                          color: AionTheme.silver.withOpacity(0.4),
-                          letterSpacing: 0.5,
-                          fontStyle: FontStyle.italic,
-                        ),
-                      ),
                     ],
                   ),
                 ),

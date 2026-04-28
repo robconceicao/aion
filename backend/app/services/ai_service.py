@@ -2,8 +2,8 @@ import json
 import anthropic
 from app.core.config import settings
 
-# Cliente oficial da Anthropic (Claude)
-client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
+# Cliente assíncrono — essencial para não bloquear o event loop do FastAPI
+async_client = anthropic.AsyncAnthropic(api_key=settings.ANTHROPIC_API_KEY)
 
 PROMPT_TEMPLATE = """
 Atue como Aion, o Oráculo de Mito & Psique — um analista junguiano de senioridade excepcional.
@@ -42,37 +42,35 @@ INSTRUÇÃO CRÍTICA: Responda APENAS com um JSON válido, seguindo exatamente e
 """
 
 async def analyze_dream(dream_text: str, context: dict = None) -> dict:
-    """Analisa o sonho usando Claude (Anthropic), priorizando qualidade e profundidade."""
+    """Analisa o sonho usando Claude async — não bloqueia o event loop."""
     print(f"[AI_SERVICE] Iniciando análise profissional com Claude.")
-    
+
     prompt = PROMPT_TEMPLATE.format(texto=dream_text)
 
-    # Modelos Claude Geração 4 (Identificados na sua conta para 2026)
     modelos = [
         "claude-sonnet-4-6",
         "claude-sonnet-4-5-20250929",
         "claude-opus-4-7",
         "claude-opus-4-6",
         "claude-haiku-4-5-20251001",
-        "claude-3-5-sonnet-latest" # Fallback para compatibilidade
+        "claude-3-5-sonnet-latest"
     ]
 
     ultimo_erro = None
     for model_name in modelos:
         try:
             print(f"[AI_SERVICE] Tentando modelo: {model_name}...")
-            message = client.messages.create(
+            message = await async_client.messages.create(
                 model=model_name,
                 max_tokens=2048,
                 messages=[{"role": "user", "content": prompt}]
             )
-
             content = message.content[0].text
             return _parse_ai_json(content)
 
         except Exception as e:
             ultimo_erro = str(e)
-            print(f"[AI_SERVICE] Erro crítico com {model_name}: {ultimo_erro}")
+            print(f"[AI_SERVICE] Erro com {model_name}: {ultimo_erro}")
             continue
 
     return _get_error_response(f"Falha técnica: {ultimo_erro}")
@@ -133,18 +131,36 @@ Comprimento: médio — substantivo, mas sem exaustão. Entre 180 e 280 palavras
 Idioma: responda sempre no mesmo idioma em que o sonho foi relatado."""
 
 
-async def analyze_dream_narrative(dream_text: str) -> str:
+async def analyze_dream_narrative(dream_text: str, analysis_context: dict = None) -> str:
     """
-    Retorna uma interpretação narrativa e poética do sonho,
-    no estilo junguiano/campbelliano do Aion.
+    Retorna uma interpretação narrativa e poética do sonho.
+    Recebe o contexto da análise estruturada para garantir coerência entre as duas leituras.
     """
-    async_client = anthropic.AsyncAnthropic(api_key=settings.ANTHROPIC_API_KEY)
+    # Constrói o contexto da análise para garantir que a narrativa seja coerente
+    context_block = ""
+    if analysis_context:
+        essencia = analysis_context.get("essencia", "")
+        arquetipos = ", ".join(
+            [a.get("nome", "") for a in analysis_context.get("arquetipos", [])]
+        )
+        mito = analysis_context.get("mito_espelho", {}).get("titulo", "")
+        fase = analysis_context.get("fase_jornada", {}).get("nome", "")
+        context_block = f"""
+
+CONTEXTO DA ANÁLISE SIMBÓLICA (use para manter coerência, não repita):
+- Essência identificada: {essencia}
+- Arquétipos presentes: {arquetipos}
+- Mito espelho: {mito}
+- Fase da Jornada: {fase}
+"""
+
+    user_content = f"Sonho: {dream_text}{context_block}"
 
     message = await async_client.messages.create(
         model="claude-sonnet-4-6",
         max_tokens=1024,
         system=NARRATIVE_SYSTEM_PROMPT,
-        messages=[{"role": "user", "content": dream_text}],
+        messages=[{"role": "user", "content": user_content}],
     )
 
     return message.content[0].text

@@ -124,23 +124,38 @@ def _build_contexto_estruturado(
 async def generate_interview_questions(dream_text: str) -> list:
     """Gera 3 perguntas cirúrgicas sobre o relato do sonho."""
     print("[AI_SERVICE] Gerando perguntas de entrevista...")
-    try:
-        message = await async_client.messages.create(
-            model="claude-3-5-sonnet-20240620",
-            max_tokens=512,
-            system=INTERVIEW_SYSTEM_PROMPT,
-            messages=[{"role": "user", "content": f"Sonho: {dream_text}"}],
-        )
-        content = message.content[0].text
-        start = content.find('{')
-        end = content.rfind('}')
-        if start != -1 and end != -1:
-            data = json.loads(content[start:end+1])
-            return data.get("perguntas", [])
-        return []
-    except Exception as e:
-        print(f"[AI_SERVICE] Erro ao gerar perguntas: {e}")
-        raise e
+    
+    modelos = [
+        "claude-3-7-sonnet-20250219",
+        "claude-3-5-sonnet-20241022",
+        "claude-3-5-sonnet-20240620",
+        "claude-3-sonnet-20240229",
+        "claude-3-haiku-20240307"
+    ]
+    
+    ultimo_erro = None
+    for model_name in modelos:
+        try:
+            print(f"[AI_SERVICE] Tentando modelo para entrevista: {model_name}...")
+            message = await async_client.messages.create(
+                model=model_name,
+                max_tokens=512,
+                system=INTERVIEW_SYSTEM_PROMPT,
+                messages=[{"role": "user", "content": f"Sonho: {dream_text}"}],
+            )
+            content = message.content[0].text
+            start = content.find('{')
+            end = content.rfind('}')
+            if start != -1 and end != -1:
+                data = json.loads(content[start:end+1])
+                return data.get("perguntas", [])
+            return []
+        except Exception as e:
+            ultimo_erro = str(e)
+            print(f"[AI_SERVICE] Erro com {model_name}: {e}")
+            continue
+
+    raise Exception(f"Todos os modelos falharam. Último erro: {ultimo_erro}")
 
 
 async def analyze_dream(
@@ -163,7 +178,11 @@ async def analyze_dream(
     prompt = PROMPT_TEMPLATE.format(texto=dream_text, contexto_estruturado=contexto)
 
     modelos = [
+        "claude-3-7-sonnet-20250219",
+        "claude-3-5-sonnet-20241022",
         "claude-3-5-sonnet-20240620",
+        "claude-3-sonnet-20240229",
+        "claude-3-haiku-20240307"
     ]
 
     ultimo_erro = None
@@ -208,17 +227,31 @@ CONTEXTO DA ANÁLISE (use para manter coerência — não repita literalmente):
 PERGUNTA_FINAL (copie esta frase exatamente como última frase da sua resposta — não altere nada):
 {pergunta_final}"""
 
-    try:
-        message = await async_client.messages.create(
-            model="claude-3-5-sonnet-20240620",
-            max_tokens=1024,
-            system=NARRATIVE_SYSTEM_PROMPT,
-            messages=[{"role": "user", "content": f"Sonho: {dream_text}{context_block}"}],
-        )
-        return message.content[0].text
-    except Exception as e:
-        print(f"[AI_SERVICE] Erro na narrativa: {e}")
-        raise e
+    modelos = [
+        "claude-3-7-sonnet-20250219",
+        "claude-3-5-sonnet-20241022",
+        "claude-3-5-sonnet-20240620",
+        "claude-3-sonnet-20240229",
+        "claude-3-haiku-20240307"
+    ]
+
+    ultimo_erro = None
+    for model_name in modelos:
+        try:
+            print(f"[AI_SERVICE] Tentando modelo para narrativa: {model_name}...")
+            message = await async_client.messages.create(
+                model=model_name,
+                max_tokens=1024,
+                system=NARRATIVE_SYSTEM_PROMPT,
+                messages=[{"role": "user", "content": f"Sonho: {dream_text}{context_block}"}],
+            )
+            return message.content[0].text
+        except Exception as e:
+            ultimo_erro = str(e)
+            print(f"[AI_SERVICE] Erro na narrativa com {model_name}: {e}")
+            continue
+
+    raise Exception(f"Todos os modelos falharam. Último erro: {ultimo_erro}")
 
 
 def _parse_ai_json(content: str) -> dict:

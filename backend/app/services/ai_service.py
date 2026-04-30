@@ -95,12 +95,8 @@ async def generate_interview_questions(dream_text: str) -> list:
     
     # Adicionamos "anthropic/claude-3.5-sonnet" caso seja OpenRouter
     modelos = [
-        "claude-3-7-sonnet-20250219",
-        "claude-3-5-sonnet-20241022",
-        "claude-3-5-sonnet-20240620",
-        "claude-3-sonnet-20240229",
-        "claude-3-haiku-20240307",
-        "anthropic/claude-3.5-sonnet"
+        "claude-sonnet-4-6",
+        "claude-haiku-4-5-20251001"
     ]
     
     ultimo_erro = None
@@ -131,7 +127,7 @@ async def analyze_dream(dream_text: str, tags_emocao=None, temas=None, residuos_
     contexto = _build_contexto_estruturado(tags_emocao, temas, residuos_diurnos, interview_answers)
     prompt = PROMPT_TEMPLATE.format(texto=dream_text, contexto_estruturado=contexto)
     
-    modelos = ["claude-3-7-sonnet-20250219", "claude-3-5-sonnet-20241022", "claude-3-5-sonnet-20240620", "claude-3-sonnet-20240229", "claude-3-haiku-20240307", "anthropic/claude-3.5-sonnet"]
+    modelos = ["claude-sonnet-4-6", "claude-haiku-4-5-20251001"]
     
     ultimo_erro = None
     for model_name in modelos:
@@ -159,7 +155,7 @@ async def analyze_dream_narrative(dream_text: str, analysis_context: dict = None
         pergunta_final = analysis_context.get("pergunta_para_reflexao", "")
         context_block = f"\n\nCONTEXTO:\n- Essência: {essencia}\n- Arquétipos: {arquetipos}\n- Mito: {mito}\n- Fase: {fase}\n\nPERGUNTA_FINAL (copie exato):\n{pergunta_final}"
 
-    modelos = ["claude-3-7-sonnet-20250219", "claude-3-5-sonnet-20241022", "claude-3-5-sonnet-20240620", "claude-3-sonnet-20240229", "claude-3-haiku-20240307", "anthropic/claude-3.5-sonnet"]
+    modelos = ["claude-sonnet-4-6", "claude-haiku-4-5-20251001"]
     
     ultimo_erro = None
     for model_name in modelos:

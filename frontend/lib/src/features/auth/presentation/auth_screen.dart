@@ -18,7 +18,7 @@ class _AuthScreenState extends State<AuthScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _nameController = TextEditingController();
-  String _selectedGender = 'Masculino';
+  String _selectedGender = 'Prefiro não informar';
 
   @override
   Widget build(BuildContext context) {
@@ -253,8 +253,10 @@ class _AuthScreenState extends State<AuthScreen> {
           style: const TextStyle(color: Colors.white, fontSize: 14),
           isExpanded: true,
           items: const [
-            DropdownMenuItem(value: 'Masculino', child: Text('SEXO: MASCULINO')),
-            DropdownMenuItem(value: 'Feminino', child: Text('SEXO: FEMININO')),
+            DropdownMenuItem(value: 'Prefiro não informar', child: Text('GÊNERO: PREFIRO NÃO INFORMAR')),
+            DropdownMenuItem(value: 'Feminino', child: Text('GÊNERO: FEMININO')),
+            DropdownMenuItem(value: 'Masculino', child: Text('GÊNERO: MASCULINO')),
+            DropdownMenuItem(value: 'Não-binário', child: Text('GÊNERO: NÃO-BINÁRIO')),
           ],
           onChanged: (val) {
             if (val != null) setState(() => _selectedGender = val);

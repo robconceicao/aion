@@ -17,8 +17,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final int _totalSteps = 2;
   final _nameController = TextEditingController();
   
-  // Simulação do dado que virá do Supabase (masculino ou feminino)
-  final String _userGender = 'masculino';
+  // Simulação do dado que virá do Supabase
+  final String _userGender = 'Prefiro não informar';
 
   void _nextStep() {
     if (_currentStep < _totalSteps) {
@@ -35,7 +35,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final String nome = _nameController.text.trim();
-    final String bemVindoStr = _userGender == 'feminino' ? 'Bem-Vinda' : 'Bem-Vindo';
+    
+    // Lógica da Saudação
+    String bemVindoStr = 'Boas-vindas';
+    if (_userGender == 'feminino' || _userGender == 'Feminino') {
+      bemVindoStr = 'Bem-vinda';
+    } else if (_userGender == 'masculino' || _userGender == 'Masculino') {
+      bemVindoStr = 'Bem-vindo';
+    }
 
     return Scaffold(
       backgroundColor: AionTheme.darkVoid,
@@ -217,8 +224,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   Widget _buildStepTwo(ThemeData theme) {
-    final isFem = _userGender == 'feminino';
-    final titulo = isFem ? 'Pronta para começar?' : 'Pronto para começar?';
+    // Lógica da Pergunta Pronta
+    String titulo = 'Tudo pronto para começar?';
+    if (_userGender == 'feminino' || _userGender == 'Feminino') {
+      titulo = 'Pronta para começar?';
+    } else if (_userGender == 'masculino' || _userGender == 'Masculino') {
+      titulo = 'Pronto para começar?';
+    }
 
     return Column(
       children: [

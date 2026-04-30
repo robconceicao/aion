@@ -109,7 +109,23 @@ class _NarrativeResultScreenState extends State<NarrativeResultScreen>
                               ],
                             ),
                           ),
-                          const SizedBox(height: 40),
+                          const SizedBox(height: 32),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                            decoration: BoxDecoration(
+                              color: AionTheme.tealBg,
+                              border: Border.all(color: AionTheme.tealBd),
+                            ),
+                            child: Text(
+                              '⚠ Esta análise é uma reflexão simbólica baseada em Jung e Campbell — não substitui acompanhamento psicológico profissional.',
+                              style: GoogleFonts.ptSerif(
+                                fontSize: 12,
+                                color: AionTheme.tealText,
+                                height: 1.7,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 32),
                           Text('LEITURA SIMBÓLICA',
                               style: GoogleFonts.ptSerif(
                                 fontSize: 9, letterSpacing: 4, color: AionTheme.gold,

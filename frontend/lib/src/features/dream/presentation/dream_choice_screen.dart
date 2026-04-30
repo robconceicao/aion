@@ -234,7 +234,7 @@ class _DreamChoiceScreenState extends State<DreamChoiceScreen>
           children: const [
             Text('M I T O  &  P S I Q U E', style: TextStyle(fontSize: 9, letterSpacing: 5, color: AionTheme.gold)),
             SizedBox(height: 8),
-            Text('O Oráculo', style: TextStyle(fontSize: 24, letterSpacing: 3, fontFamily: 'Georgia', color: Colors.white)),
+            Text('Aion o diário do Sonho', style: TextStyle(fontSize: 24, letterSpacing: 3, fontFamily: 'Georgia', color: Colors.white)),
           ],
         ),
         Wrap(

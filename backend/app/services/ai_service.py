@@ -5,7 +5,13 @@ from app.core.config import settings
 if not settings.ANTHROPIC_API_KEY:
     print("\n[CRÍTICO] ANTHROPIC_API_KEY está VAZIA. O Oráculo não poderá responder.\n")
 
-async_client = anthropic.AsyncAnthropic(api_key=settings.ANTHROPIC_API_KEY)
+try:
+    # Passa uma chave dummy se estiver vazia apenas para não crashar o Uvicorn no boot
+    api_key_safe = settings.ANTHROPIC_API_KEY if settings.ANTHROPIC_API_KEY else "sk-ant-dummy-key-to-prevent-crash"
+    async_client = anthropic.AsyncAnthropic(api_key=api_key_safe)
+except Exception as e:
+    print(f"\n[CRÍTICO] Falha ao iniciar cliente Anthropic: {e}\n")
+    async_client = None
 
 # ─────────────────────────────────────────────
 # PROMPT: ANÁLISE ESTRUTURADA (MAPA ARQUETÍPICO)

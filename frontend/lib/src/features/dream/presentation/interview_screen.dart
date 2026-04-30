@@ -120,7 +120,7 @@ class _InterviewScreenState extends State<InterviewScreen>
     if (_isLoading) {
       return Scaffold(
         backgroundColor: AionTheme.darkVoid,
-        body: const MandalaSpinner(message: 'O Oráculo está interpretando...'),
+        body: const MandalaSpinner(message: 'Aion está interpretando...'),
       );
     }
 

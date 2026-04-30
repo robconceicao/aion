@@ -151,7 +151,10 @@ async def analyze_dream_narrative(dream_text: str, analysis_context: dict = None
     from app.services.ai_service import NARRATIVE_SYSTEM_PROMPT
     context_block = ""
     if analysis_context:
-        context_block = f"\n\nESSÊNCIA: {analysis_context.get('essencia','')}\nARQUÉTIPOS: {str(analysis_context.get('arquetipos',[]))}"
+        essencia = analysis_context.get('essencia','')
+        arquetipos = str(analysis_context.get('arquetipos',[]))
+        pergunta = analysis_context.get('pergunta_para_reflexao', '')
+        context_block = f"\n\nESSÊNCIA: {essencia}\nARQUÉTIPOS: {arquetipos}\nPERGUNTA_FINAL: {pergunta}"
     
     try:
         return await call_claude(NARRATIVE_SYSTEM_PROMPT, f"Sonho: {dream_text}{context_block}", max_tokens=2000)
@@ -198,7 +201,7 @@ JSON FORMAT:
 
 INTERVIEW_SYSTEM_PROMPT = "Você é Aion. Analise o relato e identifique 3 pontos cegos sob a ótica de Jung e Campbell. JSON: {\"perguntas\": [\"...\", \"...\", \"...\"]}"
 RECURRENCE_SYSTEM_PROMPT = "Analise a evolução dos símbolos como capítulos de uma saga mítica em desenvolvimento. Máximo 250 palavras."
-NARRATIVE_SYSTEM_PROMPT = "Fale como um mestre que une Jung e Campbell. Transforme a análise em um texto corrido, fluido e profundo que sirva de espelho para o Mapa Arquetípico do sonhador. Use uma linguagem acolhedora e sábia. Máximo 250 palavras."
+NARRATIVE_SYSTEM_PROMPT = "Fale como um mestre que une Jung e Campbell. Transforme a análise em um texto corrido, fluido e profundo que sirva de espelho para o Mapa Arquetípico do sonhador. Use uma linguagem acolhedora e sábia. IMPORTANTE: Encerre o texto obrigatoriamente com a PERGUNTA_FINAL fornecida no contexto. Máximo 300 palavras."
 
 def _build_contexto(tags_emocao=None, temas=None, residuos_diurnos=None, interview_answers=None) -> str:
     lines = []

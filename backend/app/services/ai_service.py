@@ -44,6 +44,25 @@ INSTRUÇÃO CRÍTICA: Responda APENAS com um JSON válido, seguindo exatamente e
 }}
 """
 
+NARRATIVE_SYSTEM_PROMPT = """Você é Aion. Fale com a pessoa como um amigo sábio — não como um professor ou terapeuta.
+
+Leia o sonho e responda em 3 movimentos curtos, sem títulos ou subtítulos:
+
+Primeiro: diga o que o sonho está revelando sobre o momento de vida da pessoa. Seja direto. Uma ou duas frases.
+
+Segundo: escolha o símbolo mais importante do sonho e explique o que ele significa na vida real dessa pessoa. Se houver um mito ou história que ilumine isso, mencione de passagem — em uma frase simples, sem explicação histórica.
+
+Terceiro: termine com a pergunta exata que será indicada no campo PERGUNTA_FINAL. Não altere uma palavra. Não crie uma pergunta diferente.
+
+Regras absolutas:
+- Nunca use: arquétipo, inconsciente, individuação, amplificação, psíquico, Self, compensatório, projeção, ou qualquer termo de psicologia
+- Nada de metáforas poéticas exageradas
+- Máximo 180 palavras no total
+- Use "você" e "seu/sua" — português do Brasil direto
+- Não crie seções, títulos ou listas — texto corrido como uma conversa
+- A última frase DEVE ser exatamente a PERGUNTA_FINAL fornecida"""
+
+
 async def analyze_dream(dream_text: str, context: dict = None) -> dict:
     """Analisa o sonho usando Claude async — não bloqueia o event loop."""
     print(f"[AI_SERVICE] Iniciando análise profissional com Claude.")
@@ -76,63 +95,12 @@ async def analyze_dream(dream_text: str, context: dict = None) -> dict:
 
     return _get_error_response(f"Falha técnica: {ultimo_erro}")
 
-def _parse_ai_json(content: str) -> dict:
-    """Limpa e parseia o JSON de forma robusta, ignorando textos extras."""
-    try:
-        start = content.find('{')
-        end = content.rfind('}')
-        if start != -1 and end != -1:
-            json_str = content[start:end+1]
-            return json.loads(json_str)
-        return json.loads(content.strip())
-    except Exception as e:
-        print(f"[AI_SERVICE] Falha ao decodificar JSON. Conteúdo bruto: {content[:100]}")
-        raise ValueError(f"Formato de resposta inválido: {str(e)}")
-
-def _get_error_response(error_msg: str) -> dict:
-    print(f"[DEBUG_ORACULO] Gerando resposta de erro: {error_msg}")
-    return {
-        "aviso": "O Oráculo está em silêncio profundo.",
-        "essencia": "O silêncio também é uma mensagem do inconsciente. Tente novamente em instantes.",
-        "arquetipos": [],
-        "funcao_compensatoria": "Aguardando clareza técnica.",
-        "simbolos_chave": [],
-        "fase_jornada": {"nome": "O Limiar", "descricao": "O Oráculo está se reequilibrando."},
-        "prospeccao": "Aguarde o próximo momento.",
-        "mito_espelho": {"titulo": "O Silêncio de Jó", "paralelo": "A resposta virá no tempo certo."},
-        "pergunta_para_reflexao": "O que o silêncio faz você sentir?",
-        "intensidade_sombra": 0,
-        "intensidade_heroi": 0,
-        "intensidade_transformacao": 0
-    }
-
-async def process_voice_input(audio_file):
-    pass
-
-
-NARRATIVE_SYSTEM_PROMPT = """Você é Aion. Fale com a pessoa como um amigo sábio — não como um professor ou terapeuta.
-
-Leia o sonho e responda em 3 movimentos curtos, sem títulos ou subtítulos:
-
-Primeiro: diga o que o sonho está revelando sobre o momento de vida da pessoa. Seja direto. Uma ou duas frases.
-
-Segundo: escolha o símbolo mais importante do sonho e explique o que ele significa na vida real dessa pessoa. Se houver um mito ou história que ilumine isso, mencione de passagem — em uma frase simples, sem explicação histórica.
-
-Terceiro: termine com a pergunta exata que será indicada no campo PERGUNTA_FINAL. Não altere uma palavra. Não crie uma pergunta diferente.
-
-Regras absolutas:
-- Nunca use: arquétipo, inconsciente, individuação, amplificação, psíquico, Self, compensatório, projeção, ou qualquer termo de psicologia
-- Nada de metáforas poéticas exageradas
-- Máximo 180 palavras no total
-- Use "você" e "seu/sua" — português do Brasil direto
-- Não crie seções, títulos ou listas — texto corrido como uma conversa
-- A última frase DEVE ser exatamente a PERGUNTA_FINAL fornecida"""
-
 
 async def analyze_dream_narrative(dream_text: str, analysis_context: dict = None) -> str:
     """
-    Retorna uma interpretação narrativa do sonho ancorada na análise estruturada.
-    A pergunta final é obrigatoriamente a mesma do Mapa Arquetípico.
+    Retorna a interpretação narrativa do sonho.
+    Recebe o contexto da análise estruturada para garantir coerência
+    e usar exatamente a mesma pergunta para reflexão.
     """
     context_block = ""
 
@@ -153,7 +121,7 @@ CONTEXTO DA ANÁLISE (use para manter coerência — não repita literalmente):
 - Mito espelho: {mito}
 - Fase da Jornada: {fase}
 
-PERGUNTA_FINAL (use esta exatamente como última frase — não altere nada):
+PERGUNTA_FINAL (copie esta frase exatamente como última frase da sua resposta — não altere nada):
 {pergunta_final}"""
 
     user_content = f"Sonho: {dream_text}{context_block}"
@@ -169,3 +137,39 @@ PERGUNTA_FINAL (use esta exatamente como última frase — não altere nada):
     except Exception as e:
         print(f"[AI_SERVICE] Erro na narrativa: {e}")
         raise e
+
+
+def _parse_ai_json(content: str) -> dict:
+    """Limpa e parseia o JSON de forma robusta, ignorando textos extras."""
+    try:
+        start = content.find('{')
+        end = content.rfind('}')
+        if start != -1 and end != -1:
+            json_str = content[start:end+1]
+            return json.loads(json_str)
+        return json.loads(content.strip())
+    except Exception as e:
+        print(f"[AI_SERVICE] Falha ao decodificar JSON. Conteúdo bruto: {content[:100]}")
+        raise ValueError(f"Formato de resposta inválido: {str(e)}")
+
+
+def _get_error_response(error_msg: str) -> dict:
+    print(f"[DEBUG_ORACULO] Gerando resposta de erro: {error_msg}")
+    return {
+        "aviso": "O Oráculo está em silêncio profundo.",
+        "essencia": "O silêncio também é uma mensagem do inconsciente. Tente novamente em instantes.",
+        "arquetipos": [],
+        "funcao_compensatoria": "Aguardando clareza técnica.",
+        "simbolos_chave": [],
+        "fase_jornada": {"nome": "O Limiar", "descricao": "O Oráculo está se reequilibrando."},
+        "prospeccao": "Aguarde o próximo momento.",
+        "mito_espelho": {"titulo": "O Silêncio de Jó", "paralelo": "A resposta virá no tempo certo."},
+        "pergunta_para_reflexao": "O que o silêncio faz você sentir?",
+        "intensidade_sombra": 0,
+        "intensidade_heroi": 0,
+        "intensidade_transformacao": 0
+    }
+
+
+async def process_voice_input(audio_file):
+    pass

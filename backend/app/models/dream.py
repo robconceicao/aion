@@ -11,6 +11,7 @@ class DreamAnalysis(BaseModel):
     projection: str
     myth: str
     reflection: str
+    narrative: str | None = None
 
 class DreamModel(BaseModel):
     id: Optional[str] = Field(None, alias="_id")

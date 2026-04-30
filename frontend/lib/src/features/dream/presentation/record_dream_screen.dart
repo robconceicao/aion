@@ -130,8 +130,8 @@ class _RecordDreamScreenState extends State<RecordDreamScreen> with SingleTicker
     const userEmail = 'usuario@aion.app';
 
     try {
-      // 1. Análise detalhada primeiro — é a fonte da verdade
-      final analysisResponse = await dio.post(
+      // Uma única chamada ao backend — retorna análise estruturada + narrativa
+      final response = await dio.post(
         AionConfig.analyzeUrl,
         options: Options(headers: {'x-user-email': userEmail}),
         data: {
@@ -141,17 +141,9 @@ class _RecordDreamScreenState extends State<RecordDreamScreen> with SingleTicker
           'is_recurrent': _recurring,
         },
       );
-      final detailedAnalysis = analysisResponse.data as Map<String, dynamic>;
 
-      // 2. Narrativa em seguida — recebe o contexto para garantir coerência
-      final narrativeResponse = await dio.post(
-        AionConfig.narrativeUrl,
-        data: {
-          'text': text,
-          'analysis_context': detailedAnalysis,
-        },
-      );
-      final narrativeText = narrativeResponse.data['narrative'] as String;
+      final detailedAnalysis = response.data as Map<String, dynamic>;
+      final narrativeText = (detailedAnalysis['narrative'] as String?) ?? '';
 
       if (!mounted) return;
 

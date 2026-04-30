@@ -19,10 +19,21 @@ async def create_dream(
 ):
     supabase = get_supabase()
 
-    # 1. Analisa via IA
+    # 1. Analisa via IA (Estrutural)
     analysis = await analyze_dream(dream_in.text)
 
-    # 2. Prepara dados — inclui e-mail do usuário se enviado pelo frontend
+    # 2. Narrativa (usa o contexto do passo 1 para garantir pergunta idêntica)
+    try:
+        narrative = await analyze_dream_narrative(
+            dream_text=dream_in.text,
+            analysis_context=analysis,
+        )
+        analysis["narrative"] = narrative
+    except Exception as e:
+        print(f"[ROUTER] Erro ao gerar narrativa: {e}")
+        analysis["narrative"] = ""
+
+    # 3. Prepara dados — inclui e-mail do usuário se enviado pelo frontend
     dream_id = str(uuid.uuid4())
     dream_data = {
         "id": dream_id,

@@ -34,6 +34,7 @@ class _RecordDreamScreenState extends State<RecordDreamScreen> with SingleTicker
   bool _isRecording = false;
   String? _audioPath;
   bool _isProcessing = false;
+  String _loadingMessage = 'Processando...';
   String? _transcription;
   final TextEditingController _reviewController = TextEditingController();
   final TextEditingController _textInputController = TextEditingController();
@@ -89,7 +90,10 @@ class _RecordDreamScreenState extends State<RecordDreamScreen> with SingleTicker
   }
 
   Future<void> _sendToTranscription(String path) async {
-    setState(() => _isProcessing = true);
+    setState(() {
+      _isProcessing = true;
+      _loadingMessage = 'Transcrevendo sua voz...';
+    });
     final dio = Dio();
     try {
       // Usamos a abstração para pegar os bytes do áudio (seja de arquivo ou BLOB)
@@ -126,7 +130,10 @@ class _RecordDreamScreenState extends State<RecordDreamScreen> with SingleTicker
   // --- Common Analysis Logic ---
   Future<void> _analyzeAndNavigate(String text) async {
     if (text.trim().isEmpty) return;
-    setState(() => _isProcessing = true);
+    setState(() {
+      _isProcessing = true;
+      _loadingMessage = 'Buscando os melhores significados\nsegundo o seu contexto...';
+    });
     
     // Cancela notificação do dia quando usuário inicia um registro
     await AionNotificationService.cancelTodaysMorning();
@@ -192,7 +199,7 @@ class _RecordDreamScreenState extends State<RecordDreamScreen> with SingleTicker
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 36.0),
               child: _isProcessing 
-                ? const MandalaSpinner(message: 'Buscando os melhores significados\nsegundo o seu contexto...')
+                ? MandalaSpinner(message: _loadingMessage)
                 : _buildBody(theme),
             ),
           ),

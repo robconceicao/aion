@@ -18,7 +18,7 @@ class _AuthScreenState extends State<AuthScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _nameController = TextEditingController();
-  String _selectedGender = 'Prefiro não informar';
+  String? _selectedGender;
 
   @override
   Widget build(BuildContext context) {
@@ -244,19 +244,28 @@ class _AuthScreenState extends State<AuthScreen> {
         color: AionTheme.darkAbyss.withOpacity(0.3),
         border: Border.all(color: AionTheme.veil),
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
           value: _selectedGender,
+          hint: Text(
+            'GÊNERO',
+            style: TextStyle(
+              color: AionTheme.silver.withOpacity(0.5),
+              fontSize: 11,
+              letterSpacing: 2,
+            ),
+          ),
           dropdownColor: AionTheme.darkAbyss,
           icon: const Icon(Icons.keyboard_arrow_down, color: AionTheme.silver),
           style: const TextStyle(color: Colors.white, fontSize: 14),
           isExpanded: true,
           items: const [
-            DropdownMenuItem(value: 'Prefiro não informar', child: Text('GÊNERO: PREFIRO NÃO INFORMAR')),
-            DropdownMenuItem(value: 'Feminino', child: Text('GÊNERO: FEMININO')),
-            DropdownMenuItem(value: 'Masculino', child: Text('GÊNERO: MASCULINO')),
-            DropdownMenuItem(value: 'Não-binário', child: Text('GÊNERO: NÃO-BINÁRIO')),
+            DropdownMenuItem(value: 'Feminino', child: Text('Feminino')),
+            DropdownMenuItem(value: 'Masculino', child: Text('Masculino')),
+            DropdownMenuItem(value: 'Não-binário', child: Text('Não-binário')),
+            DropdownMenuItem(value: 'Prefiro não responder', child: Text('Prefiro não responder')),
+            DropdownMenuItem(value: 'Outro', child: Text('Outro')),
           ],
           onChanged: (val) {
             if (val != null) setState(() => _selectedGender = val);
@@ -293,6 +302,13 @@ class _AuthScreenState extends State<AuthScreen> {
         if (name.isEmpty) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Por favor, preencha seu Nome Completo.')),
+          );
+          setState(() => _isLoading = false);
+          return;
+        }
+        if (_selectedGender == null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Por favor, selecione seu Gênero.')),
           );
           setState(() => _isLoading = false);
           return;

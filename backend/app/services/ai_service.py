@@ -13,46 +13,37 @@ if settings.GEMINI_API_KEY:
 
 # Lista de modelos por prioridade (Versões 2026)
 AI_MODELS = [
-    "claude-sonnet-4-6",          # Sonnet mais recente
-    "claude-haiku-4-5-20251001",  # Haiku mais recente
-    "claude-3-5-sonnet-20241022", # Fallback 2024
-    "claude-3-haiku-20240307",   # Fallback 2024
+    "claude-sonnet-4-6",
+    "claude-haiku-4-5-20251001",
+    "claude-3-5-sonnet-20241022",
+    "claude-3-haiku-20240307",
 ]
 
-# ─── EMBEDDINGS (VIA REMOTE API - MEMORY SAVER) ────────────────
+# ─── EMBEDDINGS (VIA GEMINI - 768 DIMENSÕES) ──────────────────
 
 async def generate_embedding(text: str) -> list:
-    """Gera embeddings via Hugging Face API (Gratuito) para economizar RAM."""
-    model_id = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
-    api_url = f"https://api-inference.huggingface.co/pipeline/feature-extraction/{model_id}"
-    
-    # Nota: Se quiser mais estabilidade, adicione uma HF_TOKEN nas variáveis de ambiente.
-    # Mas para uso moderado, a API funciona sem token.
-    headers = {}
-    
-    async with httpx.AsyncClient() as client:
-        try:
-            response = await client.post(
-                api_url, 
-                headers=headers, 
-                json={"inputs": text, "options": {"wait_for_model": True}},
-                timeout=20.0
-            )
-            if response.status_code == 200:
-                return response.json()
-            else:
-                print(f"[AI_SERVICE] Erro embedding remoto: {response.status_code}")
-                # Fallback para zeros se a API falhar (evita crash total)
-                return [0.0] * 384
-        except Exception as e:
-            print(f"[AI_SERVICE] Erro fatal embedding: {e}")
-            return [0.0] * 384
+    """Gera embeddings usando o modelo text-embedding-004 do Google."""
+    if not settings.GEMINI_API_KEY:
+        print("[AI_SERVICE] Erro: GEMINI_API_KEY não configurada.")
+        return [0.0] * 768
+        
+    try:
+        result = genai.embed_content(
+            model="models/text-embedding-004",
+            content=text,
+            task_type="retrieval_document",
+            title="Aion Dream Analysis"
+        )
+        return result['embedding']
+    except Exception as e:
+        print(f"[AI_SERVICE] Erro embedding Gemini: {e}")
+        return [0.0] * 768
 
 
 # ─── HELPERS DE IA ────────────────────────────────────────────
 
 async def call_claude(system_prompt: str, user_content: str, max_tokens=1024):
-    """Tenta chamar o Claude com fallback. Se falhar, tenta o Gemini."""
+    """Tenta chamar o Claude com fallback para Gemini."""
     if not async_client:
         return await call_gemini(system_prompt, user_content)
 

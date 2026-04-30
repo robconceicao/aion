@@ -11,7 +11,7 @@ async_client = anthropic.AsyncAnthropic(api_key=settings.ANTHROPIC_API_KEY) if s
 if settings.GEMINI_API_KEY:
     genai.configure(api_key=settings.GEMINI_API_KEY)
 
-# Lista de modelos por prioridade (Versões 2026)
+# Lista de modelos por prioridade (Versões 2026) - Atualizado em 30/04/2026
 AI_MODELS = [
     "claude-sonnet-4-6",          # Sonnet mais recente
     "claude-haiku-4-5-20251001",  # Haiku mais recente

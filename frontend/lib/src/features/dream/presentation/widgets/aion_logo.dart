@@ -47,12 +47,14 @@ class _AionPulseLogoState extends State<AionPulseLogo> with SingleTickerProvider
           ),
           child: Opacity(
             opacity: 0.65 + (0.35 * _controller.value),
+          child: ClipOval(
             child: Image.asset(
               'assets/images/logo.png',
               fit: BoxFit.contain,
               color: Colors.white.withOpacity(0.9),
               colorBlendMode: BlendMode.modulate,
             ),
+          ),
           ),
         );
       },
@@ -107,13 +109,15 @@ class _AionSpinLogoState extends State<AionSpinLogo> with SingleTickerProviderSt
         ),
         RotationTransition(
           turns: _controller,
-          child: Image.asset(
-            'assets/images/logo.png',
-            width: widget.size,
-            height: widget.size,
-            fit: BoxFit.contain,
-            color: Colors.white.withOpacity(0.9),
-            colorBlendMode: BlendMode.modulate,
+          child: ClipOval(
+            child: Image.asset(
+              'assets/images/logo.png',
+              width: widget.size,
+              height: widget.size,
+              fit: BoxFit.contain,
+              color: Colors.white.withOpacity(0.9),
+              colorBlendMode: BlendMode.modulate,
+            ),
           ),
         ),
       ],

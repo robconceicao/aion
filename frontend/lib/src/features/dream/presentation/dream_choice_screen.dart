@@ -3,6 +3,9 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme.dart';
 import 'analysis_result_screen.dart';
 import 'narrative_result_screen.dart';
+import 'record_dream_screen.dart';
+import 'dream_history_screen.dart';
+import '../../auth/presentation/auth_screen.dart';
 
 class DreamChoiceScreen extends StatefulWidget {
   final String dreamText;
@@ -64,6 +67,8 @@ class _DreamChoiceScreenState extends State<DreamChoiceScreen>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
+                      _buildNav(context),
+                      const SizedBox(height: 30),
                       _buildDivider(),
                       const SizedBox(height: 40),
                       Text(
@@ -216,6 +221,69 @@ class _DreamChoiceScreenState extends State<DreamChoiceScreen>
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildNav(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: const [
+            Text('M I T O  &  P S I Q U E', style: TextStyle(fontSize: 9, letterSpacing: 5, color: AionTheme.gold)),
+            SizedBox(height: 8),
+            Text('O Oráculo', style: TextStyle(fontSize: 24, letterSpacing: 3, fontFamily: 'Georgia', color: Colors.white)),
+          ],
+        ),
+        Wrap(
+          spacing: 6,
+          runSpacing: 6,
+          children: [
+            _navBtn(context, '← NOVO SONHO', false, () {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (_) => const RecordDreamScreen()),
+              );
+            }),
+            _navBtn(context, 'HISTÓRICO', false, () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const DreamHistoryScreen()),
+              );
+            }),
+            _navBtn(context, 'SAIR', false, () {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (_) => const AuthScreen()),
+              );
+            }),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _navBtn(BuildContext context, String label, bool isActive, VoidCallback onTap) {
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+        decoration: BoxDecoration(
+          color: isActive ? AionTheme.gold : Colors.transparent,
+          border: Border.all(color: isActive ? AionTheme.gold : AionTheme.veil),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isActive ? AionTheme.darkVoid : AionTheme.silver,
+            fontSize: 10,
+            letterSpacing: 2,
+            fontFamily: 'Georgia',
+          ),
+        ),
+      ),
     );
   }
 }

@@ -439,6 +439,11 @@ class AnalysisResultScreen extends StatelessWidget {
 
   // ⑪ EPISÓDIOS RECOMENDADOS
   Widget _buildRecommendedEpisodesSection() {
+    final episodios = analysis['episodios_recomendados'] as List?;
+    if (episodios == null || episodios.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -454,9 +459,17 @@ class AnalysisResultScreen extends StatelessWidget {
             style: TextStyle(fontSize: 12, color: AionTheme.mist),
           ),
           const SizedBox(height: 16),
-          _buildEpisodeCard('EP07', 'A Grande Deusa', 'Magna Mater — o arquétipo que as civilizações temeram e veneraram', AionTheme.getArchetypeColor('grande mãe')),
-          const SizedBox(height: 8),
-          _buildEpisodeCard('EP08', 'O Retorno do Herói', 'A individuação — tornar-se quem você sempre foi', AionTheme.dawn),
+          ...episodios.map((ep) {
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 8.0),
+              child: _buildEpisodeCard(
+                ep['numero'] ?? 'EP--', 
+                ep['titulo'] ?? '', 
+                ep['subtitulo'] ?? '', 
+                AionTheme.getArchetypeColor(ep['arquetipo_relacionado'] ?? '')
+              ),
+            );
+          }),
         ],
       ),
     );

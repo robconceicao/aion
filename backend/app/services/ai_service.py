@@ -22,22 +22,27 @@ AI_MODELS = [
 # ─── EMBEDDINGS (VIA GEMINI - 768 DIMENSÕES) ──────────────────
 
 async def generate_embedding(text: str) -> list:
-    """Gera embeddings usando o modelo text-embedding-004 do Google."""
+    """Gera embeddings usando o modelo estável embedding-001 do Google."""
     if not settings.GEMINI_API_KEY:
         print("[AI_SERVICE] Erro: GEMINI_API_KEY não configurada.")
         return [0.0] * 768
         
     try:
+        # Usando o modelo mais estável e compatível
         result = genai.embed_content(
-            model="models/text-embedding-004",
+            model="models/embedding-001",
             content=text,
-            task_type="retrieval_document",
-            title="Aion Dream Analysis"
+            task_type="retrieval_document"
         )
         return result['embedding']
     except Exception as e:
         print(f"[AI_SERVICE] Erro embedding Gemini: {e}")
-        return [0.0] * 768
+        # Tenta fallback para versão 004 se a 001 falhar
+        try:
+            result = genai.embed_content(model="models/text-embedding-004", content=text)
+            return result['embedding']
+        except:
+            return [0.0] * 768
 
 
 # ─── HELPERS DE IA ────────────────────────────────────────────
@@ -80,24 +85,26 @@ async def call_gemini(system_prompt: str, user_content: str):
         print(f"[AI_SERVICE] Erro fatal no Gemini: {e}")
         raise e
 
-
 def _parse_ai_json(content: str) -> dict:
     import re
     try:
-        content = content.replace("```json", "").replace("```", "").strip()
+        # Limpeza agressiva
+        content = content.strip()
+        # Remove blocos de código markdown se existirem
+        content = re.sub(r'```json\s*|\s*```', '', content)
+        
         start, end = content.find('{'), content.rfind('}')
         if start != -1 and end != -1:
             content = content[start:end+1]
         
-        # Remove trailing commas
+        # Remove vírgulas extras e limpa quebras de linha problemáticas
         content = re.sub(r',\s*([\}\]])', r'\1', content)
+        content = content.replace('\n', ' ').replace('\r', '')
+        
         return json.loads(content)
     except Exception as e:
-        try:
-            cleaned = content.replace('\n', ' ').replace('\r', '')
-            return json.loads(cleaned)
-        except:
-            raise ValueError(f"JSON inválido: {str(e)}")
+        print(f"[AI_SERVICE] Erro ao parsear JSON: {e} | Conteúdo: {content[:100]}...")
+        raise ValueError(f"Falha crítica no formato da resposta: {str(e)}")
 
 
 # ─── FUNÇÕES DO AION ──────────────────────────────────────────

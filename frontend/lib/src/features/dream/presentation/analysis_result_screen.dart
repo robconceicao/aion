@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme.dart';
 import '../../../core/widgets/cinematic_background.dart';
+import 'widgets/mandala_spinner.dart';
+import 'widgets/hero_journey_widget.dart';
 
 class AnalysisResultScreen extends StatelessWidget {
   final Map<String, dynamic> analysis;
@@ -50,6 +52,9 @@ class AnalysisResultScreen extends StatelessWidget {
                     const SizedBox(height: 14),
                     _buildEssenceSection(),
                     const SizedBox(height: 14),
+                    _buildMirrorMythSection(),
+                    _buildRecurrenceSection(),
+                    const SizedBox(height: 14),
                     _buildDimensionsSection(),
                     const SizedBox(height: 14),
                     _buildArchetypesSection(context),
@@ -59,8 +64,6 @@ class AnalysisResultScreen extends StatelessWidget {
                     _buildSymbolsSection(),
                     const SizedBox(height: 14),
                     _buildHeroJourneySection(),
-                    const SizedBox(height: 14),
-                    _buildMirrorMythSection(),
                     const SizedBox(height: 14),
                     _buildReflectionQuestionSection(),
                     const SizedBox(height: 14),
@@ -354,50 +357,50 @@ class AnalysisResultScreen extends StatelessWidget {
     );
   }
 
-  // ⑧ JORNADA DO HERÓI
+  // ⑦ JORNADA DO HERÓI (Visual Upgrade 2)
   Widget _buildHeroJourneySection() {
-    final fase = analysis['fase_jornada'] ?? {};
-    final nome = fase['nome'] ?? 'O Mundo Comum';
-    
-    // Lista de fases para cálculo de progresso
-    const fasesOrder = [
-      'Mundo Comum', 'Chamado', 'Recusa', 'Mentor', 'Travessia', 
-      'Testes', 'Caverna', 'Provação', 'Recompensa', 'Caminho', 
-      'Ressurreição', 'Retorno'
-    ];
-    int index = fasesOrder.indexWhere((f) => nome.toString().contains(f));
-    if (index == -1) index = 0;
-    double progress = (index + 1) / 12;
+    final fase = analysis['fase_jornada'] as Map<String, dynamic>?;
+    if (fase == null) return const SizedBox.shrink();
 
-    return _card(
+    return HeroJourneyWidget(
+      stageName: fase['nome'] ?? 'O Mundo Comum',
+      stageDescription: fase['descricao'] ?? '',
+    );
+  }
+
+  // ⑧ ANÁLISE DE RECORRÊNCIA (Upgrade 2)
+  Widget _buildRecurrenceSection() {
+    final rec = analysis['analise_recorrencia'] as Map<String, dynamic>?;
+    if (rec == null || rec['is_recorrente'] != true) return const SizedBox.shrink();
+
+    return Container(
+      margin: const EdgeInsets.only(top: 14),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AionTheme.darkAbyss,
+        border: Border(left: BorderSide(color: AionTheme.gold, width: 2)),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _label('⊕ JORNADA DO HERÓI — CAMPBELL', color: AionTheme.gold),
-          Text(nome, style: const TextStyle(fontSize: 15, color: AionTheme.amber)),
-          const SizedBox(height: 8),
-          Container(
-            height: 4,
-            width: double.infinity,
-            color: AionTheme.shadow,
-            child: FractionallySizedBox(
-              alignment: Alignment.centerLeft,
-              widthFactor: progress,
-              child: Container(color: AionTheme.gold),
-            ),
-          ),
-          const SizedBox(height: 8),
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('O Mundo Comum', style: TextStyle(fontSize: 10, color: AionTheme.mist)),
-              Text('O Retorno com o Elixir', style: TextStyle(fontSize: 10, color: AionTheme.mist)),
+              Text('↻', style: TextStyle(color: AionTheme.gold, fontSize: 14)),
+              const SizedBox(width: 8),
+              Text(
+                'PADRÃO RECORRENTE — ${rec['numero_aparicoes']}ª VEZ',
+                style: GoogleFonts.ptSerif(
+                  fontSize: 9,
+                  letterSpacing: 3,
+                  color: AionTheme.gold,
+                ),
+              ),
             ],
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 12),
           Text(
-            fase['descricao'] ?? '',
-            style: const TextStyle(fontSize: 13, color: AionTheme.silver, height: 1.8),
+            rec['analise_evolucao'] ?? '',
+            style: GoogleFonts.ptSerif(fontSize: 13, height: 1.7, color: AionTheme.silver),
           ),
         ],
       ),

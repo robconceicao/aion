@@ -9,6 +9,9 @@ import 'widgets/aion_logo.dart';
 import '../../../core/widgets/cinematic_background.dart';
 import '../../profile/presentation/profile_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:dio/dio.dart';
+import '../../../core/constants.dart';
+import 'widgets/hero_journey_widget.dart';
 
 class DreamDiaryScreen extends StatefulWidget {
   const DreamDiaryScreen({super.key});
@@ -23,6 +26,81 @@ class _DreamDiaryScreenState extends State<DreamDiaryScreen> {
   int _thisMonth = 0;
   String _topArchetype = '-';
   bool _isLoading = true;
+
+  // — Upgrade 2: Busca e Filtros
+  final _dio = Dio();
+  final _searchController = TextEditingController();
+  String? _filtroEmocao;
+  String? _filtroFase;
+  List<Map<String, dynamic>> _searchResults = [];
+  bool _isSearching = false;
+  bool _showSearchResults = false;
+
+  static const _fases = [
+    'O Mundo Comum', 'O Chamado', 'A Travessia do Limiar',
+    'Provas e Aliados', 'O Abismo', 'A Recompensa', 'O Retorno',
+  ];
+
+  static const _emocoesFilter = [
+    'Ansiedade', 'Calmaria', 'Pavor', 'Euforia',
+    'Impotência', 'Alívio', 'Confusão', 'Nostalgia',
+  ];
+
+  Future<void> _buscarSemantico(String query) async {
+    if (query.trim().isEmpty) {
+      setState(() { _showSearchResults = false; _searchResults = []; });
+      return;
+    }
+    setState(() => _isSearching = true);
+    try {
+      final response = await _dio.post(
+        AionConfig.searchUrl,
+        data: {'query': query.trim(), 'threshold': 0.60, 'max_results': 8},
+      );
+      final results = List<Map<String, dynamic>>.from(
+        (response.data['results'] as List).map((e) => e as Map<String, dynamic>),
+      );
+      setState(() { 
+        _searchResults = results; 
+        _showSearchResults = results.isNotEmpty; 
+      });
+    } catch (e) {
+      debugPrint('Erro busca semântica: $e');
+    } finally {
+      setState(() => _isSearching = false);
+    }
+  }
+
+  Future<void> _filtrarSonhos({String? emocao, String? fase}) async {
+    // Aqui poderíamos atualizar a lista principal de sonhos ou navegar para o histórico filtrado
+    // Por enquanto, vamos apenas navegar para o histórico com os parâmetros
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => DreamHistoryScreen(
+        userEmail: 'usuario@aion.app',
+        filtroEmocao: emocao,
+        filtroFase: fase,
+      )),
+    );
+  }
+
+  Widget _buildFilterChip(String label, bool isActive, Color color, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: isActive ? color.withOpacity(0.15) : Colors.transparent,
+          border: Border.all(color: isActive ? color.withOpacity(0.6) : AionTheme.shadow),
+        ),
+        child: Text(label, style: GoogleFonts.ptSerif(
+          fontSize: 10, letterSpacing: 1,
+          color: isActive ? color : AionTheme.silver.withOpacity(0.5),
+        )),
+      ),
+    );
+  }
 
   @override
   void initState() {
@@ -144,6 +222,75 @@ class _DreamDiaryScreenState extends State<DreamDiaryScreen> {
                             _buildStatItem(_topArchetype, 'ARQUÉTIPO'),
                           ],
                         ),
+                    const SizedBox(height: 32),
+
+                    // — Upgrade 2: Interface de Busca e Filtros
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                      child: Column(
+                        children: [
+                          // Busca Semântica
+                          Container(
+                            margin: const EdgeInsets.only(bottom: 12),
+                            decoration: BoxDecoration(
+                              color: AionTheme.darkAbyss,
+                              border: Border.all(color: AionTheme.shadow),
+                            ),
+                            child: TextField(
+                              controller: _searchController,
+                              style: GoogleFonts.ptSerif(fontSize: 14, color: AionTheme.ghost),
+                              decoration: InputDecoration(
+                                hintText: 'Buscar por sentido... (ex: "superação", "perda")',
+                                hintStyle: GoogleFonts.ptSerif(
+                                    color: AionTheme.silver.withOpacity(0.35), fontSize: 13),
+                                prefixIcon: Icon(Icons.search,
+                                    color: AionTheme.silver.withOpacity(0.5), size: 18),
+                                suffixIcon: _isSearching
+                                    ? const Padding(padding: EdgeInsets.all(12),
+                                        child: SizedBox(width: 16, height: 16,
+                                            child: CircularProgressIndicator(strokeWidth: 2)))
+                                    : null,
+                                border: InputBorder.none,
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                              ),
+                              onSubmitted: _buscarSemantico,
+                              onChanged: (v) { if (v.isEmpty) setState(() => _showSearchResults = false); },
+                            ),
+                          ),
+
+                          // Filtros Horizontais
+                          SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child: Row(children: [
+                              _buildFilterChip('Todos', _filtroEmocao == null && _filtroFase == null,
+                                  AionTheme.gold, () => setState(() { _filtroEmocao = null; _filtroFase = null; })),
+                              const SizedBox(width: 6),
+                              ..._emocoesFilter.map((e) => Padding(
+                                padding: const EdgeInsets.only(right: 6),
+                                child: _buildFilterChip(e, _filtroEmocao == e, AionTheme.silver, () {
+                                  setState(() => _filtroEmocao = _filtroEmocao == e ? null : e);
+                                  if (_filtroEmocao != null) _filtrarSonhos(emocao: _filtroEmocao);
+                                }),
+                              )),
+                              Container(width: 1, height: 20, color: AionTheme.shadow,
+                                  margin: const EdgeInsets.symmetric(horizontal: 8)),
+                              ..._fases.map((f) => Padding(
+                                padding: const EdgeInsets.only(right: 6),
+                                child: _buildFilterChip(
+                                  f.split(' ').last,
+                                  _filtroFase == f,
+                                  HeroJourneyMapper.getColor(f),
+                                  () {
+                                    setState(() => _filtroFase = _filtroFase == f ? null : f);
+                                    if (_filtroFase != null) _filtrarSonhos(fase: _filtroFase);
+                                  },
+                                ),
+                              )),
+                            ]),
+                          ),
+                        ],
+                      ),
+                    ),
                     const SizedBox(height: 32),
   
                     Padding(

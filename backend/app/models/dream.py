@@ -1,28 +1,5 @@
-from datetime import datetime
-from typing import List, Optional
-from pydantic import BaseModel, Field
-
-class DreamAnalysis(BaseModel):
-    essence: str
-    archetypes: List[str]
-    compensation: str
-    symbols: List[str]
-    journey_stage: str
-    projection: str
-    myth: str
-    reflection: str
-    narrative: str | None = None
-
-class DreamModel(BaseModel):
-    id: Optional[str] = Field(None, alias="_id")
-    user_id: str
-    text: str
-    emotion: str
-    tags: List[str]
-    is_recurrent: bool
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    analysis: Optional[DreamAnalysis] = None
-    location: Optional[dict] = None # {country: str, city: str}
+from pydantic import BaseModel
+from typing import List, Optional, Dict, Any
 
 class InterviewAnswerItem(BaseModel):
     pergunta: str
@@ -30,13 +7,18 @@ class InterviewAnswerItem(BaseModel):
 
 class DreamCreate(BaseModel):
     text: str
-    emotion: Optional[str] = "neutral"
-    tags: Optional[List[str]] = []
+    user_email: Optional[str] = "usuario@aion.app"
+    emotion: Optional[str] = None
+    tags: Optional[List[str]] = None
     is_recurrent: Optional[bool] = False
+    
+    # Tags estruturadas (Upgrade 2)
     tags_emocao: Optional[List[str]] = None
     temas: Optional[List[str]] = None
     residuos_diurnos: Optional[List[str]] = None
-    interview_answers: Optional[List[InterviewAnswerItem]] = None
+    
+    # Entrevista (Upgrade 2)
+    interview_answers: Optional[List[Dict[str, str]]] = None
 
 class InterviewRequest(BaseModel):
     text: str
@@ -46,7 +28,18 @@ class InterviewResponse(BaseModel):
 
 class NarrativeRequest(BaseModel):
     text: str
-    analysis_context: dict | None = None
+    analysis_context: Optional[Dict[str, Any]] = None
 
 class NarrativeResponse(BaseModel):
     narrative: str
+
+class SemanticSearchRequest(BaseModel):
+    query: str
+    threshold: Optional[float] = 0.65
+    max_results: Optional[int] = 6
+
+class DreamHistoryResponse(BaseModel):
+    id: str
+    relato: str
+    interpretacao: Dict[str, Any]
+    created_at: str

@@ -12,3 +12,5 @@ supabase>=2.11.0
 email-validator==2.1.0.post1
 gunicorn==21.2.0
 uvicorn[standard]==0.24.0
+sentence-transformers==3.0.1
+torch==2.3.1

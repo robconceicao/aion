@@ -8,8 +8,15 @@ import 'dream_choice_screen.dart';
 
 class DreamHistoryScreen extends StatefulWidget {
   final String userEmail;
+  final String? filtroEmocao;
+  final String? filtroFase;
 
-  const DreamHistoryScreen({super.key, required this.userEmail});
+  const DreamHistoryScreen({
+    super.key, 
+    required this.userEmail,
+    this.filtroEmocao,
+    this.filtroFase,
+  });
 
   @override
   State<DreamHistoryScreen> createState() => _DreamHistoryScreenState();
@@ -34,14 +41,33 @@ class _DreamHistoryScreenState extends State<DreamHistoryScreen> {
 
     try {
       final dio = Dio();
-      final response = await dio.get(
-        AionConfig.historyUrl,
-        queryParameters: {'user_email': widget.userEmail},
-      );
-      setState(() {
-        _dreams = List<Map<String, dynamic>>.from(response.data);
-        _isLoading = false;
-      });
+      Response response;
+      
+      if (widget.filtroEmocao != null || widget.filtroFase != null) {
+        // Usa o endpoint de filtros
+        response = await dio.get(
+          AionConfig.filterUrl,
+          queryParameters: {
+            'emocao': widget.filtroEmocao,
+            'fase': widget.filtroFase,
+          },
+          options: Options(headers: {'x-user-email': widget.userEmail}),
+        );
+        setState(() {
+          _dreams = List<Map<String, dynamic>>.from(response.data['dreams'] ?? []);
+          _isLoading = false;
+        });
+      } else {
+        // Carrega o histórico normal
+        response = await dio.get(
+          AionConfig.historyUrl,
+          queryParameters: {'user_email': widget.userEmail},
+        );
+        setState(() {
+          _dreams = List<Map<String, dynamic>>.from(response.data);
+          _isLoading = false;
+        });
+      }
     } catch (e) {
       setState(() {
         _error = 'Não foi possível carregar o diário.';
@@ -193,13 +219,26 @@ class _DreamHistoryScreenState extends State<DreamHistoryScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        if (widget.filtroEmocao != null || widget.filtroFase != null)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
+            child: Wrap(
+              spacing: 8,
+              children: [
+                if (widget.filtroEmocao != null)
+                  _buildActiveFilterBadge(widget.filtroEmocao!, AionTheme.silver),
+                if (widget.filtroFase != null)
+                  _buildActiveFilterBadge(widget.filtroFase!, AionTheme.gold),
+              ],
+            ),
+          ),
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 24, 20, 8),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                '${_dreams.length} SONHO${_dreams.length != 1 ? 'S' : ''} REGISTRADO${_dreams.length != 1 ? 'S' : ''}',
+                '${_dreams.length} SONHO${_dreams.length != 1 ? 'S' : ''} ENCONTRADO${_dreams.length != 1 ? 'S' : ''}',
                 style: GoogleFonts.ptSerif(
                   fontSize: 9,
                   letterSpacing: 3,
@@ -225,6 +264,28 @@ class _DreamHistoryScreenState extends State<DreamHistoryScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildActiveFilterBadge(String label, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        border: Border.all(color: color.withOpacity(0.3)),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.filter_list, size: 10, color: color),
+          const SizedBox(width: 6),
+          Text(
+            label.toUpperCase(),
+            style: GoogleFonts.ptSerif(fontSize: 8, color: color, letterSpacing: 1),
+          ),
+        ],
+      ),
     );
   }
 

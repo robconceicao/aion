@@ -42,9 +42,18 @@ async def transcribe_audio(audio_path: str) -> str | None:
     mime_type = mime_map.get(ext, "audio/mp4")
     print(f"[VOICE_SERVICE] Formato detectado: {mime_type}")
 
-    # Monta o payload para a API Gemini (v1/gemini-1.5-flash — versão estável e gratuita para STT)
+    # DIAGNÓSTICO: Vamos listar quais modelos estão disponíveis para esta chave no Log do Render
     gemini_key = settings.GEMINI_API_KEY.strip()
-    url = f"https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key={gemini_key}"
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            diag_url = f"https://generativelanguage.googleapis.com/v1beta/models?key={gemini_key}"
+            diag_res = await client.get(diag_url)
+            print(f"[VOICE_SERVICE] Diagnóstico de Modelos: {diag_res.text[:500]}...")
+    except:
+        pass
+
+    # Vamos tentar o modelo genérico 'gemini-1.5-flash-latest' que costuma ser o apelido universal
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key={gemini_key}"
 
     payload = {
         "contents": [

@@ -3,6 +3,9 @@ import anthropic
 from app.core.config import settings
 
 # Cliente assíncrono — essencial para não bloquear o event loop do FastAPI
+if not settings.ANTHROPIC_API_KEY:
+    print("\n[CRÍTICO] ANTHROPIC_API_KEY está VAZIA. O Oráculo não poderá responder.\n")
+
 async_client = anthropic.AsyncAnthropic(api_key=settings.ANTHROPIC_API_KEY)
 
 PROMPT_TEMPLATE = """
@@ -48,11 +51,10 @@ async def analyze_dream(dream_text: str, context: dict = None) -> dict:
     prompt = PROMPT_TEMPLATE.format(texto=dream_text)
 
     modelos = [
-        "claude-3-5-sonnet-latest",
-        "claude-3-5-sonnet-20240620",
-        "claude-3-opus-latest",
         "claude-sonnet-4-6",
         "claude-sonnet-4-5-20250929",
+        "claude-3-5-sonnet-latest",
+        "claude-3-5-sonnet-20240620",
     ]
 
     ultimo_erro = None
@@ -69,7 +71,7 @@ async def analyze_dream(dream_text: str, context: dict = None) -> dict:
 
         except Exception as e:
             ultimo_erro = str(e)
-            print(f"[AI_SERVICE] Erro com {model_name}: {ultimo_erro}")
+            print(f"[AI_SERVICE] Erro crítico com {model_name}: {e}")
             continue
 
     return _get_error_response(f"Falha técnica: {ultimo_erro}")
@@ -155,11 +157,14 @@ CONTEXTO DA ANÁLISE SIMBÓLICA (use para manter coerência, não repita):
 
     user_content = f"Sonho: {dream_text}{context_block}"
 
-    message = await async_client.messages.create(
-        model="claude-3-5-sonnet-latest",
-        max_tokens=1024,
-        system=NARRATIVE_SYSTEM_PROMPT,
-        messages=[{"role": "user", "content": user_content}],
-    )
-
-    return message.content[0].text
+    try:
+        message = await async_client.messages.create(
+            model="claude-sonnet-4-6",
+            max_tokens=1024,
+            system=NARRATIVE_SYSTEM_PROMPT,
+            messages=[{"role": "user", "content": user_content}],
+        )
+        return message.content[0].text
+    except Exception as e:
+        print(f"[AI_SERVICE] Erro na narrativa: {e}")
+        raise e

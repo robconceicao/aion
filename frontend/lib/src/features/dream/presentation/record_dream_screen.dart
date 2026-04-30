@@ -171,11 +171,22 @@ class _RecordDreamScreenState extends State<RecordDreamScreen> with SingleTicker
         );
       }
     } catch (e) {
+      String errorMessage = 'O Oráculo está em silêncio.';
+      if (e is DioException) {
+        errorMessage = 'Erro na conexão: ${e.response?.statusCode} - ${e.response?.data}';
+      } else {
+        errorMessage = 'Erro inesperado: $e';
+      }
+      
       debugPrint('Analysis error: $e');
       setState(() => _isProcessing = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('O Oráculo está em silêncio. Tente novamente mais tarde.')),
+          SnackBar(
+            content: Text(errorMessage),
+            duration: const Duration(seconds: 10),
+            action: SnackBarAction(label: 'OK', onPressed: () {}),
+          ),
         );
       }
     }

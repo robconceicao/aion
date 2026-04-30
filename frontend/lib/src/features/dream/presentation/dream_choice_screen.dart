@@ -38,7 +38,6 @@ class _DreamChoiceScreenState extends State<DreamChoiceScreen>
       begin: const Offset(0, 0.12),
       end: Offset.zero,
     ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
-
     _controller.forward();
   }
 
@@ -61,16 +60,12 @@ class _DreamChoiceScreenState extends State<DreamChoiceScreen>
               child: SlideTransition(
                 position: _slideUp,
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 24, vertical: 48),
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 48),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      // — Divisor superior
                       _buildDivider(),
                       const SizedBox(height: 40),
-
-                      // — Cabeçalho
                       Text(
                         'O SONHO FOI RECEBIDO',
                         style: GoogleFonts.ptSerif(
@@ -82,7 +77,7 @@ class _DreamChoiceScreenState extends State<DreamChoiceScreen>
                       ),
                       const SizedBox(height: 20),
                       Text(
-                        'Duas leituras\ndo seu sonho',
+                        'Como você deseja\nolhar para ele?',
                         textAlign: TextAlign.center,
                         style: GoogleFonts.cormorantGaramond(
                           fontSize: 34,
@@ -92,23 +87,10 @@ class _DreamChoiceScreenState extends State<DreamChoiceScreen>
                           fontStyle: FontStyle.italic,
                         ),
                       ),
-                      const SizedBox(height: 6),
-                      Text(
-                        'Ambas estão disponíveis a qualquer momento',
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.ptSerif(
-                          fontSize: 11,
-                          color: AionTheme.silver.withOpacity(0.5),
-                          letterSpacing: 0.5,
-                          fontStyle: FontStyle.italic,
-                        ),
-                      ),
-
-                      // — Sonho ecoado
+                      const SizedBox(height: 12),
                       Container(
                         margin: const EdgeInsets.symmetric(vertical: 20),
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 20, vertical: 14),
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                         decoration: BoxDecoration(
                           border: Border(
                             left: BorderSide(
@@ -134,12 +116,9 @@ class _DreamChoiceScreenState extends State<DreamChoiceScreen>
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
-
                       const SizedBox(height: 36),
                       _buildDivider(),
                       const SizedBox(height: 36),
-
-                      // — Cards de escolha
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -149,9 +128,9 @@ class _DreamChoiceScreenState extends State<DreamChoiceScreen>
                               label: 'LEITURA SIMBÓLICA',
                               title: 'Voz do\nArquétipo',
                               description:
-                                  'Uma interpretação poética e pessoal — Jung e Campbell em diálogo com o seu sonho.',
+                                  'Uma interpretação direta e acessível — Jung e Campbell em diálogo com o seu sonho.',
                               accentColor: AionTheme.gold,
-                              onTap: () => Navigator.push(
+                              onTap: () => Navigator.pushReplacement(
                                 context,
                                 MaterialPageRoute(
                                   builder: (_) => NarrativeResultScreen(
@@ -171,7 +150,7 @@ class _DreamChoiceScreenState extends State<DreamChoiceScreen>
                               description:
                                   'Arquétipos, símbolos, Jornada do Herói, Mito Espelho e dimensões psíquicas detalhadas.',
                               accentColor: AionTheme.teal,
-                              onTap: () => Navigator.push(
+                              onTap: () => Navigator.pushReplacement(
                                 context,
                                 MaterialPageRoute(
                                   builder: (_) => AnalysisResultScreen(
@@ -184,8 +163,17 @@ class _DreamChoiceScreenState extends State<DreamChoiceScreen>
                           ),
                         ],
                       ),
-
                       const SizedBox(height: 48),
+                      Text(
+                        'Você pode acessar a outra leitura a qualquer momento.',
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.ptSerif(
+                          fontSize: 11,
+                          color: AionTheme.silver.withOpacity(0.4),
+                          letterSpacing: 0.5,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -205,10 +193,7 @@ class _DreamChoiceScreenState extends State<DreamChoiceScreen>
             height: 1,
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [
-                  Colors.transparent,
-                  AionTheme.gold.withOpacity(0.3),
-                ],
+                colors: [Colors.transparent, AionTheme.gold.withOpacity(0.3)],
               ),
             ),
           ),
@@ -217,10 +202,7 @@ class _DreamChoiceScreenState extends State<DreamChoiceScreen>
           padding: const EdgeInsets.symmetric(horizontal: 12),
           child: Text(
             '✦',
-            style: TextStyle(
-              color: AionTheme.gold.withOpacity(0.5),
-              fontSize: 10,
-            ),
+            style: TextStyle(color: AionTheme.gold.withOpacity(0.5), fontSize: 10),
           ),
         ),
         Expanded(
@@ -228,10 +210,7 @@ class _DreamChoiceScreenState extends State<DreamChoiceScreen>
             height: 1,
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [
-                  AionTheme.gold.withOpacity(0.3),
-                  Colors.transparent,
-                ],
+                colors: [AionTheme.gold.withOpacity(0.3), Colors.transparent],
               ),
             ),
           ),
@@ -240,10 +219,6 @@ class _DreamChoiceScreenState extends State<DreamChoiceScreen>
     );
   }
 }
-
-// ——————————————————————————————————————————
-// Widget: card de escolha
-// ——————————————————————————————————————————
 
 class _ChoiceCard extends StatefulWidget {
   final String icon;
@@ -280,30 +255,17 @@ class _ChoiceCardState extends State<_ChoiceCard> {
           duration: const Duration(milliseconds: 200),
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
-            color: _hovered
-                ? AionTheme.darkAbyss
-                : AionTheme.darkDeep,
+            color: _hovered ? AionTheme.darkAbyss : AionTheme.darkDeep,
             border: Border.all(
-              color: _hovered
-                  ? widget.accentColor.withOpacity(0.5)
-                  : AionTheme.shadow,
+              color: _hovered ? widget.accentColor.withOpacity(0.5) : AionTheme.shadow,
               width: 1,
             ),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Ícone
-              Text(
-                widget.icon,
-                style: TextStyle(
-                  fontSize: 22,
-                  color: widget.accentColor,
-                ),
-              ),
+              Text(widget.icon, style: TextStyle(fontSize: 22, color: widget.accentColor)),
               const SizedBox(height: 16),
-
-              // Label
               Text(
                 widget.label,
                 style: GoogleFonts.ptSerif(
@@ -314,8 +276,6 @@ class _ChoiceCardState extends State<_ChoiceCard> {
                 ),
               ),
               const SizedBox(height: 8),
-
-              // Título
               Text(
                 widget.title,
                 style: GoogleFonts.cormorantGaramond(
@@ -327,38 +287,23 @@ class _ChoiceCardState extends State<_ChoiceCard> {
                 ),
               ),
               const SizedBox(height: 12),
-
-              // Divisor
               Container(
                 height: 1,
                 width: 32,
                 color: widget.accentColor.withOpacity(0.35),
                 margin: const EdgeInsets.only(bottom: 12),
               ),
-
-              // Descrição
               Text(
                 widget.description,
-                style: GoogleFonts.ptSerif(
-                  fontSize: 12,
-                  height: 1.7,
-                  color: AionTheme.silver,
-                ),
+                style: GoogleFonts.ptSerif(fontSize: 12, height: 1.7, color: AionTheme.silver),
               ),
               const SizedBox(height: 20),
-
-              // CTA
               AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 16, vertical: 10),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                 decoration: BoxDecoration(
-                  color: _hovered
-                      ? widget.accentColor
-                      : Colors.transparent,
-                  border: Border.all(
-                    color: widget.accentColor.withOpacity(0.4),
-                  ),
+                  color: _hovered ? widget.accentColor : Colors.transparent,
+                  border: Border.all(color: widget.accentColor.withOpacity(0.4)),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -368,9 +313,7 @@ class _ChoiceCardState extends State<_ChoiceCard> {
                       style: GoogleFonts.ptSerif(
                         fontSize: 9,
                         letterSpacing: 2,
-                        color: _hovered
-                            ? AionTheme.darkVoid
-                            : widget.accentColor,
+                        color: _hovered ? AionTheme.darkVoid : widget.accentColor,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -378,9 +321,7 @@ class _ChoiceCardState extends State<_ChoiceCard> {
                     Icon(
                       Icons.arrow_forward,
                       size: 12,
-                      color: _hovered
-                          ? AionTheme.darkVoid
-                          : widget.accentColor,
+                      color: _hovered ? AionTheme.darkVoid : widget.accentColor,
                     ),
                   ],
                 ),

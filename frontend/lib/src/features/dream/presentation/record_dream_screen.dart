@@ -12,6 +12,7 @@ import 'audio_recorder_platform.dart';
 import 'archetypes_screen.dart';
 import 'canal_screen.dart';
 import 'dream_choice_screen.dart';
+import 'narrative_result_screen.dart';
 
 enum DreamInputMode { selection, voice, text }
 
@@ -126,13 +127,10 @@ class _RecordDreamScreenState extends State<RecordDreamScreen> with SingleTicker
 
     setState(() => _isProcessing = true);
     final dio = Dio();
-
-    // Recupera e-mail salvo localmente (simples SharedPreferences ou fallback)
-    // Por ora usamos um identificador persistido em memória
-    const userEmail = 'usuario@aion.app'; // Substituir por auth real
+    const userEmail = 'usuario@aion.app';
 
     try {
-      // 1ª chamada: análise estruturada (com e-mail para histórico)
+      // 1. Análise detalhada primeiro — é a fonte da verdade
       final analysisResponse = await dio.post(
         AionConfig.analyzeUrl,
         options: Options(headers: {'x-user-email': userEmail}),
@@ -143,50 +141,40 @@ class _RecordDreamScreenState extends State<RecordDreamScreen> with SingleTicker
           'is_recurrent': _recurring,
         },
       );
-
       final detailedAnalysis = analysisResponse.data as Map<String, dynamic>;
 
-      // 2ª chamada: narrativa — passa contexto da análise para coerência
+      // 2. Narrativa em seguida — recebe o contexto para garantir coerência
       final narrativeResponse = await dio.post(
         AionConfig.narrativeUrl,
         data: {
           'text': text,
           'analysis_context': detailedAnalysis,
-          'user_email': userEmail,
         },
       );
-
       final narrativeText = narrativeResponse.data['narrative'] as String;
 
-      if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (_) => DreamChoiceScreen(
-              dreamText: text,
-              detailedAnalysis: detailedAnalysis,
-              narrativeText: narrativeText,
-            ),
+      if (!mounted) return;
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => DreamChoiceScreen(
+            dreamText: text,
+            detailedAnalysis: detailedAnalysis,
+            narrativeText: narrativeText,
           ),
-        );
-      }
+        ),
+      );
     } catch (e) {
       String errorMessage = 'O Oráculo está em silêncio.';
       if (e is DioException) {
-        errorMessage = 'Erro na conexão: ${e.response?.statusCode} - ${e.response?.data}';
-      } else {
-        errorMessage = 'Erro inesperado: $e';
+        errorMessage = 'Erro ao analisar: ${e.message}';
       }
       
-      debugPrint('Analysis error: $e');
       setState(() => _isProcessing = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(errorMessage),
-            duration: const Duration(seconds: 10),
-            action: SnackBarAction(label: 'OK', onPressed: () {}),
-          ),
+          SnackBar(content: Text(errorMessage), backgroundColor: AionTheme.crimson),
         );
       }
     }

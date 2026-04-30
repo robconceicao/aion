@@ -1,22 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, Header
-from app.models.dream import DreamCreate, DreamModel
+from app.models.dream import DreamCreate, DreamModel, NarrativeRequest, NarrativeResponse
 from app.routers.auth import get_current_user
 from app.database import get_supabase
 from app.services.ai_service import analyze_dream, analyze_dream_narrative
 from datetime import datetime
 from typing import Optional
 import uuid
-from pydantic import BaseModel
-
-
-class NarrativeRequest(BaseModel):
-    text: str
-    analysis_context: Optional[dict] = None
-    user_email: Optional[str] = None
-
-
-class NarrativeResponse(BaseModel):
-    narrative: str
 
 
 router = APIRouter()
@@ -94,15 +83,16 @@ async def get_dream(dream_id: str):
 
 
 @router.post("/narrative", response_model=NarrativeResponse)
-async def get_narrative_interpretation(payload: NarrativeRequest):
+async def get_narrative_interpretation(request: NarrativeRequest):
     """
-    Retorna a interpretação narrativa (poética/junguiana) do sonho.
-    Recebe o contexto da análise estruturada para garantir coerência.
+    Retorna a interpretação narrativa (direta/acessível) do sonho.
+    Recebe analysis_context para garantir coerência com o Mapa Arquetípico
+    e usar a mesma pergunta para reflexão.
     """
     try:
         narrative_text = await analyze_dream_narrative(
-            dream_text=payload.text,
-            analysis_context=payload.analysis_context,
+            dream_text=request.text,
+            analysis_context=request.analysis_context,
         )
         return NarrativeResponse(narrative=narrative_text)
     except Exception as e:

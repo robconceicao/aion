@@ -38,15 +38,12 @@ class _NarrativeResultScreenState extends State<NarrativeResultScreen>
     super.dispose();
   }
 
-  /// Separa o texto em parágrafos e identifica a pergunta final
-  /// (último parágrafo que termina com "?")
   List<_TextBlock> _parseNarrative(String text) {
     final paragraphs = text
         .split('\n')
         .map((p) => p.trim())
         .where((p) => p.isNotEmpty)
         .toList();
-
     final blocks = <_TextBlock>[];
     for (int i = 0; i < paragraphs.length; i++) {
       final p = paragraphs[i];
@@ -56,22 +53,17 @@ class _NarrativeResultScreenState extends State<NarrativeResultScreen>
     return blocks;
   }
 
-  /// Remove marcação **bold** e retorna spans estilizados
-  List<InlineSpan> _buildRichSpans(String text, {bool isQuestion = false}) {
+  List<InlineSpan> _buildRichSpans(String text) {
     final spans = <InlineSpan>[];
     final regex = RegExp(r'\*\*(.*?)\*\*');
     int lastEnd = 0;
-
     for (final match in regex.allMatches(text)) {
       if (match.start > lastEnd) {
         spans.add(TextSpan(text: text.substring(lastEnd, match.start)));
       }
       spans.add(TextSpan(
         text: match.group(1),
-        style: TextStyle(
-          color: AionTheme.amber,
-          fontWeight: FontWeight.w600,
-        ),
+        style: TextStyle(color: AionTheme.amber, fontWeight: FontWeight.w600),
       ));
       lastEnd = match.end;
     }
@@ -84,7 +76,6 @@ class _NarrativeResultScreenState extends State<NarrativeResultScreen>
   @override
   Widget build(BuildContext context) {
     final blocks = _parseNarrative(widget.narrativeText);
-
     return Scaffold(
       backgroundColor: AionTheme.darkVoid,
       body: SafeArea(
@@ -101,67 +92,43 @@ class _NarrativeResultScreenState extends State<NarrativeResultScreen>
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // — Voltar
                           GestureDetector(
                             onTap: () => Navigator.pop(context),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(
-                                  Icons.arrow_back,
-                                  size: 14,
-                                  color: AionTheme.silver.withOpacity(0.5),
-                                ),
+                                Icon(Icons.arrow_back, size: 14,
+                                    color: AionTheme.silver.withOpacity(0.5)),
                                 const SizedBox(width: 8),
-                                Text(
-                                  'VOLTAR',
-                                  style: GoogleFonts.ptSerif(
-                                    fontSize: 9,
-                                    letterSpacing: 3,
-                                    color: AionTheme.silver.withOpacity(0.5),
-                                  ),
-                                ),
+                                Text('VOLTAR',
+                                    style: GoogleFonts.ptSerif(
+                                      fontSize: 9,
+                                      letterSpacing: 3,
+                                      color: AionTheme.silver.withOpacity(0.5),
+                                    )),
                               ],
                             ),
                           ),
                           const SizedBox(height: 40),
-
-                          // — Label
-                          Text(
-                            'LEITURA SIMBÓLICA',
-                            style: GoogleFonts.ptSerif(
-                              fontSize: 9,
-                              letterSpacing: 4,
-                              color: AionTheme.gold,
-                            ),
-                          ),
+                          Text('LEITURA SIMBÓLICA',
+                              style: GoogleFonts.ptSerif(
+                                fontSize: 9, letterSpacing: 4, color: AionTheme.gold,
+                              )),
                           const SizedBox(height: 16),
-
-                          // — Título
-                          Text(
-                            'Voz do Arquétipo',
-                            style: GoogleFonts.cormorantGaramond(
-                              fontSize: 36,
-                              height: 1.2,
-                              color: AionTheme.ghost,
-                              fontWeight: FontWeight.w300,
-                              fontStyle: FontStyle.italic,
-                            ),
-                          ),
+                          Text('Voz do Arquétipo',
+                              style: GoogleFonts.cormorantGaramond(
+                                fontSize: 36, height: 1.2, color: AionTheme.ghost,
+                                fontWeight: FontWeight.w300, fontStyle: FontStyle.italic,
+                              )),
                           const SizedBox(height: 28),
-
-                          // — Divider
                           _buildDivider(),
                           const SizedBox(height: 28),
-
-                          // — Sonho
                           Container(
                             padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
                             decoration: BoxDecoration(
                               border: Border(
                                 left: BorderSide(
-                                  color: AionTheme.gold.withOpacity(0.35),
-                                  width: 2,
+                                  color: AionTheme.gold.withOpacity(0.35), width: 2,
                                 ),
                               ),
                               color: AionTheme.darkAbyss.withOpacity(0.5),
@@ -170,40 +137,31 @@ class _NarrativeResultScreenState extends State<NarrativeResultScreen>
                                 bottomRight: Radius.circular(4),
                               ),
                             ),
-                            child: Text(
-                              '"${widget.dreamText}"',
-                              style: GoogleFonts.cormorantGaramond(
-                                fontSize: 15,
-                                fontStyle: FontStyle.italic,
-                                color: AionTheme.silver,
-                                height: 1.75,
-                              ),
-                            ),
+                            child: Text('"${widget.dreamText}"',
+                                style: GoogleFonts.cormorantGaramond(
+                                  fontSize: 15, fontStyle: FontStyle.italic,
+                                  color: AionTheme.silver, height: 1.75,
+                                )),
                           ),
                           const SizedBox(height: 40),
                         ],
                       ),
                     ),
                   ),
-
-                  // — Parágrafos da interpretação
                   SliverPadding(
                     padding: const EdgeInsets.symmetric(horizontal: 24),
                     sliver: SliverList(
                       delegate: SliverChildBuilderDelegate(
                         (context, i) {
                           final block = blocks[i];
-                          if (block.isQuestion) {
-                            return _buildQuestionBlock(block.text);
-                          }
-                          return _buildParagraph(block.text);
+                          return block.isQuestion
+                              ? _buildQuestionBlock(block.text)
+                              : _buildParagraph(block.text);
                         },
                         childCount: blocks.length,
                       ),
                     ),
                   ),
-
-                  // — Rodapé
                   SliverToBoxAdapter(
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(24, 48, 24, 64),
@@ -215,22 +173,17 @@ class _NarrativeResultScreenState extends State<NarrativeResultScreen>
                             '"Quem olha para fora, sonha.\nQuem olha para dentro, desperta."',
                             textAlign: TextAlign.center,
                             style: GoogleFonts.cormorantGaramond(
-                              fontSize: 14,
-                              fontStyle: FontStyle.italic,
-                              color: AionTheme.silver.withOpacity(0.4),
-                              height: 1.7,
+                              fontSize: 14, fontStyle: FontStyle.italic,
+                              color: AionTheme.silver.withOpacity(0.4), height: 1.7,
                             ),
                           ),
                           const SizedBox(height: 6),
-                          Text(
-                            '— C. G. Jung',
-                            textAlign: TextAlign.center,
-                            style: GoogleFonts.ptSerif(
-                              fontSize: 10,
-                              letterSpacing: 2,
-                              color: AionTheme.silver.withOpacity(0.3),
-                            ),
-                          ),
+                          Text('— C. G. Jung',
+                              textAlign: TextAlign.center,
+                              style: GoogleFonts.ptSerif(
+                                fontSize: 10, letterSpacing: 2,
+                                color: AionTheme.silver.withOpacity(0.3),
+                              )),
                         ],
                       ),
                     ),
@@ -250,10 +203,8 @@ class _NarrativeResultScreenState extends State<NarrativeResultScreen>
       child: RichText(
         text: TextSpan(
           style: GoogleFonts.cormorantGaramond(
-            fontSize: 18,
-            height: 1.85,
-            color: AionTheme.ghost.withOpacity(0.88),
-            fontWeight: FontWeight.w300,
+            fontSize: 18, height: 1.85,
+            color: AionTheme.ghost.withOpacity(0.88), fontWeight: FontWeight.w300,
           ),
           children: _buildRichSpans(text),
         ),
@@ -266,33 +217,23 @@ class _NarrativeResultScreenState extends State<NarrativeResultScreen>
       margin: const EdgeInsets.only(top: 16, bottom: 40),
       padding: const EdgeInsets.all(28),
       decoration: BoxDecoration(
-        border: Border.all(
-          color: AionTheme.gold.withOpacity(0.2),
-        ),
+        border: Border.all(color: AionTheme.gold.withOpacity(0.2)),
         color: AionTheme.darkAbyss,
       ),
       child: Column(
         children: [
-          Text(
-            'PERGUNTA PARA REFLEXÃO',
-            style: GoogleFonts.ptSerif(
-              fontSize: 9,
-              letterSpacing: 4,
-              color: AionTheme.gold.withOpacity(0.6),
-            ),
-          ),
+          Text('PERGUNTA PARA REFLEXÃO',
+              style: GoogleFonts.ptSerif(
+                fontSize: 9, letterSpacing: 4,
+                color: AionTheme.gold.withOpacity(0.6),
+              )),
           const SizedBox(height: 16),
-          Text(
-            text,
-            textAlign: TextAlign.center,
-            style: GoogleFonts.cormorantGaramond(
-              fontSize: 20,
-              height: 1.6,
-              color: AionTheme.ghost,
-              fontStyle: FontStyle.italic,
-              fontWeight: FontWeight.w300,
-            ),
-          ),
+          Text(text,
+              textAlign: TextAlign.center,
+              style: GoogleFonts.cormorantGaramond(
+                fontSize: 20, height: 1.6, color: AionTheme.ghost,
+                fontStyle: FontStyle.italic, fontWeight: FontWeight.w300,
+              )),
         ],
       ),
     );
@@ -313,13 +254,8 @@ class _NarrativeResultScreenState extends State<NarrativeResultScreen>
         ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12),
-          child: Text(
-            '✦',
-            style: TextStyle(
-              color: AionTheme.gold.withOpacity(0.5),
-              fontSize: 10,
-            ),
-          ),
+          child: Text('✦',
+              style: TextStyle(color: AionTheme.gold.withOpacity(0.5), fontSize: 10)),
         ),
         Expanded(
           child: Container(

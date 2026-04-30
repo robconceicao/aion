@@ -79,23 +79,18 @@ async def analyze_dream(dream_text: str, context: dict = None) -> dict:
 def _parse_ai_json(content: str) -> dict:
     """Limpa e parseia o JSON de forma robusta, ignorando textos extras."""
     try:
-        # Tenta encontrar o início e fim do JSON real
         start = content.find('{')
         end = content.rfind('}')
-        
         if start != -1 and end != -1:
             json_str = content[start:end+1]
             return json.loads(json_str)
-            
         return json.loads(content.strip())
     except Exception as e:
         print(f"[AI_SERVICE] Falha ao decodificar JSON. Conteúdo bruto: {content[:100]}")
         raise ValueError(f"Formato de resposta inválido: {str(e)}")
 
 def _get_error_response(error_msg: str) -> dict:
-    # Se o erro for de autenticação (401), avisa explicitamente
     print(f"[DEBUG_ORACULO] Gerando resposta de erro: {error_msg}")
-    
     return {
         "aviso": "O Oráculo está em silêncio profundo.",
         "essencia": "O silêncio também é uma mensagem do inconsciente. Tente novamente em instantes.",
@@ -123,23 +118,24 @@ Primeiro: diga o que o sonho está revelando sobre o momento de vida da pessoa. 
 
 Segundo: escolha o símbolo mais importante do sonho e explique o que ele significa na vida real dessa pessoa. Se houver um mito ou história que ilumine isso, mencione de passagem — em uma frase simples, sem explicação histórica.
 
-Terceiro: termine com uma única pergunta. Curta. Que a pessoa consiga responder sozinha ainda hoje.
+Terceiro: termine com a pergunta exata que será indicada no campo PERGUNTA_FINAL. Não altere uma palavra. Não crie uma pergunta diferente.
 
 Regras absolutas:
 - Nunca use: arquétipo, inconsciente, individuação, amplificação, psíquico, Self, compensatório, projeção, ou qualquer termo de psicologia
 - Nada de metáforas poéticas exageradas
 - Máximo 180 palavras no total
 - Use "você" e "seu/sua" — português do Brasil direto
-- Não crie seções, títulos ou listas — texto corrido como uma conversa"""
+- Não crie seções, títulos ou listas — texto corrido como uma conversa
+- A última frase DEVE ser exatamente a PERGUNTA_FINAL fornecida"""
 
 
 async def analyze_dream_narrative(dream_text: str, analysis_context: dict = None) -> str:
     """
-    Retorna uma interpretação narrativa e poética do sonho.
-    Recebe o contexto da análise estruturada para garantir coerência entre as duas leituras.
+    Retorna uma interpretação narrativa do sonho ancorada na análise estruturada.
+    A pergunta final é obrigatoriamente a mesma do Mapa Arquetípico.
     """
-    # Constrói o contexto da análise para garantir que a narrativa seja coerente
     context_block = ""
+
     if analysis_context:
         essencia = analysis_context.get("essencia", "")
         arquetipos = ", ".join(
@@ -147,14 +143,18 @@ async def analyze_dream_narrative(dream_text: str, analysis_context: dict = None
         )
         mito = analysis_context.get("mito_espelho", {}).get("titulo", "")
         fase = analysis_context.get("fase_jornada", {}).get("nome", "")
+        pergunta_final = analysis_context.get("pergunta_para_reflexao", "")
+
         context_block = f"""
 
-CONTEXTO DA ANÁLISE SIMBÓLICA (use para manter coerência, não repita):
-- Essência identificada: {essencia}
-- Arquétipos presentes: {arquetipos}
+CONTEXTO DA ANÁLISE (use para manter coerência — não repita literalmente):
+- Essência: {essencia}
+- Arquétipos identificados: {arquetipos}
 - Mito espelho: {mito}
 - Fase da Jornada: {fase}
-"""
+
+PERGUNTA_FINAL (use esta exatamente como última frase — não altere nada):
+{pergunta_final}"""
 
     user_content = f"Sonho: {dream_text}{context_block}"
 

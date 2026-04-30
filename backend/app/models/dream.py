@@ -28,3 +28,10 @@ class DreamCreate(BaseModel):
     emotion: Optional[str] = "neutral"
     tags: Optional[List[str]] = []
     is_recurrent: Optional[bool] = False
+
+class NarrativeRequest(BaseModel):
+    text: str
+    analysis_context: dict | None = None
+
+class NarrativeResponse(BaseModel):
+    narrative: str

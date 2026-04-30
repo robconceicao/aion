@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme.dart';
 import '../../dream/presentation/widgets/aion_logo.dart';
 import '../../../core/widgets/cinematic_background.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
@@ -15,6 +16,8 @@ class _AuthScreenState extends State<AuthScreen> {
   bool _isLogin = true;
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _nameController = TextEditingController();
+  String _selectedGender = 'Masculino';
 
   @override
   Widget build(BuildContext context) {
@@ -64,16 +67,6 @@ class _AuthScreenState extends State<AuthScreen> {
                         letterSpacing: 1,
                       ),
                     ),
-                    const SizedBox(height: 24),
-                    Text(
-                      'Bem-Vindo(a)',
-                      style: GoogleFonts.cormorantGaramond(
-                        fontSize: 30,
-                        fontWeight: FontWeight.w600,
-                        color: AionTheme.dawn,
-                        letterSpacing: 3,
-                      ),
-                    ),
                     const SizedBox(height: 48),
                     
                     // Login/Register Toggle
@@ -84,11 +77,21 @@ class _AuthScreenState extends State<AuthScreen> {
                       child: Row(
                         children: [
                           _buildTab(context, 'ENTRAR', _isLogin, () => setState(() => _isLogin = true)),
-                          _buildTab(context, 'CRIAR ESSÊNCIA', !_isLogin, () => setState(() => _isLogin = false)),
+                          _buildTab(context, 'CADASTRAR', !_isLogin, () => setState(() => _isLogin = false)),
                         ],
                       ),
                     ),
                     const SizedBox(height: 32),
+
+                    if (!_isLogin) ...[
+                      _buildInput(
+                        controller: _nameController,
+                        hint: 'NOME COMPLETO',
+                      ),
+                      const SizedBox(height: 16),
+                      _buildGenderDropdown(),
+                      const SizedBox(height: 16),
+                    ],
 
                     _buildInput(
                       controller: _emailController,
@@ -149,10 +152,17 @@ class _AuthScreenState extends State<AuthScreen> {
                     SizedBox(
                       width: double.infinity,
                       child: OutlinedButton.icon(
-                        onPressed: () {},
-                        icon: const Icon(Icons.g_mobiledata, size: 28),
+                        onPressed: _handleGoogleSignIn,
+                        icon: Text(
+                          'G',
+                          style: GoogleFonts.roboto(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
                         label: Text(
-                          _isLogin ? 'ENTRAR COM GOOGLE' : 'REGISTRAR COM GOOGLE',
+                          _isLogin ? 'ENTRAR COM GOOGLE' : 'CADASTRAR COM GOOGLE',
                           style: const TextStyle(fontSize: 11, letterSpacing: 1),
                         ),
                         style: OutlinedButton.styleFrom(
@@ -224,5 +234,50 @@ class _AuthScreenState extends State<AuthScreen> {
         ),
       ),
     );
+  }
+
+  Widget _buildGenderDropdown() {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: AionTheme.darkAbyss.withOpacity(0.3),
+        border: Border.all(color: AionTheme.veil),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: _selectedGender,
+          dropdownColor: AionTheme.darkAbyss,
+          icon: const Icon(Icons.keyboard_arrow_down, color: AionTheme.silver),
+          style: const TextStyle(color: Colors.white, fontSize: 14),
+          isExpanded: true,
+          items: const [
+            DropdownMenuItem(value: 'Masculino', child: Text('SEXO: MASCULINO')),
+            DropdownMenuItem(value: 'Feminino', child: Text('SEXO: FEMININO')),
+          ],
+          onChanged: (val) {
+            if (val != null) setState(() => _selectedGender = val);
+          },
+        ),
+      ),
+    );
+  }
+
+  Future<void> _handleGoogleSignIn() async {
+    try {
+      await Supabase.instance.client.auth.signInWithOAuth(
+        OAuthProvider.google,
+      );
+      // O Supabase importará nome, email e foto do usuário Google automaticamente.
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erro de conexão com o Google: $e'),
+            backgroundColor: AionTheme.crimson,
+          ),
+        );
+      }
+    }
   }
 }

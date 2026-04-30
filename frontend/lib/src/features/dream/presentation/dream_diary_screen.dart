@@ -166,6 +166,11 @@ class DreamDiaryScreen extends StatelessWidget {
           if (transcription != null && transcription.isNotEmpty) {
             debugPrint('Relato recebido: $transcription');
           }
+        } else if (text == 'HISTÓRICO') {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const DreamHistoryScreen(userEmail: 'usuario@aion.app')),
+          );
         } else if (text == 'ARQUÉTIPOS') {
           Navigator.push(
             context,

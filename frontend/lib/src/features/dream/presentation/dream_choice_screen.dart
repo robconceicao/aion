@@ -250,7 +250,7 @@ class _DreamChoiceScreenState extends State<DreamChoiceScreen>
             _navBtn(context, 'HISTÓRICO', false, () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => const DreamHistoryScreen()),
+                MaterialPageRoute(builder: (_) => const DreamHistoryScreen(userEmail: 'usuario@aion.app')),
               );
             }),
             _navBtn(context, 'SAIR', false, () {

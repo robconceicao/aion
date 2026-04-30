@@ -253,7 +253,6 @@ class AnalysisResultScreen extends StatelessWidget {
                   const SizedBox(height: 8),
                   Text(
                     name.toUpperCase(),
-                    style: TextStyle(fontSize: 12, color: color, letterSpacing: 1, fontWeight: FontWeight.bold),
                     style: TextStyle(fontSize: 11, color: color, letterSpacing: 1, fontWeight: FontWeight.bold),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,

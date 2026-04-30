@@ -130,7 +130,7 @@ class _DreamChoiceScreenState extends State<DreamChoiceScreen>
                               description:
                                   'Uma interpretação direta e acessível — Jung e Campbell em diálogo com o seu sonho.',
                               accentColor: AionTheme.gold,
-                              onTap: () => Navigator.pushReplacement(
+                              onTap: () => Navigator.push(
                                 context,
                                 MaterialPageRoute(
                                   builder: (_) => NarrativeResultScreen(
@@ -150,7 +150,7 @@ class _DreamChoiceScreenState extends State<DreamChoiceScreen>
                               description:
                                   'Arquétipos, símbolos, Jornada do Herói, Mito Espelho e dimensões psíquicas detalhadas.',
                               accentColor: AionTheme.teal,
-                              onTap: () => Navigator.pushReplacement(
+                              onTap: () => Navigator.push(
                                 context,
                                 MaterialPageRoute(
                                   builder: (_) => AnalysisResultScreen(

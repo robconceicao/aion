@@ -232,20 +232,30 @@ class _DreamDiaryScreenState extends State<DreamDiaryScreen> {
                         children: [
                           Row(
                             children: [
-                              Icon(Icons.auto_awesome, size: 14, color: AionTheme.gold.withOpacity(0.7)),
+                              Icon(Icons.psychology_outlined, size: 16, color: AionTheme.gold.withOpacity(0.7)),
                               const SizedBox(width: 8),
                               Text(
-                                'EXPLORAR O INCONSCIENTE',
+                                'BUSCA SEMÂNTICA (POR SENTIDO)',
                                 style: GoogleFonts.ptSerif(
-                                  fontSize: 9,
-                                  letterSpacing: 3,
+                                  fontSize: 10,
+                                  letterSpacing: 2,
                                   color: AionTheme.gold,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
                             ],
                           ),
-                          const SizedBox(height: 12),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Aqui você busca por ideias, não apenas palavras. A IA entende o conceito: se buscar "superação", ela encontrará sonhos sobre subir montanhas ou vencer desafios, mesmo que a palavra não esteja no texto.',
+                            style: GoogleFonts.ptSerif(
+                              fontSize: 11,
+                              height: 1.5,
+                              color: AionTheme.silver.withOpacity(0.6),
+                              fontStyle: FontStyle.italic,
+                            ),
+                          ),
+                          const SizedBox(height: 14),
                           // Busca Semântica
                           Container(
                             margin: const EdgeInsets.only(bottom: 12),

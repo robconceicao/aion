@@ -22,15 +22,9 @@ AI_MODELS = [
 # ─── EMBEDDINGS (VIA REMOTE API - 768 DIM) ────────────────────
 
 async def generate_embedding(text: str) -> list:
-    """Gera embeddings via Hugging Face para manter 768 dimensões com estabilidade."""
-    model_id = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
-    # Nota: Embora o modelo seja 384 nativo, vamos garantir que o banco aceite.
-    # Como o seu banco foi alterado para 768, vou usar o modelo do Google fixado.
     if not settings.GEMINI_API_KEY:
         return [0.0] * 768
-        
     try:
-        # Forçando o uso do modelo via REST direto para evitar erros do SDK
         url = f"https://generativelanguage.googleapis.com/v1beta/models/embedding-001:embedContent?key={settings.GEMINI_API_KEY}"
         async with httpx.AsyncClient() as client:
             res = await client.post(url, json={
@@ -46,7 +40,7 @@ async def generate_embedding(text: str) -> list:
 
 # ─── HELPERS DE IA ────────────────────────────────────────────
 
-async def call_claude(system_prompt: str, user_content: str, max_tokens=2500):
+async def call_claude(system_prompt: str, user_content: str, max_tokens=3500):
     if not async_client:
         return await call_gemini(system_prompt, user_content)
 
@@ -84,33 +78,34 @@ async def call_gemini(system_prompt: str, user_content: str):
 def _parse_ai_json(content: str) -> dict:
     import re
     try:
-        # 1. Limpeza básica
+        # 1. Limpeza básica e remoção de Markdown
         content = content.strip()
-        # 2. Extrai apenas o que está entre as primeiras e últimas chaves
+        content = re.sub(r'```json\s*|\s*```', '', content)
+        
+        # 2. Localiza o bloco JSON
         start, end = content.find('{'), content.rfind('}')
         if start != -1 and end != -1:
             content = content[start:end+1]
         
-        # 3. Remove blocos de código se ainda restarem
-        content = re.sub(r'```json\s*|\s*```', '', content)
+        # 3. Resolve problemas de quebra de linha dentro de strings JSON
+        # Esta regex procura por quebras de linha que não estão precedendo uma chave ou fechamento
+        content = re.sub(r'(?<![:{,])\n(?![}\],])', ' ', content)
         
-        # 4. Remove vírgulas extras antes de fechar chaves ou colchetes
+        # 4. Remove vírgulas extras
         content = re.sub(r',\s*([\}\]])', r'\1', content)
         
-        # 5. Tenta o parse direto primeiro (mais seguro)
         return json.loads(content)
     except Exception as e:
-        # 6. Fallback agressivo: remove quebras de linha que não estão entre aspas
         try:
-            # Substitui quebras de linha por espaços para não quebrar a estrutura
-            content_flat = content.replace('\n', ' ').replace('\r', ' ')
-            return json.loads(content_flat)
+            # Fallback final: remove TODAS as quebras de linha para sanitizar
+            cleaned = re.sub(r'\s+', ' ', content)
+            return json.loads(cleaned)
         except:
-            print(f"[AI_SERVICE] Falha total no parse. Erro: {e}")
+            print(f"[AI_SERVICE] Falha total parse JSON. Erro: {e}")
             raise ValueError(f"JSON inválido: {str(e)}")
 
 
-# ─── FUNÇÕES DO AION (ALMA RESTAURADA) ────────────────────────
+# ─── FUNÇÕES DO AION (ALMA JUNG & CAMPBELL) ───────────────────
 
 async def analyze_dream(dream_text: str, **kwargs) -> dict:
     from app.services.ai_service import PROMPT_TEMPLATE, _build_contexto, _get_error_response
@@ -121,8 +116,8 @@ async def analyze_dream(dream_text: str, **kwargs) -> dict:
     prompt = PROMPT_TEMPLATE.format(texto=dream_text, contexto_estruturado=contexto)
     
     try:
-        # Claude Sonnet é o preferencial para a profundidade junguiana
-        content = await call_claude("", prompt, max_tokens=3000)
+        # Aumentamos o limite de tokens para permitir análises profundas
+        content = await call_claude("", prompt, max_tokens=4000)
         return _parse_ai_json(content)
     except Exception as e:
         print(f"[AI_SERVICE] Erro fatal análise: {e}")
@@ -132,22 +127,22 @@ async def analyze_dream(dream_text: str, **kwargs) -> dict:
 async def generate_interview_questions(dream_text: str) -> list:
     from app.services.ai_service import INTERVIEW_SYSTEM_PROMPT
     try:
-        content = await call_claude(INTERVIEW_SYSTEM_PROMPT, f"Sonho: {dream_text}", max_tokens=800)
+        content = await call_claude(INTERVIEW_SYSTEM_PROMPT, f"Sonho: {dream_text}", max_tokens=1000)
         data = _parse_ai_json(content)
         return data.get("perguntas", [])
     except Exception as e:
-        return ["Como você se sentiu nesse cenário?", "O que esse sonho lembra da sua história?", "Qual era a sensação predominante?"]
+        return ["Como você se sentiu?", "O que lembra da vida?", "Qual era a sensação?"]
 
 
 async def analyze_recurring_pattern(current_dream: str, similar_dreams: list) -> str:
     from app.services.ai_service import RECURRENCE_SYSTEM_PROMPT
-    history = "\n\nSONHOS ANTERIORES SIMILARES:\n"
+    history = "\n\nANTERIORES:\n"
     for i, d in enumerate(similar_dreams[:3], 1):
-        relato = (d.get("relato") or "")[:250]
+        relato = (d.get("relato") or "")[:300]
         history += f"\n[{i}]: {relato}..."
     
     try:
-        return await call_claude(RECURRENCE_SYSTEM_PROMPT, f"Sonho atual: {current_dream}{history}", max_tokens=1000)
+        return await call_claude(RECURRENCE_SYSTEM_PROMPT, f"Atual: {current_dream}{history}", max_tokens=1200)
     except Exception as e:
         return ""
 
@@ -159,58 +154,61 @@ async def analyze_dream_narrative(dream_text: str, analysis_context: dict = None
         context_block = f"\n\nESSÊNCIA: {analysis_context.get('essencia','')}\nARQUÉTIPOS: {str(analysis_context.get('arquetipos',[]))}"
     
     try:
-        return await call_claude(NARRATIVE_SYSTEM_PROMPT, f"Sonho: {dream_text}{context_block}", max_tokens=1500)
+        return await call_claude(NARRATIVE_SYSTEM_PROMPT, f"Sonho: {dream_text}{context_block}", max_tokens=2000)
     except Exception as e:
-        return "O Oráculo processa sua jornada em silêncio sagrado..."
+        return "O Oráculo aguarda em silêncio sagrado..."
 
 
-# ─── PROMPTS (JUNG & CAMPBELL INTEGRADOS) ─────────────────────
+# ─── PROMPTS DEFINITIVOS (EXCELÊNCIA) ─────────────────────────
 
 PROMPT_TEMPLATE = """
-Atue como Aion, o Oráculo de Mito & Psique — analista junguiano e mitologista campbelliano.
-Sua missão é realizar uma Amplificação Profunda que una a Psicologia Analítica de Jung com a Mitologia Comparada de Joseph Campbell.
+Atue como Aion, o Oráculo de Mito & Psique. Você é a união da senioridade de C.G. Jung com a sabedoria narrativa de Joseph Campbell.
 
-DIRETRIZES DE PERSONA:
-1. Use "VOCÊ" — português do Brasil.
-2. Tom sábio, poético, acolhedor e iniciático.
-3. Integre a dinâmica da PSIQUE (Jung: Sombra, Anima/Animus, Individuação) com a dinâmica do MITO (Campbell: Jornada do Herói, Chamado, Travessia do Limiar).
+SUA MISSÃO: 
+Realizar uma Amplificação profunda que conecte os símbolos da PSIQUE (Jung: Sombra, Anima, Individuação) aos estágios do MITO (Campbell: Jornada do Herói).
+
+REGRAS DE RESPOSTA (CRÍTICAS):
+1. Use tom poético, iniciático e acolhedor.
+2. Seja profundo. Explore o significado oculto sob a superfície.
+3. Responda APENAS JSON válido.
+4. IMPORTANTE: Não use quebras de linha (Enter) dentro dos valores das strings no JSON. Use '\\n' se precisar pular linha no texto.
 
 DADOS DO SONHO:
 - RELATO: {texto}
 {contexto_estruturado}
 
-Responda APENAS com JSON válido seguindo este formato rigoroso:
+JSON FORMAT:
 {{
-  "aviso": "Esta análise é uma reflexão simbólica baseada na união de C.G. Jung e Joseph Campbell...",
-  "essencia": "O núcleo dinâmico do sonho, unindo o processo de individuação à jornada mítica.",
+  "aviso": "Análise simbólica baseada em Jung e Campbell.",
+  "essencia": "O núcleo dinâmico do sonho unindo individuação e jornada mítica.",
   "arquetipos": [
-    {{ "nome": "...", "simbolo": "...", "descricao": "A força arquetípica segundo Jung e seu papel na jornada segundo Campbell." }}
+    {{ "nome": "...", "simbolo": "...", "descricao": "Papel psicológico e místico deste elemento." }}
   ],
-  "funcao_compensatoria": "Como a psique busca o equilíbrio e qual 'etapa' da jornada está sendo sinalizada?",
+  "funcao_compensatoria": "Como a psique busca o equilíbrio através deste sonho?",
   "simbolos_chave": [
-    {{ "elemento": "...", "significado": "Significado simbólico (Jung) e mitológico (Campbell)." }}
+    {{ "elemento": "...", "significado": "Visão junguiana e campbelliana combinadas." }}
   ],
-  "fase_jornada": {{ "nome": "...", "descricao": "Localize o sonhador no Monomito de Campbell (ex: Ventre da Baleia, Estrada de Provas)." }},
-  "prospeccao": "O que o Self sinaliza como próximo passo na grande travessia?",
-  "pergunta_para_reflexao": "Uma questão para o sonhador levar ao seu 'Mundo Comum'.",
-  "mito_espelho": {{ "titulo": "...", "paralela": "O mito ou lenda que serve de espelho para esta dinâmica." }},
+  "fase_jornada": {{ "nome": "...", "descricao": "Localização no Monomito de Campbell." }},
+  "prospeccao": "O sinal do Self para o futuro.",
+  "pergunta_para_reflexao": "Uma questão para levar ao Mundo Comum.",
+  "mito_espelho": {{ "titulo": "...", "paralela": "O mito que reflete esta jornada." }},
   "intensidade_sombra": 5, "intensidade_heroi": 5, "intensidade_transformacao": 5
 }}
 """
 
-INTERVIEW_SYSTEM_PROMPT = "Você é Aion. Analise o relato e identifique 3 pontos cegos sob a ótica de Jung e Campbell. JSON: {\"perguntas\": [\"...\", \"...\", \"...\"]}"
-RECURRENCE_SYSTEM_PROMPT = "Analise a evolução dos símbolos como capítulos de uma saga mítica em desenvolvimento. Máximo 250 palavras."
-NARRATIVE_SYSTEM_PROMPT = "Fale como um mestre que une Jung e Campbell. Transforme a análise em uma narrativa de jornada em 3 atos curtos e profundos. Máximo 220 palavras."
+INTERVIEW_SYSTEM_PROMPT = "Aion. Identifique 3 pontos cegos. Responda JSON: {\"perguntas\": [\"...\", \"...\", \"...\"]}"
+RECURRENCE_SYSTEM_PROMPT = "Analise a evolução dos símbolos como capítulos de uma saga mítica. Máximo 250 palavras."
+NARRATIVE_SYSTEM_PROMPT = "Mestre Jung/Campbell. Transforme a análise em uma narrativa de jornada em 3 atos profundos. Máximo 220 palavras."
 
 def _build_contexto(tags_emocao=None, temas=None, residuos_diurnos=None, interview_answers=None) -> str:
     lines = []
-    if tags_emocao: lines.append(f"- EMOÇÕES: {', '.join(tags_emocao)}")
-    if temas: lines.append(f"- TEMAS: {', '.join(temas)}")
-    if residuos_diurnos: lines.append(f"- CONTEXTO: {', '.join(residuos_diurnos)}")
+    if tags_emocao: lines.append(f"EMOÇÕES: {', '.join(tags_emocao)}")
+    if temas: lines.append(f"TEMAS: {', '.join(temas)}")
+    if residuos_diurnos: lines.append(f"CONTEÚDO DIURNO: {', '.join(residuos_diurnos)}")
     if interview_answers:
         for item in interview_answers:
-            lines.append(f"  P: {item.get('pergunta', '')}\n  R: {item.get('resposta', '')}")
-    return "\n\nCONTEXTO ADICIONAL:\n" + "\n".join(lines) if lines else ""
+            lines.append(f"P: {item.get('pergunta', '')} | R: {item.get('resposta', '')}")
+    return "\nCONTEXTO ADICIONAL:\n" + "\n".join(lines) if lines else ""
 
 def _get_error_response(error_msg: str) -> dict:
     return {

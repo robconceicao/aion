@@ -38,7 +38,6 @@ class _RecordDreamScreenState extends State<RecordDreamScreen> with SingleTicker
   @override
   void initState() {
     super.initState();
-    _ctxController.text = "Transição de carreira, busca por propósito..."; // Pre-preenchido
     _audioRecorder = AudioRecorder();
     _platformRecorder = getPlatformRecorder();
     _animationController = AnimationController(
@@ -136,7 +135,6 @@ class _RecordDreamScreenState extends State<RecordDreamScreen> with SingleTicker
         options: Options(headers: {'x-user-email': userEmail}),
         data: {
           'text': text,
-          'emotion': _mood != 'Não informar' ? _mood : null,
           if (_tags.isNotEmpty) 'tags': _tags,
           'is_recurrent': _recurring,
         },
@@ -172,9 +170,6 @@ class _RecordDreamScreenState extends State<RecordDreamScreen> with SingleTicker
     }
   }
 
-  String _mood = 'Não informar';
-  final List<String> _moods = ['Não informar', 'Aterrorizado', 'Ansioso', 'Neutro', 'Curioso', 'Revigorado', 'Eufórico', 'Triste', 'Lúcido'];
-  final TextEditingController _ctxController = TextEditingController();
   final TextEditingController _tagController = TextEditingController();
   final List<String> _tags = [];
   bool _recurring = false;
@@ -349,85 +344,7 @@ class _RecordDreamScreenState extends State<RecordDreamScreen> with SingleTicker
           ),
           const SizedBox(height: 16),
 
-          // Mood + Context
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final isWide = constraints.maxWidth > 500;
-              final children = [
-                Expanded(
-                  flex: isWide ? 1 : 0,
-                  child: Container(
-                    padding: const EdgeInsets.all(18),
-                    decoration: BoxDecoration(
-                      color: AionTheme.deep,
-                      border: Border.all(color: AionTheme.shadow),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('E S T A D O   A O   A C O R D A R', style: TextStyle(color: AionTheme.silver, fontSize: 10, letterSpacing: 2)),
-                        const SizedBox(height: 12),
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
-                          decoration: BoxDecoration(
-                            color: AionTheme.darkVoid,
-                            border: Border.all(color: AionTheme.shadow),
-                          ),
-                          child: DropdownButtonHideUnderline(
-                            child: DropdownButton<String>(
-                              value: _mood,
-                              dropdownColor: AionTheme.darkVoid,
-                              style: const TextStyle(color: AionTheme.silver, fontSize: 13, fontFamily: 'Georgia'),
-                              icon: const Icon(Icons.keyboard_arrow_down, color: AionTheme.silver),
-                              isExpanded: true,
-                              onChanged: (val) => setState(() => _mood = val!),
-                              items: _moods.map((m) => DropdownMenuItem(value: m, child: Text(m))).toList(),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                if (isWide) const SizedBox(width: 14) else const SizedBox(height: 14),
-                Expanded(
-                  flex: isWide ? 1 : 0,
-                  child: Container(
-                    padding: const EdgeInsets.all(18),
-                    decoration: BoxDecoration(
-                      color: AionTheme.deep,
-                      border: Border.all(color: AionTheme.shadow),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('C O N T E X T O   D E   V I D A', style: TextStyle(color: AionTheme.silver, fontSize: 10, letterSpacing: 2)),
-                        const SizedBox(height: 12),
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
-                          decoration: BoxDecoration(
-                            color: AionTheme.darkVoid,
-                            border: Border.all(color: AionTheme.shadow),
-                          ),
-                          child: TextField(
-                            controller: _ctxController,
-                            style: const TextStyle(color: AionTheme.silver, fontSize: 13, fontFamily: 'Georgia'),
-                            decoration: const InputDecoration(
-                              border: InputBorder.none,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ];
-              return isWide ? Row(children: children) : Column(children: children);
-            },
-          ),
-          const SizedBox(height: 16),
+
 
           // Tags
           Container(

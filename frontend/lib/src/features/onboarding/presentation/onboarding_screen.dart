@@ -14,9 +14,11 @@ class OnboardingScreen extends StatefulWidget {
 
 class _OnboardingScreenState extends State<OnboardingScreen> {
   int _currentStep = 1;
-  final int _totalSteps = 3;
+  final int _totalSteps = 2;
   final _nameController = TextEditingController();
-  String _selectedIntention = '';
+  
+  // Simulação do dado que virá do Supabase (masculino ou feminino)
+  final String _userGender = 'masculino';
 
   void _nextStep() {
     if (_currentStep < _totalSteps) {
@@ -32,6 +34,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final String nome = _nameController.text.trim();
+    final String bemVindoStr = _userGender == 'feminino' ? 'Bem-Vinda' : 'Bem-Vindo';
 
     return Scaffold(
       backgroundColor: AionTheme.darkVoid,
@@ -90,13 +94,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                                 // BEM-VINDO DINÂMICO
                                 if (_currentStep == 2)
                                   Text(
-                                    'Bem-Vindo(a)',
+                                    '$bemVindoStr, $nome',
                                     style: GoogleFonts.cormorantGaramond(
                                       fontSize: 30,
                                       fontWeight: FontWeight.w600,
                                       color: AionTheme.dawn,
                                       letterSpacing: 3,
                                     ),
+                                    textAlign: TextAlign.center,
                                   ),
                                   
                                 const SizedBox(height: 32),
@@ -127,7 +132,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                                 
                                 if (_currentStep == 1) _buildStepOne(theme),
                                 if (_currentStep == 2) _buildStepTwo(theme),
-                                if (_currentStep == 3) _buildStepThree(theme),
                                 
                                 const SizedBox(height: 32),
                                 const Spacer(),
@@ -154,7 +158,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                                       Expanded(
                                         flex: 4,
                                         child: ElevatedButton(
-                                          onPressed: (_currentStep == 1 && _nameController.text.trim().isEmpty) || (_currentStep == 2 && _selectedIntention.isEmpty) ? null : _nextStep,
+                                          onPressed: (_currentStep == 1 && _nameController.text.trim().isEmpty) ? null : _nextStep,
                                           style: ElevatedButton.styleFrom(
                                             backgroundColor: AionTheme.gold,
                                             foregroundColor: AionTheme.darkVoid,
@@ -213,56 +217,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   Widget _buildStepTwo(ThemeData theme) {
-    final intentions = [
-      'Entender meus sonhos',
-      'Crescimento espiritual',
-      'Curiosidade psicológica',
-      'Apenas registrar',
-    ];
+    final isFem = _userGender == 'feminino';
+    final titulo = isFem ? 'Pronta para começar?' : 'Pronto para começar?';
 
     return Column(
       children: [
         Text(
-          'Qual sua intenção principal?',
-          style: theme.textTheme.displayMedium,
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 32),
-        ...intentions.map((intent) {
-          final isSelected = _selectedIntention == intent;
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: SizedBox(
-              width: double.infinity,
-              child: OutlinedButton(
-                onPressed: () => setState(() => _selectedIntention = intent),
-                style: OutlinedButton.styleFrom(
-                  backgroundColor: isSelected ? AionTheme.gold.withOpacity(0.1) : Colors.transparent,
-                  side: BorderSide(color: isSelected ? AionTheme.gold : AionTheme.veil),
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: const RoundedRectangleBorder(),
-                ),
-                child: Text(
-                  intent.toUpperCase(),
-                  style: TextStyle(
-                    color: isSelected ? AionTheme.gold : AionTheme.silver,
-                    fontSize: 11,
-                    letterSpacing: 2,
-                  ),
-                ),
-              ),
-            ),
-          );
-        }),
-      ],
-    );
-  }
-
-  Widget _buildStepThree(ThemeData theme) {
-    return Column(
-      children: [
-        Text(
-          'Pronto para começar?',
+          titulo,
           style: theme.textTheme.displayMedium,
           textAlign: TextAlign.center,
         ),

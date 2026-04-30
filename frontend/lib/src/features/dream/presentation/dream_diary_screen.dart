@@ -228,7 +228,24 @@ class _DreamDiaryScreenState extends State<DreamDiaryScreen> {
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16.0),
                       child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          Row(
+                            children: [
+                              Icon(Icons.auto_awesome, size: 14, color: AionTheme.gold.withOpacity(0.7)),
+                              const SizedBox(width: 8),
+                              Text(
+                                'EXPLORAR O INCONSCIENTE',
+                                style: GoogleFonts.ptSerif(
+                                  fontSize: 9,
+                                  letterSpacing: 3,
+                                  color: AionTheme.gold,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
                           // Busca Semântica
                           Container(
                             margin: const EdgeInsets.only(bottom: 12),
@@ -240,7 +257,7 @@ class _DreamDiaryScreenState extends State<DreamDiaryScreen> {
                               controller: _searchController,
                               style: GoogleFonts.ptSerif(fontSize: 14, color: AionTheme.ghost),
                               decoration: InputDecoration(
-                                hintText: 'Buscar por sentido... (ex: "superação", "perda")',
+                                hintText: 'Busque por significado... (ex: "perda", "voo")',
                                 hintStyle: GoogleFonts.ptSerif(
                                     color: AionTheme.silver.withOpacity(0.35), fontSize: 13),
                                 prefixIcon: Icon(Icons.search,
@@ -258,6 +275,15 @@ class _DreamDiaryScreenState extends State<DreamDiaryScreen> {
                             ),
                           ),
 
+                          Text(
+                            'FILTRAR POR EMOÇÃO OU JORNADA:',
+                            style: GoogleFonts.ptSerif(
+                              fontSize: 8,
+                              letterSpacing: 1.5,
+                              color: AionTheme.silver.withOpacity(0.4),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
                           // Filtros Horizontais
                           SingleChildScrollView(
                             scrollDirection: Axis.horizontal,

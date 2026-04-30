@@ -48,12 +48,11 @@ async def analyze_dream(dream_text: str, context: dict = None) -> dict:
     prompt = PROMPT_TEMPLATE.format(texto=dream_text)
 
     modelos = [
+        "claude-3-5-sonnet-latest",
+        "claude-3-5-sonnet-20240620",
+        "claude-3-opus-latest",
         "claude-sonnet-4-6",
         "claude-sonnet-4-5-20250929",
-        "claude-opus-4-7",
-        "claude-opus-4-6",
-        "claude-haiku-4-5-20251001",
-        "claude-3-5-sonnet-latest"
     ]
 
     ultimo_erro = None
@@ -157,7 +156,7 @@ CONTEXTO DA ANÁLISE SIMBÓLICA (use para manter coerência, não repita):
     user_content = f"Sonho: {dream_text}{context_block}"
 
     message = await async_client.messages.create(
-        model="claude-sonnet-4-6",
+        model="claude-3-5-sonnet-latest",
         max_tokens=1024,
         system=NARRATIVE_SYSTEM_PROMPT,
         messages=[{"role": "user", "content": user_content}],

@@ -44,13 +44,14 @@ async def create_dream(
     if x_user_email:
         dream_data["user_email"] = x_user_email
 
-    # 3. Salva no Supabase
+    # 3. Salva no Supabase (Resiliente: não interrompe se falhar)
     try:
         supabase.table("sonhos").insert(dream_data).execute()
-        return analysis
     except Exception as e:
-        print(f"[ERRO SUPABASE]: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Erro ao salvar no Oráculo: {str(e)}")
+        # Apenas loga o erro, mas não quebra a resposta para o usuário
+        print(f"[AVISO SUPABASE]: Não foi possível salvar o registro, mas a análise continuará. Erro: {str(e)}")
+    
+    return analysis
 
 
 @router.get("/history", response_model=list)

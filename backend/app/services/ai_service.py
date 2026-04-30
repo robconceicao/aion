@@ -1,7 +1,7 @@
 import json
 import anthropic
 import google.generativeai as genai
-from sentence_transformers import SentenceTransformer
+import httpx
 from app.core.config import settings
 
 # Clientes de IA
@@ -11,7 +11,7 @@ async_client = anthropic.AsyncAnthropic(api_key=settings.ANTHROPIC_API_KEY) if s
 if settings.GEMINI_API_KEY:
     genai.configure(api_key=settings.GEMINI_API_KEY)
 
-# Lista de modelos por prioridade (Versões 2026) - Atualizado em 30/04/2026
+# Lista de modelos por prioridade (Versões 2026)
 AI_MODELS = [
     "claude-sonnet-4-6",          # Sonnet mais recente
     "claude-haiku-4-5-20251001",  # Haiku mais recente
@@ -19,22 +19,34 @@ AI_MODELS = [
     "claude-3-haiku-20240307",   # Fallback 2024
 ]
 
-# Modelo de embedding — singleton
-_embedding_model = None
+# ─── EMBEDDINGS (VIA REMOTE API - MEMORY SAVER) ────────────────
 
-def get_embedding_model() -> SentenceTransformer:
-    global _embedding_model
-    if _embedding_model is None:
-        print("[AI_SERVICE] Carregando modelo de embedding...")
-        _embedding_model = SentenceTransformer('paraphrase-multilingual-MiniLM-L12-v2')
-        print("[AI_SERVICE] Modelo pronto.")
-    return _embedding_model
-
-
-def generate_embedding(text: str) -> list:
-    model = get_embedding_model()
-    embedding = model.encode(text, normalize_embeddings=True)
-    return embedding.tolist()
+async def generate_embedding(text: str) -> list:
+    """Gera embeddings via Hugging Face API (Gratuito) para economizar RAM."""
+    model_id = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+    api_url = f"https://api-inference.huggingface.co/pipeline/feature-extraction/{model_id}"
+    
+    # Nota: Se quiser mais estabilidade, adicione uma HF_TOKEN nas variáveis de ambiente.
+    # Mas para uso moderado, a API funciona sem token.
+    headers = {}
+    
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.post(
+                api_url, 
+                headers=headers, 
+                json={"inputs": text, "options": {"wait_for_model": True}},
+                timeout=20.0
+            )
+            if response.status_code == 200:
+                return response.json()
+            else:
+                print(f"[AI_SERVICE] Erro embedding remoto: {response.status_code}")
+                # Fallback para zeros se a API falhar (evita crash total)
+                return [0.0] * 384
+        except Exception as e:
+            print(f"[AI_SERVICE] Erro fatal embedding: {e}")
+            return [0.0] * 384
 
 
 # ─── HELPERS DE IA ────────────────────────────────────────────
@@ -56,10 +68,9 @@ async def call_claude(system_prompt: str, user_content: str, max_tokens=1024):
         except Exception as e:
             print(f"[AI_SERVICE] Erro no modelo {model_name}: {e}")
             if "not_found_error" in str(e).lower() or "404" in str(e):
-                continue # Tenta o próximo Claude
-            break # Erro de outro tipo (ex: 401), para o loop
+                continue 
+            break 
             
-    # Se chegou aqui, todos os Claudes falharam ou não existem. Tenta Gemini.
     return await call_gemini(system_prompt, user_content)
 
 
@@ -71,7 +82,6 @@ async def call_gemini(system_prompt: str, user_content: str):
     print("[AI_SERVICE] Usando fallback Gemini 1.5 Flash...")
     try:
         model = genai.GenerativeModel('gemini-1.5-flash')
-        # No Gemini, combinamos system e user prompt
         full_prompt = f"{system_prompt}\n\nUSUÁRIO: {user_content}"
         response = model.generate_content(full_prompt)
         return response.text
@@ -82,7 +92,6 @@ async def call_gemini(system_prompt: str, user_content: str):
 
 def _parse_ai_json(content: str) -> dict:
     try:
-        # Limpeza para Gemini (que às vezes coloca markdown ```json)
         content = content.replace("```json", "").replace("```", "").strip()
         start, end = content.find('{'), content.rfind('}')
         if start != -1 and end != -1:

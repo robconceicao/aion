@@ -2,22 +2,25 @@ import json
 import anthropic
 from app.core.config import settings
 
-# Cliente assíncrono — essencial para não bloquear o event loop do FastAPI
 if not settings.ANTHROPIC_API_KEY:
     print("\n[CRÍTICO] ANTHROPIC_API_KEY está VAZIA. O Oráculo não poderá responder.\n")
 
 async_client = anthropic.AsyncAnthropic(api_key=settings.ANTHROPIC_API_KEY)
 
+# ─────────────────────────────────────────────
+# PROMPT: ANÁLISE ESTRUTURADA (MAPA ARQUETÍPICO)
+# ─────────────────────────────────────────────
 PROMPT_TEMPLATE = """
 Atue como Aion, o Oráculo de Mito & Psique — um analista junguiano de senioridade excepcional.
-Sua tarefa é realizar uma 'Amplificação Junguiana' profunda, mas OBJETIVA e DIRETA do sonho abaixo.
+Sua tarefa é realizar uma 'Amplificação Junguiana' profunda do sonho abaixo.
 
-DIRETRIZ DE LINGUAGEM E VELOCIDADE:
+DIRETRIZ DE LINGUAGEM:
 1. Use o português do Brasil coloquial: use "VOCÊ" e "SEU/SUA" (nunca use "Tu" ou "Vós").
-2. Seja conciso: vá direto ao ponto para que a resposta seja gerada rapidamente.
-3. Use um tom sábio e acolhedor, explicando termos técnicos de forma simples.
+2. Seja conciso e direto. Use um tom sábio e acolhedor.
 
-SONHO: {texto}
+DADOS DO SONHO:
+- RELATO: {texto}
+{contexto_estruturado}
 
 INSTRUÇÃO CRÍTICA: Responda APENAS com um JSON válido, seguindo exatamente este esquema:
 
@@ -44,6 +47,34 @@ INSTRUÇÃO CRÍTICA: Responda APENAS com um JSON válido, seguindo exatamente e
 }}
 """
 
+# ─────────────────────────────────────────────
+# PROMPT: MODO ENTREVISTA
+# ─────────────────────────────────────────────
+INTERVIEW_SYSTEM_PROMPT = """Você é um pesquisador de sonhos clínico do Aion. Sua tarefa é analisar o relato de um sonho e identificar pontos cegos, símbolos potentes ou figuras ambíguas que precisam de mais contexto para uma interpretação real.
+
+DIRETRIZES PARA AS PERGUNTAS:
+1. Não interprete ainda. Apenas pergunte.
+2. Identifique o símbolo mais forte e peça uma associação pessoal (ex: "O que [X] te lembra na sua vida real agora?").
+3. Se houver uma pessoa conhecida no sonho, pergunte como está a relação com ela hoje.
+4. Se o cenário for marcante, pergunte se o usuário já viveu algo parecido recentemente.
+5. Se houver uma emoção intensa, pergunte a que situação real ela pode estar conectada.
+6. Seja empático, breve e use linguagem próxima — "você" e "seu/sua".
+
+FORMATO DE SAÍDA OBRIGATÓRIO:
+Responda APENAS com um JSON válido neste formato exato:
+{
+  "perguntas": [
+    "Primeira pergunta aqui?",
+    "Segunda pergunta aqui?",
+    "Terceira pergunta aqui?"
+  ]
+}
+
+Gere exatamente 3 perguntas. Nada mais."""
+
+# ─────────────────────────────────────────────
+# PROMPT: LEITURA SIMBÓLICA (NARRATIVA)
+# ─────────────────────────────────────────────
 NARRATIVE_SYSTEM_PROMPT = """Você é Aion. Fale com a pessoa como um amigo sábio — não como um professor ou terapeuta.
 
 Leia o sonho e responda em 3 movimentos curtos, sem títulos ou subtítulos:
@@ -63,15 +94,75 @@ Regras absolutas:
 - A última frase DEVE ser exatamente a PERGUNTA_FINAL fornecida"""
 
 
-async def analyze_dream(dream_text: str, context: dict = None) -> dict:
-    """Analisa o sonho usando Claude async — não bloqueia o event loop."""
-    print(f"[AI_SERVICE] Iniciando análise profissional com Claude.")
+def _build_contexto_estruturado(
+    tags_emocao: list = None,
+    temas: list = None,
+    residuos_diurnos: list = None,
+    interview_answers: list = None,
+) -> str:
+    """Monta o bloco de contexto estruturado para injetar no prompt."""
+    lines = []
 
-    prompt = PROMPT_TEMPLATE.format(texto=dream_text)
+    if tags_emocao:
+        lines.append(f"- EMOÇÕES SENTIDAS NO SONHO: {', '.join(tags_emocao)}")
+    if temas:
+        lines.append(f"- TEMAS IDENTIFICADOS: {', '.join(temas)}")
+    if residuos_diurnos:
+        lines.append(f"- CONTEXTO DE VIDA (dia anterior): {', '.join(residuos_diurnos)}")
+    if interview_answers:
+        lines.append("\nASSOCIAÇÕES PESSOAIS DO SONHADOR (use para personalizar a análise):")
+        for item in interview_answers:
+            lines.append(f"  Pergunta: {item.get('pergunta', '')}")
+            lines.append(f"  Resposta: {item.get('resposta', '')}")
+
+    if not lines:
+        return ""
+
+    return "\n\nCONTEXTO ADICIONAL (integre à análise sem repetir literalmente):\n" + "\n".join(lines)
+
+
+async def generate_interview_questions(dream_text: str) -> list:
+    """Gera 3 perguntas cirúrgicas sobre o relato do sonho."""
+    print("[AI_SERVICE] Gerando perguntas de entrevista...")
+    try:
+        message = await async_client.messages.create(
+            model="claude-3-5-sonnet-latest",
+            max_tokens=512,
+            system=INTERVIEW_SYSTEM_PROMPT,
+            messages=[{"role": "user", "content": f"Sonho: {dream_text}"}],
+        )
+        content = message.content[0].text
+        start = content.find('{')
+        end = content.rfind('}')
+        if start != -1 and end != -1:
+            data = json.loads(content[start:end+1])
+            return data.get("perguntas", [])
+        return []
+    except Exception as e:
+        print(f"[AI_SERVICE] Erro ao gerar perguntas: {e}")
+        raise e
+
+
+async def analyze_dream(
+    dream_text: str,
+    tags_emocao: list = None,
+    temas: list = None,
+    residuos_diurnos: list = None,
+    interview_answers: list = None,
+    context: dict = None,
+) -> dict:
+    """Analisa o sonho com todo o contexto disponível."""
+    print("[AI_SERVICE] Iniciando análise com Claude.")
+
+    contexto = _build_contexto_estruturado(
+        tags_emocao=tags_emocao,
+        temas=temas,
+        residuos_diurnos=residuos_diurnos,
+        interview_answers=interview_answers,
+    )
+    prompt = PROMPT_TEMPLATE.format(texto=dream_text, contexto_estruturado=contexto)
 
     modelos = [
-        "claude-sonnet-4-6",
-        "claude-sonnet-4-5-20250929",
         "claude-3-5-sonnet-latest",
         "claude-3-5-sonnet-20240620",
     ]
@@ -85,23 +176,17 @@ async def analyze_dream(dream_text: str, context: dict = None) -> dict:
                 max_tokens=2048,
                 messages=[{"role": "user", "content": prompt}]
             )
-            content = message.content[0].text
-            return _parse_ai_json(content)
-
+            return _parse_ai_json(message.content[0].text)
         except Exception as e:
             ultimo_erro = str(e)
-            print(f"[AI_SERVICE] Erro crítico com {model_name}: {e}")
+            print(f"[AI_SERVICE] Erro com {model_name}: {e}")
             continue
 
     return _get_error_response(f"Falha técnica: {ultimo_erro}")
 
 
 async def analyze_dream_narrative(dream_text: str, analysis_context: dict = None) -> str:
-    """
-    Retorna a interpretação narrativa do sonho.
-    Recebe o contexto da análise estruturada para garantir coerência
-    e usar exatamente a mesma pergunta para reflexão.
-    """
+    """Interpretação narrativa ancorada na análise estruturada."""
     context_block = ""
 
     if analysis_context:
@@ -124,14 +209,12 @@ CONTEXTO DA ANÁLISE (use para manter coerência — não repita literalmente):
 PERGUNTA_FINAL (copie esta frase exatamente como última frase da sua resposta — não altere nada):
 {pergunta_final}"""
 
-    user_content = f"Sonho: {dream_text}{context_block}"
-
     try:
         message = await async_client.messages.create(
-            model="claude-sonnet-4-6",
+            model="claude-3-5-sonnet-latest",
             max_tokens=1024,
             system=NARRATIVE_SYSTEM_PROMPT,
-            messages=[{"role": "user", "content": user_content}],
+            messages=[{"role": "user", "content": f"Sonho: {dream_text}{context_block}"}],
         )
         return message.content[0].text
     except Exception as e:
@@ -140,24 +223,22 @@ PERGUNTA_FINAL (copie esta frase exatamente como última frase da sua resposta �
 
 
 def _parse_ai_json(content: str) -> dict:
-    """Limpa e parseia o JSON de forma robusta, ignorando textos extras."""
     try:
         start = content.find('{')
         end = content.rfind('}')
         if start != -1 and end != -1:
-            json_str = content[start:end+1]
-            return json.loads(json_str)
+            return json.loads(content[start:end+1])
         return json.loads(content.strip())
     except Exception as e:
-        print(f"[AI_SERVICE] Falha ao decodificar JSON. Conteúdo bruto: {content[:100]}")
+        print(f"[AI_SERVICE] Falha ao decodificar JSON: {content[:100]}")
         raise ValueError(f"Formato de resposta inválido: {str(e)}")
 
 
 def _get_error_response(error_msg: str) -> dict:
-    print(f"[DEBUG_ORACULO] Gerando resposta de erro: {error_msg}")
+    print(f"[DEBUG_ORACULO] Erro: {error_msg}")
     return {
         "aviso": "O Oráculo está em silêncio profundo.",
-        "essencia": "O silêncio também é uma mensagem do inconsciente. Tente novamente em instantes.",
+        "essencia": "O silêncio também é uma mensagem. Tente novamente em instantes.",
         "arquetipos": [],
         "funcao_compensatoria": "Aguardando clareza técnica.",
         "simbolos_chave": [],

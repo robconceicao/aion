@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, Header
-from app.models.dream import DreamCreate, DreamModel, NarrativeRequest, NarrativeResponse
+from app.models.dream import DreamCreate, DreamModel, NarrativeRequest, NarrativeResponse, InterviewRequest, InterviewResponse
 from app.routers.auth import get_current_user
 from app.database import get_supabase
-from app.services.ai_service import analyze_dream, analyze_dream_narrative
+from app.services.ai_service import analyze_dream, analyze_dream_narrative, generate_interview_questions
 from datetime import datetime
 from typing import Optional
 import uuid
@@ -19,8 +19,14 @@ async def create_dream(
 ):
     supabase = get_supabase()
 
-    # 1. Analisa via IA (Estrutural)
-    analysis = await analyze_dream(dream_in.text)
+    # 1. Analisa via IA (Estrutural com tags e entrevista)
+    analysis = await analyze_dream(
+        dream_text=dream_in.text,
+        tags_emocao=dream_in.tags_emocao,
+        temas=dream_in.temas,
+        residuos_diurnos=dream_in.residuos_diurnos,
+        interview_answers=[a.dict() for a in dream_in.interview_answers] if dream_in.interview_answers else None,
+    )
 
     # 2. Narrativa (usa o contexto do passo 1 para garantir pergunta idêntica)
     try:
@@ -110,4 +116,16 @@ async def get_narrative_interpretation(request: NarrativeRequest):
         raise HTTPException(
             status_code=500,
             detail=f"Erro ao gerar interpretação narrativa: {str(e)}"
+        )
+
+@router.post("/interview", response_model=InterviewResponse)
+async def get_interview_questions(request: InterviewRequest):
+    """Gera 3 perguntas cirúrgicas sobre o relato do sonho."""
+    try:
+        perguntas = await generate_interview_questions(request.text)
+        return InterviewResponse(perguntas=perguntas)
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Erro ao gerar perguntas: {str(e)}"
         )

@@ -7,6 +7,7 @@ class AionConfig {
   static const String analyzeUrl = '$apiBaseUrl/dreams/';
   static const String narrativeUrl = '$apiBaseUrl/dreams/narrative';
   static const String historyUrl = '$apiBaseUrl/dreams/history';
+  static const String interviewUrl = '$apiBaseUrl/dreams/interview';
   static const String episodesUrl = '$apiBaseUrl/episodes/';
 }
 

@@ -13,6 +13,9 @@ import 'archetypes_screen.dart';
 import 'canal_screen.dart';
 import 'dream_choice_screen.dart';
 import 'narrative_result_screen.dart';
+import 'interview_screen.dart';
+import 'widgets/tag_selector.dart';
+import 'notification_service.dart';
 
 enum DreamInputMode { selection, voice, text }
 
@@ -123,55 +126,56 @@ class _RecordDreamScreenState extends State<RecordDreamScreen> with SingleTicker
   // --- Common Analysis Logic ---
   Future<void> _analyzeAndNavigate(String text) async {
     if (text.trim().isEmpty) return;
-
     setState(() => _isProcessing = true);
-    final dio = Dio();
-    const userEmail = 'usuario@aion.app';
+    
+    // Cancela notificação do dia quando usuário inicia um registro
+    await AionNotificationService.cancelTodaysMorning();
 
+    final dio = Dio();
     try {
-      // Uma única chamada ao backend — retorna análise estruturada + narrativa
+      // Solicita 3 perguntas de entrevista ao Claude
       final response = await dio.post(
-        AionConfig.analyzeUrl,
-        options: Options(headers: {'x-user-email': userEmail}),
-        data: {
-          'text': text,
-          if (_tags.isNotEmpty) 'tags': _tags,
-          'is_recurrent': _recurring,
-        },
+        AionConfig.interviewUrl,
+        data: {'text': text},
       );
 
-      final detailedAnalysis = response.data as Map<String, dynamic>;
-      final narrativeText = (detailedAnalysis['narrative'] as String?) ?? '';
+      final perguntas = List<String>.from(
+        response.data['perguntas'] as List,
+      );
 
       if (!mounted) return;
 
-      Navigator.pushReplacement(
+      Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (_) => DreamChoiceScreen(
+          builder: (_) => InterviewScreen(
             dreamText: text,
-            detailedAnalysis: detailedAnalysis,
-            narrativeText: narrativeText,
+            tagsEmocao: List.from(_tagsEmocao),
+            temas: List.from(_temas),
+            residuosDiurnos: List.from(_residuosDiurnos),
+            perguntas: perguntas,
           ),
         ),
       );
-    } catch (e) {
-      String errorMessage = 'O Oráculo está em silêncio.';
-      if (e is DioException) {
-        errorMessage = 'Erro ao analisar: ${e.message}';
-      }
-      
-      setState(() => _isProcessing = false);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(errorMessage), backgroundColor: AionTheme.crimson),
-        );
-      }
+    } on DioException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Erro ao preparar a entrevista: ${e.message}',
+            style: GoogleFonts.ptSerif(color: Colors.white),
+          ),
+          backgroundColor: AionTheme.crimson,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isProcessing = false);
     }
   }
 
-  final TextEditingController _tagController = TextEditingController();
-  final List<String> _tags = [];
+  final List<String> _tagsEmocao = [];
+  final List<String> _temas = [];
+  final List<String> _residuosDiurnos = [];
   bool _recurring = false;
   bool _deepMode = false;
 
@@ -346,89 +350,106 @@ class _RecordDreamScreenState extends State<RecordDreamScreen> with SingleTicker
 
 
 
-          // Tags
-          Container(
-            padding: const EdgeInsets.all(22),
-            decoration: BoxDecoration(
-              color: AionTheme.deep,
-              border: Border.all(color: AionTheme.shadow),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('T A G S   P E R S O N A L I Z A D A S', style: TextStyle(color: AionTheme.silver, fontSize: 10, letterSpacing: 2)),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                        decoration: BoxDecoration(
-                          color: AionTheme.darkVoid,
-                          border: Border.all(color: AionTheme.shadow),
-                        ),
-                        child: TextField(
-                          controller: _tagController,
-                          style: const TextStyle(color: AionTheme.silver, fontSize: 13, fontFamily: 'Georgia'),
-                          decoration: const InputDecoration(
-                            hintText: 'Digite uma tag e pressione Enter...',
-                            hintStyle: TextStyle(color: Colors.white24),
-                            border: InputBorder.none,
-                          ),
-                          onSubmitted: (val) {
-                            if (val.trim().isNotEmpty && !_tags.contains(val.trim())) {
-                              setState(() => _tags.add(val.trim()));
-                              _tagController.clear();
-                            }
-                          },
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    InkWell(
-                      onTap: () {
-                        if (_tagController.text.trim().isNotEmpty && !_tags.contains(_tagController.text.trim())) {
-                          setState(() => _tags.add(_tagController.text.trim()));
-                          _tagController.clear();
-                        }
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
-                        decoration: BoxDecoration(
-                          color: AionTheme.darkVoid,
-                          border: Border.all(color: AionTheme.shadow),
-                        ),
-                        child: const Text('+ A D D', style: TextStyle(color: AionTheme.silver, fontSize: 10, letterSpacing: 2)),
-                      ),
-                    ),
-                  ],
-                ),
-                if (_tags.isNotEmpty) const SizedBox(height: 16),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: _tags.map((t) => Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: AionTheme.veil),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(t, style: const TextStyle(color: AionTheme.silver, fontSize: 12, fontFamily: 'Georgia')),
-                        const SizedBox(width: 8),
-                        InkWell(
-                          onTap: () => setState(() => _tags.remove(t)),
-                          child: const Icon(Icons.close, size: 14, color: AionTheme.silver),
-                        ),
-                      ],
-                    ),
-                  )).toList(),
-                ),
-              ],
-            ),
+          // — SEÇÃO DE TAGS (inserir no build, antes do botão principal)
+          const SizedBox(height: 24),
+          Text('COMO VOCÊ SE SENTIU NO SONHO?',
+              style: GoogleFonts.ptSerif(
+                fontSize: 9, letterSpacing: 3, color: AionTheme.gold,
+              )),
+          const SizedBox(height: 4),
+          Text('Selecione até 3 emoções',
+              style: GoogleFonts.ptSerif(
+                fontSize: 11, color: AionTheme.silver.withOpacity(0.5),
+              )),
+          const SizedBox(height: 16),
+
+          // Emoções positivas
+          TagSelector(
+            label: 'Positivas',
+            options: AionTags.emocoes['positivas']!,
+            selected: _tagsEmocao,
+            accentColor: const Color(0xFF2A8070), // teal
+            onToggle: (tag) => setState(() {
+              _tagsEmocao.contains(tag)
+                  ? _tagsEmocao.remove(tag)
+                  : _tagsEmocao.add(tag);
+            }),
           ),
           const SizedBox(height: 16),
+
+          // Emoções negativas
+          TagSelector(
+            label: 'Negativas',
+            options: AionTags.emocoes['negativas']!,
+            selected: _tagsEmocao,
+            accentColor: AionTheme.crimson,
+            onToggle: (tag) => setState(() {
+              _tagsEmocao.contains(tag)
+                  ? _tagsEmocao.remove(tag)
+                  : _tagsEmocao.add(tag);
+            }),
+          ),
+          const SizedBox(height: 16),
+
+          // Emoções ambivalentes
+          TagSelector(
+            label: 'Ambivalentes',
+            options: AionTags.emocoes['ambivalentes']!,
+            selected: _tagsEmocao,
+            accentColor: const Color(0xFF9898B8), // silver
+            onToggle: (tag) => setState(() {
+              _tagsEmocao.contains(tag)
+                  ? _tagsEmocao.remove(tag)
+                  : _tagsEmocao.add(tag);
+            }),
+          ),
+
+          const SizedBox(height: 28),
+          Text('TEMA DO SONHO',
+              style: GoogleFonts.ptSerif(
+                fontSize: 9, letterSpacing: 3, color: AionTheme.gold,
+              )),
+          const SizedBox(height: 4),
+          Text('Selecione até 2 temas',
+              style: GoogleFonts.ptSerif(
+                fontSize: 11, color: AionTheme.silver.withOpacity(0.5),
+              )),
+          const SizedBox(height: 16),
+          TagSelector(
+            label: '',
+            options: AionTags.temas,
+            selected: _temas,
+            accentColor: AionTheme.amber,
+            onToggle: (tag) => setState(() {
+              _temas.contains(tag) ? _temas.remove(tag) : _temas.add(tag);
+            }),
+            maxSelect: 2,
+          ),
+
+          const SizedBox(height: 28),
+          Text('O QUE ACONTECEU ONTEM?',
+              style: GoogleFonts.ptSerif(
+                fontSize: 9, letterSpacing: 3, color: AionTheme.gold,
+              )),
+          const SizedBox(height: 4),
+          Text('Contexto que pode ter influenciado o sonho',
+              style: GoogleFonts.ptSerif(
+                fontSize: 11, color: AionTheme.silver.withOpacity(0.5),
+              )),
+          const SizedBox(height: 16),
+          TagSelector(
+            label: '',
+            options: AionTags.residuos,
+            selected: _residuosDiurnos,
+            accentColor: const Color(0xFF9898B8),
+            onToggle: (tag) => setState(() {
+              _residuosDiurnos.contains(tag)
+                  ? _residuosDiurnos.remove(tag)
+                  : _residuosDiurnos.add(tag);
+            }),
+            maxSelect: 3,
+          ),
+          const SizedBox(height: 32),
 
           // Options
           LayoutBuilder(

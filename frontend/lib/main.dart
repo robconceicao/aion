@@ -6,10 +6,13 @@ import 'src/core/theme.dart';
 import 'src/features/onboarding/presentation/onboarding_screen.dart';
 import 'src/features/auth/presentation/auth_screen.dart';
 import 'src/features/dream/presentation/dream_diary_screen.dart';
+import 'src/features/dream/presentation/notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
+  await AionNotificationService.initialize();
+
   // Initialize Supabase
   await Supabase.initialize(
     url: 'https://wzitocwgpnjsyeojthfn.supabase.co',

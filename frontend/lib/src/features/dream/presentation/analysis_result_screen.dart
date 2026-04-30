@@ -222,29 +222,22 @@ class AnalysisResultScreen extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _label('⟁ ARQUÉTIPOS PRESENTES', color: AionTheme.gold),
         const SizedBox(height: 4),
-        GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-            mainAxisExtent: 180,
-          ),
-          itemCount: arquetipos.length,
-          itemBuilder: (context, index) {
-            final a = arquetipos[index];
+        Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          children: arquetipos.map((a) {
             final name = a['nome'] ?? 'Arquétipo';
             final color = AionTheme.getArchetypeColor(name);
             return Container(
-              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+              width: (MediaQuery.of(context).size.width - 52) / 2,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
               decoration: BoxDecoration(
                 color: AionTheme.darkAbyss,
                 border: Border.all(color: AionTheme.shadow),
               ),
               child: Column(
+                mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Container(height: 3, width: double.infinity, color: color),
@@ -254,22 +247,20 @@ class AnalysisResultScreen extends StatelessWidget {
                   Text(
                     name.toUpperCase(),
                     style: TextStyle(fontSize: 11, color: color, letterSpacing: 1, fontWeight: FontWeight.bold),
-                    maxLines: 1,
+                    maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 8),
-                  Expanded(
-                    child: Text(
-                      a['descricao'] ?? '',
-                      style: const TextStyle(fontSize: 11, color: AionTheme.silver, height: 1.5),
-                      maxLines: 4,
-                      overflow: TextOverflow.ellipsis,
-                    ),
+                  Text(
+                    a['descricao'] ?? '',
+                    style: const TextStyle(fontSize: 11, color: AionTheme.silver, height: 1.5),
+                    maxLines: 5,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),
             );
-          },
+          }).toList(),
         ),
       ],
     );
@@ -277,10 +268,12 @@ class AnalysisResultScreen extends StatelessWidget {
 
   // ⑥ FUNÇÃO COMPENSATÓRIA + PROSPECÇÃO
   Widget _buildTwoColumnSection() {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return Wrap(
+      spacing: 14,
+      runSpacing: 14,
       children: [
-        Expanded(
+        SizedBox(
+          width: (MediaQuery.of(context).size.width - 54) / 2,
           child: _card(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -288,14 +281,14 @@ class AnalysisResultScreen extends StatelessWidget {
                 _label('⊗ FUNÇÃO COMPENSATÓRIA', color: AionTheme.amber),
                 Text(
                   analysis['funcao_compensatoria'] ?? '',
-                  style: const TextStyle(fontSize: 13, color: AionTheme.ghost, height: 1.8),
+                  style: const TextStyle(fontSize: 12, color: AionTheme.ghost, height: 1.7),
                 ),
               ],
             ),
           ),
         ),
-        const SizedBox(width: 14),
-        Expanded(
+        SizedBox(
+          width: (MediaQuery.of(context).size.width - 54) / 2,
           child: _card(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -303,7 +296,7 @@ class AnalysisResultScreen extends StatelessWidget {
                 _label('✦ PROSPECÇÃO', color: AionTheme.silver),
                 Text(
                   analysis['prospeccao'] ?? '',
-                  style: const TextStyle(fontSize: 13, color: AionTheme.ghost, height: 1.8),
+                  style: const TextStyle(fontSize: 12, color: AionTheme.ghost, height: 1.7),
                 ),
               ],
             ),
@@ -558,9 +551,10 @@ class AnalysisResultScreen extends StatelessWidget {
         children: [
           Text(
             text,
+            textAlign: center ? TextAlign.center : TextAlign.start,
             style: TextStyle(
-              fontSize: 9,
-              letterSpacing: 5,
+              fontSize: 8.5,
+              letterSpacing: 1.5,
               color: color,
               fontWeight: FontWeight.bold,
             ),

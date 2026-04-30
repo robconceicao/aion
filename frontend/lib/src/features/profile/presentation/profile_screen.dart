@@ -66,7 +66,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       const SizedBox(height: 40),
                       
                       _buildProfileField(
-                        label: 'NOME DA ESSÊNCIA',
+                        label: 'NOME DO SONHADOR',
                         controller: _nameController,
                         theme: theme,
                       ),
@@ -194,7 +194,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           Navigator.of(context).pushNamedAndRemoveUntil('/auth', (route) => false);
                         },
                         child: Text(
-                          'desconectar essência',
+                          'sair da conta',
                           style: theme.textTheme.bodySmall?.copyWith(
                             color: AionTheme.silver.withOpacity(0.5),
                             letterSpacing: 1,

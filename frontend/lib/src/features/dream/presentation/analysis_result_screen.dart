@@ -176,14 +176,13 @@ class AnalysisResultScreen extends StatelessWidget {
         children: [
           _label('DIMENSÕES DO SONHO', color: AionTheme.silver),
           const SizedBox(height: 4),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
             children: [
-              Expanded(child: _buildDimItem('Sombra', (analysis['intensidade_sombra'] ?? 5).toDouble(), AionTheme.crimson)),
-              const SizedBox(width: 14),
-              Expanded(child: _buildDimItem('Herói', (analysis['intensidade_heroi'] ?? 5).toDouble(), AionTheme.gold)),
-              const SizedBox(width: 14),
-              Expanded(child: _buildDimItem('Transformação', (analysis['intensidade_transformacao'] ?? 5).toDouble(), AionTheme.teal)),
+              SizedBox(width: 100, child: _buildDimItem('Sombra', (analysis['intensidade_sombra'] ?? 5).toDouble(), AionTheme.crimson)),
+              SizedBox(width: 100, child: _buildDimItem('Herói', (analysis['intensidade_heroi'] ?? 5).toDouble(), AionTheme.gold)),
+              SizedBox(width: 120, child: _buildDimItem('Transformação', (analysis['intensidade_transformacao'] ?? 5).toDouble(), AionTheme.teal)),
             ],
           ),
         ],
@@ -254,13 +253,16 @@ class AnalysisResultScreen extends StatelessWidget {
                   const SizedBox(height: 8),
                   Text(
                     name.toUpperCase(),
-                    style: TextStyle(fontSize: 13, color: color, letterSpacing: 1, fontWeight: FontWeight.bold),
+                    style: TextStyle(fontSize: 12, color: color, letterSpacing: 1, fontWeight: FontWeight.bold),
+                    style: TextStyle(fontSize: 11, color: color, letterSpacing: 1, fontWeight: FontWeight.bold),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 8),
                   Expanded(
                     child: Text(
                       a['descricao'] ?? '',
-                      style: const TextStyle(fontSize: 12, color: AionTheme.silver, height: 1.7),
+                      style: const TextStyle(fontSize: 11, color: AionTheme.silver, height: 1.5),
                       maxLines: 4,
                       overflow: TextOverflow.ellipsis,
                     ),

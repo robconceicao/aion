@@ -170,7 +170,7 @@ class _DreamDiaryScreenState extends State<DreamDiaryScreen> {
                         );
                       },
                       child: Text(
-                        'editar perfil',
+                        'ajustes e despertar',
                         style: theme.textTheme.bodyMedium?.copyWith(
                           color: AionTheme.silver,
                           fontSize: 11,

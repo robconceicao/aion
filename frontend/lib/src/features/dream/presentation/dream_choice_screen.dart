@@ -259,6 +259,12 @@ class _DreamChoiceScreenState extends State<DreamChoiceScreen>
                       MaterialPageRoute(builder: (_) => const DreamHistoryScreen(userEmail: 'usuario@aion.app')),
                     );
                   }),
+                  _navBtn(context, 'SAIR', false, () {
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(builder: (_) => const AuthScreen()),
+                    );
+                  }),
                 ],
               ),
             ),

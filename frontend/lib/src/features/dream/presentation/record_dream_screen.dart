@@ -13,6 +13,8 @@ import 'archetypes_screen.dart';
 import 'canal_screen.dart';
 import 'dream_choice_screen.dart';
 import 'narrative_result_screen.dart';
+import 'dream_history_screen.dart';
+import '../../auth/presentation/auth_screen.dart';
 import 'interview_screen.dart';
 import 'widgets/tag_selector.dart';
 import 'notification_service.dart';
@@ -316,10 +318,16 @@ class _RecordDreamScreenState extends State<RecordDreamScreen> with SingleTicker
                 runSpacing: 6,
                 children: [
                   _navBtn(context, 'INÍCIO', false, () => Navigator.pop(context)),
-                  _navBtn(context, 'ARQUÉTIPOS', false, () {
+                  _navBtn(context, 'HISTÓRICO', false, () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (_) => const ArchetypesScreen()),
+                      MaterialPageRoute(builder: (_) => const DreamHistoryScreen(userEmail: 'usuario@aion.app')),
+                    );
+                  }),
+                  _navBtn(context, 'SAIR', false, () {
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(builder: (_) => const AuthScreen()),
                     );
                   }),
                 ],

@@ -1,22 +1,25 @@
 import json
 import anthropic
+import google.generativeai as genai
 from sentence_transformers import SentenceTransformer
 from app.core.config import settings
 
-if not settings.ANTHROPIC_API_KEY:
-    print("\n[CRÍTICO] ANTHROPIC_API_KEY está VAZIA.\n")
+# Clientes de IA
+async_client = anthropic.AsyncAnthropic(api_key=settings.ANTHROPIC_API_KEY) if settings.ANTHROPIC_API_KEY else None
 
-async_client = anthropic.AsyncAnthropic(api_key=settings.ANTHROPIC_API_KEY)
+# Configuração Gemini
+if settings.GEMINI_API_KEY:
+    genai.configure(api_key=settings.GEMINI_API_KEY)
 
-# Lista de modelos por prioridade para evitar erros 404
+# Lista de modelos por prioridade (Versões 2026)
 AI_MODELS = [
-    "claude-3-5-sonnet-20241022", # Sonnet 3.5 New
-    "claude-3-5-sonnet-20240620", # Sonnet 3.5 v1
-    "claude-3-opus-20240229",    # Opus
-    "claude-3-haiku-20240307",   # Haiku (Mais provável de estar disponível)
+    "claude-sonnet-4-6",          # Sonnet mais recente
+    "claude-haiku-4-5-20251001",  # Haiku mais recente
+    "claude-3-5-sonnet-20241022", # Fallback 2024
+    "claude-3-haiku-20240307",   # Fallback 2024
 ]
 
-# Modelo de embedding — singleton carregado na primeira chamada
+# Modelo de embedding — singleton
 _embedding_model = None
 
 def get_embedding_model() -> SentenceTransformer:
@@ -34,63 +37,13 @@ def generate_embedding(text: str) -> list:
     return embedding.tolist()
 
 
-# ─── PROMPTS ──────────────────────────────────────────────────
-
-PROMPT_TEMPLATE = """
-Atue como Aion, o Oráculo de Mito & Psique — analista junguiano de senioridade excepcional.
-Realize uma Amplificação Junguiana profunda do sonho abaixo.
-
-DIRETRIZ DE LINGUAGEM:
-1. Use "VOCÊ" e "SEU/SUA" — português do Brasil. Nunca "Tu" ou "Vós".
-2. Tom sábio, acolhedor e direto.
-
-DADOS DO SONHO:
-- RELATO: {texto}
-{contexto_estruturado}
-
-INSTRUÇÃO CRÍTICA: Responda APENAS com JSON válido:
-
-{{
-  "aviso": "Esta análise é uma reflexão simbólica e não substitui o psicólogo.",
-  "essencia": "O coração do sonho em 2 frases diretas e profundas.",
-  "arquetipos": [
-    {{ "nome": "Nome do Arquétipo", "simbolo": "emoji", "descricao": "Como esta força age em você." }}
-  ],
-  "funcao_compensatoria": "O que seu interior está equilibrando agora.",
-  "simbolos_chave": [
-    {{ "elemento": "Item do sonho", "significado": "O que isso representa para você." }}
-  ],
-  "fase_jornada": {{
-    "nome": "Uma destas fases EXATAS: O Mundo Comum | O Chamado | A Recusa do Chamado | O Encontro com o Mentor | A Travessia do Limiar | Provas e Aliados | O Abismo | A Recompensa | O Caminho de Volta | A Ressurreição | O Retorno",
-    "descricao": "Seu momento atual de vida."
-  }},
-  "prospeccao": "Um sinal para seu futuro próximo.",
-  "pergunta_para_reflexao": "Uma pergunta para você pensar hoje.",
-  "mito_espelho": {{ "titulo": "Nome do Mito", "paralelo": "Conexão com sua histora." }},
-  "intensidade_sombra": 1-10,
-  "intensidade_heroi": 1-10,
-  "intensidade_transformacao": 1-10
-}}
-"""
-
-RECURRENCE_SYSTEM_PROMPT = """Você é Aion. O usuário tem um padrão de sonhos recorrentes.
-Analise a EVOLUÇÃO do símbolo ao longo do tempo — não interprete o sonho atual isoladamente.
-Foque no progresso ou estagnação do tema. Use "você" e "seu/sua". Máximo 200 palavras."""
-
-INTERVIEW_SYSTEM_PROMPT = """Você é um pesquisador de sonhos clínico do Aion.
-Analise o relato e identifique pontos cegos que precisam de mais contexto.
-Não interprete ainda. Apenas pergunte. Use "você" e "seu/sua". APENAS JSON."""
-
-NARRATIVE_SYSTEM_PROMPT = """Você é Aion. Fale como um amigo sábio.
-Responda em 3 movimentos curtos, sem títulos. Texto corrido. Máximo 180 palavras.
-Termine com a PERGUNTA_FINAL exata fornecida."""
-
-
-# ─── HELPERS ──────────────────────────────────────────────────
+# ─── HELPERS DE IA ────────────────────────────────────────────
 
 async def call_claude(system_prompt: str, user_content: str, max_tokens=1024):
-    """Tenta chamar o Claude com fallback de modelos para evitar erros 404."""
-    ultimo_erro = None
+    """Tenta chamar o Claude com fallback. Se falhar, tenta o Gemini."""
+    if not async_client:
+        return await call_gemini(system_prompt, user_content)
+
     for model_name in AI_MODELS:
         try:
             message = await async_client.messages.create(
@@ -102,24 +55,47 @@ async def call_claude(system_prompt: str, user_content: str, max_tokens=1024):
             return message.content[0].text
         except Exception as e:
             print(f"[AI_SERVICE] Erro no modelo {model_name}: {e}")
-            ultimo_erro = e
-            continue
-    raise ultimo_erro
+            if "not_found_error" in str(e).lower() or "404" in str(e):
+                continue # Tenta o próximo Claude
+            break # Erro de outro tipo (ex: 401), para o loop
+            
+    # Se chegou aqui, todos os Claudes falharam ou não existem. Tenta Gemini.
+    return await call_gemini(system_prompt, user_content)
+
+
+async def call_gemini(system_prompt: str, user_content: str):
+    """Fallback final usando Google Gemini 1.5 Flash."""
+    if not settings.GEMINI_API_KEY:
+        raise ValueError("Nenhuma chave de IA (Anthropic ou Gemini) disponível.")
+    
+    print("[AI_SERVICE] Usando fallback Gemini 1.5 Flash...")
+    try:
+        model = genai.GenerativeModel('gemini-1.5-flash')
+        # No Gemini, combinamos system e user prompt
+        full_prompt = f"{system_prompt}\n\nUSUÁRIO: {user_content}"
+        response = model.generate_content(full_prompt)
+        return response.text
+    except Exception as e:
+        print(f"[AI_SERVICE] Erro fatal no Gemini: {e}")
+        raise e
+
 
 def _parse_ai_json(content: str) -> dict:
     try:
+        # Limpeza para Gemini (que às vezes coloca markdown ```json)
+        content = content.replace("```json", "").replace("```", "").strip()
         start, end = content.find('{'), content.rfind('}')
         if start != -1 and end != -1:
             return json.loads(content[start:end+1])
-        return json.loads(content.strip())
+        return json.loads(content)
     except Exception as e:
         raise ValueError(f"JSON inválido: {str(e)}")
 
 
-# ─── FUNÇÕES DE IA ────────────────────────────────────────────
+# ─── FUNÇÕES DO AION ──────────────────────────────────────────
 
 async def analyze_dream(dream_text: str, **kwargs) -> dict:
-    from app.services.ai_service import _build_contexto # lazy import
+    from app.services.ai_service import PROMPT_TEMPLATE, _build_contexto, _get_error_response
     contexto = _build_contexto(
         kwargs.get('tags_emocao'), kwargs.get('temas'), 
         kwargs.get('residuos_diurnos'), kwargs.get('interview_answers')
@@ -131,11 +107,22 @@ async def analyze_dream(dream_text: str, **kwargs) -> dict:
         return _parse_ai_json(content)
     except Exception as e:
         print(f"[AI_SERVICE] Erro fatal análise: {e}")
-        from app.services.ai_service import _get_error_response
         return _get_error_response(str(e))
 
 
+async def generate_interview_questions(dream_text: str) -> list:
+    from app.services.ai_service import INTERVIEW_SYSTEM_PROMPT
+    try:
+        content = await call_claude(INTERVIEW_SYSTEM_PROMPT, f"Sonho: {dream_text}", max_tokens=512)
+        data = _parse_ai_json(content)
+        return data.get("perguntas", [])
+    except Exception as e:
+        print(f"[AI_SERVICE] Erro entrevista: {e}")
+        return ["Como você se sentiu ao acordar?", "O que esse sonho lembra da sua vida?", "Qual era a cor predominante?"]
+
+
 async def analyze_recurring_pattern(current_dream: str, similar_dreams: list) -> str:
+    from app.services.ai_service import RECURRENCE_SYSTEM_PROMPT
     history = "\n\nSONHOS ANTERIORES SIMILARES:\n"
     for i, d in enumerate(similar_dreams[:3], 1):
         relato = (d.get("relato") or "")[:200]
@@ -144,20 +131,11 @@ async def analyze_recurring_pattern(current_dream: str, similar_dreams: list) ->
     try:
         return await call_claude(RECURRENCE_SYSTEM_PROMPT, f"Sonho atual: {current_dream}{history}", max_tokens=512)
     except Exception as e:
-        print(f"[AI_SERVICE] Erro recorrência: {e}")
         return ""
 
 
-async def generate_interview_questions(dream_text: str) -> list:
-    try:
-        content = await call_claude(INTERVIEW_SYSTEM_PROMPT, f"Sonho: {dream_text}", max_tokens=512)
-        return _parse_ai_json(content).get("perguntas", [])
-    except Exception as e:
-        print(f"[AI_SERVICE] Erro entrevista: {e}")
-        return ["Como você se sentiu ao acordar?", "O que esse sonho lembra da sua vida?", "Qual era a cor predominante?"]
-
-
 async def analyze_dream_narrative(dream_text: str, analysis_context: dict = None) -> str:
+    from app.services.ai_service import NARRATIVE_SYSTEM_PROMPT
     context_block = ""
     if analysis_context:
         pergunta = analysis_context.get("pergunta_para_reflexao", "")
@@ -166,8 +144,44 @@ async def analyze_dream_narrative(dream_text: str, analysis_context: dict = None
     try:
         return await call_claude(NARRATIVE_SYSTEM_PROMPT, f"Sonho: {dream_text}{context_block}", max_tokens=1024)
     except Exception as e:
-        print(f"[AI_SERVICE] Erro narrativa: {e}")
         return "O Oráculo está processando sua mensagem em silêncio..."
+
+
+# ─── PROMPTS E AUXILIARES ──────────────────────────────────────
+
+PROMPT_TEMPLATE = """
+Atue como Aion, o Oráculo de Mito & Psique — analista junguiano de senioridade excepcional.
+Realize uma Amplificação Junguiana profunda do sonho abaixo.
+Responda APENAS com JSON válido.
+
+DIRETRIZ DE LINGUAGEM:
+1. Use "VOCÊ" e "SEU/SUA" — português do Brasil.
+2. Tom sábio, acolhedor e direto.
+
+DADOS DO SONHO:
+- RELATO: {texto}
+{contexto_estruturado}
+
+JSON FORMAT:
+{{
+  "aviso": "Esta análise é uma reflexão simbólica...",
+  "essencia": "...",
+  "arquetipos": [{{ "nome": "...", "simbolo": "...", "descricao": "..." }}],
+  "funcao_compensatoria": "...",
+  "simbolos_chave": [{{ "elemento": "...", "significado": "..." }}],
+  "fase_jornada": {{ "nome": "...", "descricao": "..." }},
+  "prospeccao": "...",
+  "pergunta_para_reflexao": "...",
+  "mito_espelho": {{ "titulo": "...", "paralela": "..." }},
+  "intensidade_sombra": 5,
+  "intensidade_heroi": 5,
+  "intensidade_transformacao": 5
+}}
+"""
+
+INTERVIEW_SYSTEM_PROMPT = "Você é Aion. Analise o relato e identifique 3 pontos cegos. Responda APENAS JSON: {\"perguntas\": [\"...\", \"...\", \"...\"]}"
+RECURRENCE_SYSTEM_PROMPT = "Analise a EVOLUÇÃO do símbolo recorrente. Máximo 200 palavras."
+NARRATIVE_SYSTEM_PROMPT = "Fale como um amigo sábio. 3 movimentos curtos. Máximo 180 palavras."
 
 def _build_contexto(tags_emocao=None, temas=None, residuos_diurnos=None, interview_answers=None) -> str:
     lines = []

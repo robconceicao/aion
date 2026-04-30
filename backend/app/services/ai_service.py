@@ -91,14 +91,22 @@ async def call_gemini(system_prompt: str, user_content: str):
 
 
 def _parse_ai_json(content: str) -> dict:
+    import re
     try:
         content = content.replace("```json", "").replace("```", "").strip()
         start, end = content.find('{'), content.rfind('}')
         if start != -1 and end != -1:
-            return json.loads(content[start:end+1])
+            content = content[start:end+1]
+        
+        # Remove trailing commas
+        content = re.sub(r',\s*([\}\]])', r'\1', content)
         return json.loads(content)
     except Exception as e:
-        raise ValueError(f"JSON inválido: {str(e)}")
+        try:
+            cleaned = content.replace('\n', ' ').replace('\r', '')
+            return json.loads(cleaned)
+        except:
+            raise ValueError(f"JSON inválido: {str(e)}")
 
 
 # ─── FUNÇÕES DO AION ──────────────────────────────────────────

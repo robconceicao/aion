@@ -44,7 +44,7 @@ async def create_dream(
         analysis["narrative"] = ""
 
     # 3. Embedding para busca semântica
-    embedding = generate_embedding(dream_in.text)
+    embedding = await generate_embedding(dream_in.text)
 
     # 4. Detectar recorrência
     similar_dreams = []
@@ -128,7 +128,7 @@ async def semantic_search(request: SemanticSearchRequest, x_user_email: Optional
     """Busca semântica no diário de sonhos."""
     user_email = x_user_email or "usuario@aion.app"
     try:
-        query_embedding = generate_embedding(request.query)
+        query_embedding = await generate_embedding(request.query)
         supabase = get_supabase()
         result = supabase.rpc("buscar_sonhos_semanticos", {
             "p_user_email": user_email,

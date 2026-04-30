@@ -82,30 +82,31 @@ async def call_gemini(system_prompt: str, user_content: str):
 
 
 def _parse_ai_json(content: str) -> dict:
+    import re
     try:
-        # Limpeza robusta
+        # 1. Limpeza básica
         content = content.strip()
-        content = re.sub(r'```json\s*|\s*```', '', content)
-        
+        # 2. Extrai apenas o que está entre as primeiras e últimas chaves
         start, end = content.find('{'), content.rfind('}')
         if start != -1 and end != -1:
             content = content[start:end+1]
         
-        # Escapa quebras de linha reais para não quebrar o JSON
-        content = content.replace('\n', '\\n').replace('\r', '\\r')
-        # Mas não escapa o que já está escapado ou delimitadores
-        content = content.replace('\\n{', '{').replace('}\\n', '}').replace('":\\n"', '":"')
+        # 3. Remove blocos de código se ainda restarem
+        content = re.sub(r'```json\s*|\s*```', '', content)
         
-        # Remove vírgulas extras antes de fechamento
+        # 4. Remove vírgulas extras antes de fechar chaves ou colchetes
         content = re.sub(r',\s*([\}\]])', r'\1', content)
         
+        # 5. Tenta o parse direto primeiro (mais seguro)
         return json.loads(content)
     except Exception as e:
-        # Tenta um parse desesperado removendo todas as quebras de linha
+        # 6. Fallback agressivo: remove quebras de linha que não estão entre aspas
         try:
-            cleaned = re.sub(r'\s+', ' ', content)
-            return json.loads(cleaned)
+            # Substitui quebras de linha por espaços para não quebrar a estrutura
+            content_flat = content.replace('\n', ' ').replace('\r', ' ')
+            return json.loads(content_flat)
         except:
+            print(f"[AI_SERVICE] Falha total no parse. Erro: {e}")
             raise ValueError(f"JSON inválido: {str(e)}")
 
 
@@ -214,14 +215,14 @@ def _build_contexto(tags_emocao=None, temas=None, residuos_diurnos=None, intervi
     return "\n\nCONTEXTO ADICIONAL:\n" + "\n".join(lines) if lines else ""
 
 def _get_error_response(error_msg: str) -> dict:
-    return {{
+    return {
         "aviso": "O Oráculo está em silêncio profundo.",
         "essencia": "O silêncio também é uma mensagem. Tente novamente.",
         "arquetipos": [], "funcao_compensatoria": "Aguardando.",
         "simbolos_chave": [],
-        "fase_jornada": {{"nome": "O Mundo Comum", "descricao": "Reequilibrando."}},
+        "fase_jornada": {"nome": "O Mundo Comum", "descricao": "Reequilibrando."},
         "prospeccao": "Aguarde.",
-        "mito_espelho": {{"titulo": "O Silêncio", "paralela": "Aguarde."}},
+        "mito_espelho": {"titulo": "O Silêncio", "paralela": "Aguarde."},
         "pergunta_para_reflexao": "O que o silêncio faz você sentir?",
         "intensidade_sombra": 0, "intensidade_heroi": 0, "intensidade_transformacao": 0,
-    }}
+    }

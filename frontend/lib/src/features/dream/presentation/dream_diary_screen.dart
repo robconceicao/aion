@@ -285,15 +285,22 @@ class _DreamDiaryScreenState extends State<DreamDiaryScreen> {
                             ),
                           ),
 
-                          Text(
-                            'FILTRAR POR EMOÇÃO OU JORNADA:',
-                            style: GoogleFonts.ptSerif(
-                              fontSize: 8,
-                              letterSpacing: 1.5,
-                              color: AionTheme.silver.withOpacity(0.6),
-                            ),
+                          Row(
+                            children: [
+                              Icon(Icons.filter_list_outlined, size: 16, color: AionTheme.gold.withOpacity(0.7)),
+                              const SizedBox(width: 8),
+                              Text(
+                                'FILTRAR POR EMOÇÃO OU JORNADA',
+                                style: GoogleFonts.ptSerif(
+                                  fontSize: 10,
+                                  letterSpacing: 2,
+                                  color: AionTheme.gold,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
                           ),
-                          const SizedBox(height: 8),
+                          const SizedBox(height: 12),
                           // Filtros Horizontais
                           SingleChildScrollView(
                             scrollDirection: Axis.horizontal,

@@ -96,7 +96,7 @@ class _DreamDiaryScreenState extends State<DreamDiaryScreen> {
         ),
         child: Text(label, style: GoogleFonts.ptSerif(
           fontSize: 10, letterSpacing: 1,
-          color: isActive ? color : AionTheme.silver.withOpacity(0.5),
+          color: isActive ? color : AionTheme.silver.withOpacity(0.7),
         )),
       ),
     );
@@ -251,7 +251,7 @@ class _DreamDiaryScreenState extends State<DreamDiaryScreen> {
                             style: GoogleFonts.ptSerif(
                               fontSize: 11,
                               height: 1.5,
-                              color: AionTheme.silver.withOpacity(0.6),
+                              color: AionTheme.silver.withOpacity(0.75),
                               fontStyle: FontStyle.italic,
                             ),
                           ),
@@ -290,7 +290,7 @@ class _DreamDiaryScreenState extends State<DreamDiaryScreen> {
                             style: GoogleFonts.ptSerif(
                               fontSize: 8,
                               letterSpacing: 1.5,
-                              color: AionTheme.silver.withOpacity(0.4),
+                              color: AionTheme.silver.withOpacity(0.6),
                             ),
                           ),
                           const SizedBox(height: 8),

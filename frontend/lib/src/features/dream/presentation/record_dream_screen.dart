@@ -307,8 +307,6 @@ class _RecordDreamScreenState extends State<RecordDreamScreen> with SingleTicker
                 const SizedBox(height: 4),
                 Text('A I O N', style: GoogleFonts.cormorantGaramond(fontSize: 28, fontWeight: FontWeight.bold, color: AionTheme.gold, letterSpacing: 2)),
                 Text('O Diário do Sonho', style: GoogleFonts.cormorantGaramond(fontSize: 14, fontStyle: FontStyle.italic, color: Colors.white70)),
-                const SizedBox(height: 12),
-                const Text('Registrar Sonho', style: TextStyle(fontSize: 11, letterSpacing: 1, fontFamily: 'Georgia', color: Colors.white38)),
               ],
             ),
             Expanded(
@@ -455,7 +453,7 @@ class _RecordDreamScreenState extends State<RecordDreamScreen> with SingleTicker
           const SizedBox(height: 4),
           Text('Selecione até 3 emoções',
               style: GoogleFonts.ptSerif(
-                fontSize: 11, color: AionTheme.silver.withOpacity(0.5),
+                fontSize: 11, color: AionTheme.silver.withOpacity(0.65),
               )),
           const SizedBox(height: 16),
 
@@ -508,7 +506,7 @@ class _RecordDreamScreenState extends State<RecordDreamScreen> with SingleTicker
           const SizedBox(height: 4),
           Text('Selecione até 2 temas',
               style: GoogleFonts.ptSerif(
-                fontSize: 11, color: AionTheme.silver.withOpacity(0.5),
+                fontSize: 11, color: AionTheme.silver.withOpacity(0.65),
               )),
           const SizedBox(height: 16),
           TagSelector(
@@ -530,7 +528,7 @@ class _RecordDreamScreenState extends State<RecordDreamScreen> with SingleTicker
           const SizedBox(height: 4),
           Text('Contexto que pode ter influenciado o sonho',
               style: GoogleFonts.ptSerif(
-                fontSize: 11, color: AionTheme.silver.withOpacity(0.5),
+                fontSize: 11, color: AionTheme.silver.withOpacity(0.65),
               )),
           const SizedBox(height: 16),
           TagSelector(

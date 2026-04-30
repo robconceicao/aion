@@ -43,7 +43,8 @@ async def transcribe_audio(audio_path: str) -> str | None:
     print(f"[VOICE_SERVICE] Formato detectado: {mime_type}")
 
     # Monta o payload para a API Gemini (gemini-1.5-flash — mais rápido e eficiente para STT)
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={settings.GEMINI_API_KEY}"
+    gemini_key = settings.GEMINI_API_KEY.strip()
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={gemini_key}"
 
     payload = {
         "contents": [

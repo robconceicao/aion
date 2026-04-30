@@ -126,7 +126,7 @@ async def generate_interview_questions(dream_text: str) -> list:
     print("[AI_SERVICE] Gerando perguntas de entrevista...")
     try:
         message = await async_client.messages.create(
-            model="claude-3-5-sonnet-latest",
+            model="claude-3-5-sonnet-20240620",
             max_tokens=512,
             system=INTERVIEW_SYSTEM_PROMPT,
             messages=[{"role": "user", "content": f"Sonho: {dream_text}"}],
@@ -163,7 +163,6 @@ async def analyze_dream(
     prompt = PROMPT_TEMPLATE.format(texto=dream_text, contexto_estruturado=contexto)
 
     modelos = [
-        "claude-3-5-sonnet-latest",
         "claude-3-5-sonnet-20240620",
     ]
 
@@ -211,7 +210,7 @@ PERGUNTA_FINAL (copie esta frase exatamente como Ãºltima frase da sua resposta â
 
     try:
         message = await async_client.messages.create(
-            model="claude-3-5-sonnet-latest",
+            model="claude-3-5-sonnet-20240620",
             max_tokens=1024,
             system=NARRATIVE_SYSTEM_PROMPT,
             messages=[{"role": "user", "content": f"Sonho: {dream_text}{context_block}"}],

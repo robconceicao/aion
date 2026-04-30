@@ -14,6 +14,7 @@ class AuthScreen extends StatefulWidget {
 
 class _AuthScreenState extends State<AuthScreen> {
   bool _isLogin = true;
+  bool _isLoading = false;
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _nameController = TextEditingController();
@@ -121,16 +122,16 @@ class _AuthScreenState extends State<AuthScreen> {
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: () {
-                          Navigator.pushReplacementNamed(context, '/onboarding');
-                        },
+                        onPressed: _isLoading ? null : _handleEmailAuth,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AionTheme.gold,
                           foregroundColor: AionTheme.darkVoid,
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: const RoundedRectangleBorder(),
                         ),
-                        child: Text(_isLogin ? 'ENTRAR' : 'COMEÇAR'),
+                        child: _isLoading 
+                            ? const SizedBox(height: 16, width: 16, child: CircularProgressIndicator(color: AionTheme.darkVoid, strokeWidth: 2))
+                            : Text(_isLogin ? 'ENTRAR' : 'CADASTRAR'),
                       ),
                     ),
                     
@@ -261,6 +262,68 @@ class _AuthScreenState extends State<AuthScreen> {
         ),
       ),
     );
+  }
+
+  Future<void> _handleEmailAuth() async {
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
+    final name = _nameController.text.trim();
+
+    if (email.isEmpty || password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Por favor, preencha E-mail e Senha.')),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      if (_isLogin) {
+        // Fluxo de Login
+        await Supabase.instance.client.auth.signInWithPassword(
+          email: email,
+          password: password,
+        );
+        if (mounted) Navigator.pushReplacementNamed(context, '/home'); // Vai direto para o diário
+      } else {
+        // Fluxo de Cadastro
+        if (name.isEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Por favor, preencha seu Nome Completo.')),
+          );
+          setState(() => _isLoading = false);
+          return;
+        }
+        
+        await Supabase.instance.client.auth.signUp(
+          email: email,
+          password: password,
+          data: {
+            'nome': name,
+            'sexo': _selectedGender,
+          },
+        );
+        if (mounted) {
+          // Após cadastro, envia para a tela de Onboarding para a saudação
+          Navigator.pushReplacementNamed(context, '/onboarding');
+        }
+      }
+    } on AuthException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erro: ${e.message}'), backgroundColor: AionTheme.crimson),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erro inesperado: $e'), backgroundColor: AionTheme.crimson),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   Future<void> _handleGoogleSignIn() async {

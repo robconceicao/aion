@@ -163,7 +163,7 @@ class _InterviewScreenState extends State<InterviewScreen>
                         )),
                     const SizedBox(height: 12),
                     Text(
-                      'O Oráculo precisa\nde mais contexto.',
+                      'Aion precisa\nde mais contexto.',
                       style: GoogleFonts.cormorantGaramond(
                         fontSize: 30, height: 1.2, color: AionTheme.ghost,
                         fontWeight: FontWeight.w300, fontStyle: FontStyle.italic,

@@ -13,6 +13,7 @@ AI_MODELS = [
     "claude-3-5-sonnet-20241022", # Sonnet 3.5 New
     "claude-3-5-sonnet-20240620", # Sonnet 3.5 v1
     "claude-3-opus-20240229",    # Opus
+    "claude-3-haiku-20240307",   # Haiku (Mais provável de estar disponível)
 ]
 
 # Modelo de embedding — singleton carregado na primeira chamada

@@ -27,7 +27,7 @@ class AionNotificationService {
   static const List<String> _nightMessages = [
     'Prepare o seu santuário. O que você espera encontrar na jornada desta noite?',
     'Antes de dormir: o que ficou inacabado hoje que pode aparecer no seu sonho?',
-    'A noite começa. O Oráculo estará esperando de manhã.',
+    'A noite começa. Aion estará esperando de manhã.',
   ];
 
   /// Inicializa o serviço — chamar em main.dart

@@ -385,7 +385,7 @@ class _RecordDreamScreenState extends State<RecordDreamScreen> with SingleTicker
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'R E L A T O   D O   S O N H O   *',
+                      'RELATO DO SONHO *',
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: AionTheme.gold,
                         fontSize: 11,

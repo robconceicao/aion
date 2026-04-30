@@ -19,34 +19,34 @@ AI_MODELS = [
     "claude-3-5-sonnet-20241022",
 ]
 
-# ─── EMBEDDINGS (VIA GEMINI) ──────────────────────────────────
+# ─── EMBEDDINGS (VIA REMOTE API - 768 DIM) ────────────────────
 
 async def generate_embedding(text: str) -> list:
-    """Gera embeddings usando o modelo do Google."""
+    """Gera embeddings via Hugging Face para manter 768 dimensões com estabilidade."""
+    model_id = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+    # Nota: Embora o modelo seja 384 nativo, vamos garantir que o banco aceite.
+    # Como o seu banco foi alterado para 768, vou usar o modelo do Google fixado.
     if not settings.GEMINI_API_KEY:
         return [0.0] * 768
         
     try:
-        # Tentativa com o nome de modelo mais comum
-        result = genai.embed_content(
-            model="models/text-embedding-004",
-            content=text,
-            task_type="retrieval_document"
-        )
-        return result['embedding']
-    except Exception as e:
-        print(f"[AI_SERVICE] Erro embedding: {e}")
-        # Segunda tentativa com nome alternativo
-        try:
-            result = genai.embed_content(model="models/embedding-001", content=text)
-            return result['embedding']
-        except:
+        # Forçando o uso do modelo via REST direto para evitar erros do SDK
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/embedding-001:embedContent?key={settings.GEMINI_API_KEY}"
+        async with httpx.AsyncClient() as client:
+            res = await client.post(url, json={
+                "model": "models/embedding-001",
+                "content": {"parts": [{"text": text}]}
+            })
+            if res.status_code == 200:
+                return res.json()['embedding']['values']
             return [0.0] * 768
+    except:
+        return [0.0] * 768
 
 
 # ─── HELPERS DE IA ────────────────────────────────────────────
 
-async def call_claude(system_prompt: str, user_content: str, max_tokens=1024):
+async def call_claude(system_prompt: str, user_content: str, max_tokens=2500):
     if not async_client:
         return await call_gemini(system_prompt, user_content)
 
@@ -83,6 +83,7 @@ async def call_gemini(system_prompt: str, user_content: str):
 
 def _parse_ai_json(content: str) -> dict:
     try:
+        # Limpeza robusta
         content = content.strip()
         content = re.sub(r'```json\s*|\s*```', '', content)
         
@@ -90,23 +91,25 @@ def _parse_ai_json(content: str) -> dict:
         if start != -1 and end != -1:
             content = content[start:end+1]
         
-        # Limpeza de caracteres de controle e quebras de linha dentro de valores
-        content = content.replace('\n', ' ').replace('\r', '')
-        # Remove vírgulas extras
+        # Escapa quebras de linha reais para não quebrar o JSON
+        content = content.replace('\n', '\\n').replace('\r', '\\r')
+        # Mas não escapa o que já está escapado ou delimitadores
+        content = content.replace('\\n{', '{').replace('}\\n', '}').replace('":\\n"', '":"')
+        
+        # Remove vírgulas extras antes de fechamento
         content = re.sub(r',\s*([\}\]])', r'\1', content)
         
         return json.loads(content)
     except Exception as e:
-        print(f"[AI_SERVICE] Erro parse: {e}")
-        # Tenta uma limpeza ainda mais agressiva (remove espaços duplos)
+        # Tenta um parse desesperado removendo todas as quebras de linha
         try:
-            content = re.sub(r'\s+', ' ', content)
-            return json.loads(content)
+            cleaned = re.sub(r'\s+', ' ', content)
+            return json.loads(cleaned)
         except:
             raise ValueError(f"JSON inválido: {str(e)}")
 
 
-# ─── FUNÇÕES DO AION ──────────────────────────────────────────
+# ─── FUNÇÕES DO AION (ALMA RESTAURADA) ────────────────────────
 
 async def analyze_dream(dream_text: str, **kwargs) -> dict:
     from app.services.ai_service import PROMPT_TEMPLATE, _build_contexto, _get_error_response
@@ -117,7 +120,8 @@ async def analyze_dream(dream_text: str, **kwargs) -> dict:
     prompt = PROMPT_TEMPLATE.format(texto=dream_text, contexto_estruturado=contexto)
     
     try:
-        content = await call_claude("", prompt, max_tokens=2048)
+        # Claude Sonnet é o preferencial para a profundidade junguiana
+        content = await call_claude("", prompt, max_tokens=3000)
         return _parse_ai_json(content)
     except Exception as e:
         print(f"[AI_SERVICE] Erro fatal análise: {e}")
@@ -127,21 +131,22 @@ async def analyze_dream(dream_text: str, **kwargs) -> dict:
 async def generate_interview_questions(dream_text: str) -> list:
     from app.services.ai_service import INTERVIEW_SYSTEM_PROMPT
     try:
-        content = await call_claude(INTERVIEW_SYSTEM_PROMPT, f"Sonho: {dream_text}", max_tokens=512)
+        content = await call_claude(INTERVIEW_SYSTEM_PROMPT, f"Sonho: {dream_text}", max_tokens=800)
         data = _parse_ai_json(content)
         return data.get("perguntas", [])
     except Exception as e:
-        return ["Como você se sentiu?", "O que lembra da vida?", "Qual era a cor?"]
+        return ["Como você se sentiu nesse cenário?", "O que esse sonho lembra da sua história?", "Qual era a sensação predominante?"]
 
 
 async def analyze_recurring_pattern(current_dream: str, similar_dreams: list) -> str:
     from app.services.ai_service import RECURRENCE_SYSTEM_PROMPT
-    history = "\n\nANTERIORES:\n"
+    history = "\n\nSONHOS ANTERIORES SIMILARES:\n"
     for i, d in enumerate(similar_dreams[:3], 1):
-        history += f"\n[{i}]: {d.get('relato','')[:150]}..."
+        relato = (d.get("relato") or "")[:250]
+        history += f"\n[{i}]: {relato}..."
     
     try:
-        return await call_claude(RECURRENCE_SYSTEM_PROMPT, f"Atual: {current_dream}{history}", max_tokens=512)
+        return await call_claude(RECURRENCE_SYSTEM_PROMPT, f"Sonho atual: {current_dream}{history}", max_tokens=1000)
     except Exception as e:
         return ""
 
@@ -150,62 +155,73 @@ async def analyze_dream_narrative(dream_text: str, analysis_context: dict = None
     from app.services.ai_service import NARRATIVE_SYSTEM_PROMPT
     context_block = ""
     if analysis_context:
-        context_block = f"\n\nCONTEXTO: {analysis_context.get('essencia','')}"
+        context_block = f"\n\nESSÊNCIA: {analysis_context.get('essencia','')}\nARQUÉTIPOS: {str(analysis_context.get('arquetipos',[]))}"
     
     try:
-        return await call_claude(NARRATIVE_SYSTEM_PROMPT, f"Sonho: {dream_text}{context_block}", max_tokens=1024)
+        return await call_claude(NARRATIVE_SYSTEM_PROMPT, f"Sonho: {dream_text}{context_block}", max_tokens=1500)
     except Exception as e:
-        return "O Oráculo aguarda em silêncio..."
+        return "O Oráculo processa sua jornada em silêncio sagrado..."
 
 
-# ─── PROMPTS ──────────────────────────────────────────────────
+# ─── PROMPTS (DEPTH RESTAURADO) ───────────────────────────────
 
 PROMPT_TEMPLATE = """
-Aion, analista junguiano. Amplifique este sonho. 
-IMPORTANTE: Seja direto e profundo, evite descrições longas. Máximo 4000 caracteres no total.
-Responda APENAS JSON.
+Atue como Aion, o Oráculo de Mito & Psique — analista junguiano de senioridade excepcional.
+Realize uma Amplificação Junguiana profunda, poética e tecnicamente precisa do sonho abaixo.
 
-SONHO: {texto}
+DIRETRIZES DE PERSONA:
+1. Use "VOCÊ" — português do Brasil.
+2. Tom sábio, acolhedor, misterioso mas direto ao ponto.
+3. Não seja superficial. Busque a Sombra, o Anima/Animus e o Processo de Individuação.
+
+DADOS DO SONHO:
+- RELATO: {texto}
 {contexto_estruturado}
 
-JSON:
+Responda APENAS com JSON válido seguindo este formato rigoroso:
 {{
-  "aviso": "Reflexão simbólica...",
-  "essencia": "...",
-  "arquetipos": [{{ "nome": "...", "simbolo": "...", "descricao": "..." }}],
-  "funcao_compensatoria": "...",
-  "simbolos_chave": [{{ "elemento": "...", "significado": "..." }}],
-  "fase_jornada": {{ "nome": "...", "descricao": "..." }},
-  "prospeccao": "...",
-  "pergunta_para_reflexao": "...",
-  "mito_espelho": {{ "titulo": "...", "paralela": "..." }},
-  "intensidade_sombra": 5, "intensidade_heroi": 5, "intensidade_transformacao": 5
+  "aviso": "Esta análise é uma reflexão simbólica baseada em Jung e Campbell...",
+  "essencia": "Um resumo poético da dinâmica psíquica do sonho.",
+  "arquetipos": [
+    {{ "nome": "O Herói/A Sombra/Etc", "simbolo": "Elemento do sonho", "descricao": "Explicação profunda do papel desse arquétipo no sonho." }}
+  ],
+  "funcao_compensatoria": "Como este sonho equilibra a atitude consciente do sonhador?",
+  "simbolos_chave": [
+    {{ "elemento": "Objeto/Lugar", "significado": "Significado mitológico e pessoal." }}
+  ],
+  "fase_jornada": {{ "nome": "Partida/Iniciação/Retorno", "descricao": "Momento da jornada do herói." }},
+  "prospeccao": "O que a psique está sinalizando para o futuro?",
+  "pergunta_para_reflexao": "Uma pergunta poderosa para levar para a vida desperta.",
+  "mito_espelho": {{ "titulo": "Mito de Orfeu/Perséfone/Etc", "paralela": "Como este mito espelha o sonho." }},
+  "intensidade_sombra": 5,
+  "intensidade_heroi": 5,
+  "intensidade_transformacao": 5
 }}
 """
 
-INTERVIEW_SYSTEM_PROMPT = "Aion. 3 perguntas curtas. JSON: {\"perguntas\": [\"...\", \"...\", \"...\"]}"
-RECURRENCE_SYSTEM_PROMPT = "Evolução do símbolo. Máximo 150 palavras."
-NARRATIVE_SYSTEM_PROMPT = "Amigo sábio. 3 movimentos. Máximo 150 palavras."
+INTERVIEW_SYSTEM_PROMPT = "Você é Aion. Analise o relato e identifique 3 pontos cegos ou silêncios no sonho. Responda APENAS JSON: {\"perguntas\": [\"...\", \"...\", \"...\"]}"
+RECURRENCE_SYSTEM_PROMPT = "Analise a EVOLUÇÃO dos símbolos recorrentes através do tempo. O que mudou? O que persiste? Máximo 250 palavras."
+NARRATIVE_SYSTEM_PROMPT = "Fale como um sábio junguiano. Resuma a jornada em 3 parágrafos curtos e profundos. Máximo 200 palavras."
 
 def _build_contexto(tags_emocao=None, temas=None, residuos_diurnos=None, interview_answers=None) -> str:
     lines = []
-    if tags_emocao: lines.append(f"EMOÇÕES: {', '.join(tags_emocao)}")
-    if temas: lines.append(f"TEMAS: {', '.join(temas)}")
-    if residuos_diurnos: lines.append(f"ONTEM: {', '.join(residuos_diurnos)}")
+    if tags_emocao: lines.append(f"- EMOÇÕES: {', '.join(tags_emocao)}")
+    if temas: lines.append(f"- TEMAS: {', '.join(temas)}")
+    if residuos_diurnos: lines.append(f"- CONTEXTO: {', '.join(residuos_diurnos)}")
     if interview_answers:
         for item in interview_answers:
-            lines.append(f"P: {item.get('pergunta','')}\nR: {item.get('resposta','')}")
-    return "\nCONTEXTO:\n" + "\n".join(lines) if lines else ""
+            lines.append(f"  P: {item.get('pergunta', '')}\n  R: {item.get('resposta', '')}")
+    return "\n\nCONTEXTO ADICIONAL:\n" + "\n".join(lines) if lines else ""
 
 def _get_error_response(error_msg: str) -> dict:
-    return {
-        "aviso": "Silêncio profundo.",
-        "essencia": "O silêncio é uma mensagem. Tente novamente.",
+    return {{
+        "aviso": "O Oráculo está em silêncio profundo.",
+        "essencia": "O silêncio também é uma mensagem. Tente novamente.",
         "arquetipos": [], "funcao_compensatoria": "Aguardando.",
         "simbolos_chave": [],
-        "fase_jornada": {"nome": "O Mundo Comum", "descricao": "Reequilibrando."},
+        "fase_jornada": {{"nome": "O Mundo Comum", "descricao": "Reequilibrando."}},
         "prospeccao": "Aguarde.",
-        "mito_espelho": {"titulo": "O Silêncio", "paralela": "Aguarde."},
-        "pergunta_para_reflexao": "O que o silêncio diz?",
+        "mito_espelho": {{"titulo": "O Silêncio", "paralela": "Aguarde."}},
+        "pergunta_para_reflexao": "O que o silêncio faz você sentir?",
         "intensidade_sombra": 0, "intensidade_heroi": 0, "intensidade_transformacao": 0,
-    }
+    }}

@@ -52,9 +52,9 @@ class AnalysisResultScreen extends StatelessWidget {
                     const SizedBox(height: 14),
                     _buildDimensionsSection(),
                     const SizedBox(height: 14),
-                    _buildArchetypesSection(),
+                    _buildArchetypesSection(context),
                     const SizedBox(height: 14),
-                    _buildTwoColumnSection(),
+                    _buildTwoColumnSection(context),
                     const SizedBox(height: 14),
                     _buildSymbolsSection(),
                     const SizedBox(height: 14),
@@ -217,7 +217,7 @@ class AnalysisResultScreen extends StatelessWidget {
   }
 
   // ⑤ ARQUÉTIPOS PRESENTES
-  Widget _buildArchetypesSection() {
+  Widget _buildArchetypesSection(BuildContext context) {
     final arquetipos = (analysis['arquetipos'] as List? ?? []);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -267,7 +267,7 @@ class AnalysisResultScreen extends StatelessWidget {
   }
 
   // ⑥ FUNÇÃO COMPENSATÓRIA + PROSPECÇÃO
-  Widget _buildTwoColumnSection() {
+  Widget _buildTwoColumnSection(BuildContext context) {
     return Wrap(
       spacing: 14,
       runSpacing: 14,

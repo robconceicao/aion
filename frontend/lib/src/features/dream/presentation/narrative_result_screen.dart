@@ -200,6 +200,23 @@ class _NarrativeResultScreenState extends State<NarrativeResultScreen>
                                 fontSize: 10, letterSpacing: 2,
                                 color: AionTheme.silver.withOpacity(0.3),
                               )),
+                          const SizedBox(height: 48),
+                          OutlinedButton(
+                            onPressed: () => Navigator.pop(context),
+                            style: OutlinedButton.styleFrom(
+                              side: const BorderSide(color: AionTheme.gold),
+                              padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
+                              shape: const RoundedRectangleBorder(),
+                            ),
+                            child: Text(
+                              'VOLTAR AO DIÁRIO',
+                              style: GoogleFonts.ptSerif(
+                                fontSize: 12,
+                                letterSpacing: 3,
+                                color: AionTheme.gold,
+                              ),
+                            ),
+                          ),
                         ],
                       ),
                     ),

@@ -32,16 +32,12 @@ class _DreamDiaryScreenState extends State<DreamDiaryScreen> {
 
   Future<void> _loadStats() async {
     try {
-      final user = Supabase.instance.client.auth.currentUser;
-      if (user == null) {
-        setState(() => _isLoading = false);
-        return;
-      }
-
-      // Busca os sonhos do usuário
+      // Busca os sonhos do usuário (usando o e-mail padrão para consistência com o histórico)
+      const String userEmail = 'usuario@aion.app';
       final data = await Supabase.instance.client
           .from('dreams')
-          .select('created_at, is_favorite, main_archetype');
+          .select('created_at, is_favorite, main_archetype')
+          .eq('user_email', userEmail);
 
       int favs = 0;
       int month = 0;

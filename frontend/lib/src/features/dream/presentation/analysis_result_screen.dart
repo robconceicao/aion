@@ -65,6 +65,8 @@ class AnalysisResultScreen extends StatelessWidget {
                     _buildReflectionQuestionSection(),
                     const SizedBox(height: 14),
                     _buildRecommendedEpisodesSection(),
+                    const SizedBox(height: 48),
+                    _buildNavigationButtons(context),
                     const SizedBox(height: 80),
                   ],
                 ),
@@ -72,6 +74,31 @@ class AnalysisResultScreen extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildNavigationButtons(BuildContext context) {
+    return Center(
+      child: Column(
+        children: [
+          OutlinedButton(
+            onPressed: () => Navigator.pop(context),
+            style: OutlinedButton.styleFrom(
+              side: const BorderSide(color: AionTheme.gold),
+              padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
+              shape: const RoundedRectangleBorder(),
+            ),
+            child: Text(
+              'VOLTAR AO DIÁRIO',
+              style: GoogleFonts.ptSerif(
+                fontSize: 12,
+                letterSpacing: 3,
+                color: AionTheme.gold,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

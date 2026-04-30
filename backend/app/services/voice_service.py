@@ -50,54 +50,46 @@ async def transcribe_audio(audio_path: str) -> str | None:
         "contents": [
             {
                 "parts": [
-                    {
-                        "text": (
-                            "Transcreva o áudio abaixo de forma literal e completa. "
-                            "O usuário está relatando um sonho que acabou de ter. "
-                            "Mantenha as palavras exatas, sem corrigir ou resumir. "
-                            "Responda APENAS com o texto transcrito, sem qualquer comentário adicional."
-                        )
-                    },
+                    {"text": "Transcreva o áudio a seguir exatamente como foi dito, sem comentários adicionais. Se não houver fala clara, retorne apenas '[Áudio sem fala clara]'."},
                     {
                         "inline_data": {
                             "mime_type": mime_type,
-                            "data": audio_b64,
+                            "data": audio_b64
                         }
-                    },
+                    }
                 ]
             }
-        ],
-        "generationConfig": {
-            "temperature": 0.0,
-            "maxOutputTokens": 2048,
-        },
+        ]
     }
 
-    try:
-        async with httpx.AsyncClient(timeout=60.0) as client:
-            print(f"[VOICE_SERVICE] Enviando áudio para Gemini ({len(audio_bytes)} bytes)...")
-            response = await client.post(url, json=payload)
-            response.raise_for_status()
-
-            data = response.json()
-            transcription = (
-                data.get("candidates", [{}])[0]
-                .get("content", {})
-                .get("parts", [{}])[0]
-                .get("text", "")
-                .strip()
-            )
-
-            if transcription:
-                print(f"[VOICE_SERVICE] Transcrição concluída ({len(transcription)} chars).")
-                return transcription
-            else:
-                print("[VOICE_SERVICE] Gemini retornou resposta vazia.")
+    import asyncio
+    max_retries = 3
+    for attempt in range(max_retries):
+        try:
+            async with httpx.AsyncClient(timeout=45.0) as client:
+                print(f"[VOICE_SERVICE] Enviando áudio para Gemini (Tentativa {attempt + 1}/{max_retries})...")
+                response = await client.post(url, json=payload)
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    transcription = data['candidates'][0]['content']['parts'][0]['text']
+                    print(f"[VOICE_SERVICE] Transcrição concluída ({len(transcription)} chars).")
+                    return transcription.strip()
+                
+                elif response.status_code == 503:
+                    print(f"[VOICE_SERVICE] Gemini sobrecarregado (503). Aguardando para tentar novamente...")
+                    if attempt < max_retries - 1:
+                        await asyncio.sleep(2.0)
+                        continue
+                
+                print(f"[VOICE_SERVICE] Erro HTTP {response.status_code}: {response.text}")
                 return None
+                
+        except Exception as e:
+            print(f"[VOICE_SERVICE] Erro na tentativa {attempt + 1}: {e}")
+            if attempt < max_retries - 1:
+                await asyncio.sleep(1.0)
+                continue
+            return None
 
-    except httpx.HTTPStatusError as e:
-        print(f"[VOICE_SERVICE] Erro HTTP {e.response.status_code}: {e.response.text}")
-        return None
-    except Exception as e:
-        print(f"[VOICE_SERVICE] Erro inesperado: {e}")
-        return None
+    return None

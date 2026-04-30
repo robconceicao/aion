@@ -225,40 +225,43 @@ class _DreamChoiceScreenState extends State<DreamChoiceScreen>
   }
 
   Widget _buildNav(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      crossAxisAlignment: CrossAxisAlignment.end,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Column(
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           crossAxisAlignment: CrossAxisAlignment.start,
-          children: const [
-            Text('M I T O  &  P S I Q U E', style: TextStyle(fontSize: 9, letterSpacing: 5, color: AionTheme.gold)),
-            SizedBox(height: 8),
-            Text('Aion o diário do Sonho', style: TextStyle(fontSize: 24, letterSpacing: 3, fontFamily: 'Georgia', color: Colors.white)),
-          ],
-        ),
-        Wrap(
-          spacing: 6,
-          runSpacing: 6,
           children: [
-            _navBtn(context, '← NOVO SONHO', false, () {
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (_) => const RecordDreamScreen()),
-              );
-            }),
-            _navBtn(context, 'HISTÓRICO', false, () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const DreamHistoryScreen(userEmail: 'usuario@aion.app')),
-              );
-            }),
-            _navBtn(context, 'SAIR', false, () {
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (_) => const AuthScreen()),
-              );
-            }),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('M I T O  &  P S I Q U E', style: TextStyle(fontSize: 8, letterSpacing: 4, color: AionTheme.gold)),
+                const SizedBox(height: 4),
+                Text('A I O N', style: GoogleFonts.cormorantGaramond(fontSize: 28, fontWeight: FontWeight.bold, color: AionTheme.gold, letterSpacing: 2)),
+                Text('O Diário do Sonho', style: GoogleFonts.cormorantGaramond(fontSize: 14, fontStyle: FontStyle.italic, color: Colors.white70)),
+              ],
+            ),
+            Expanded(
+              child: Wrap(
+                alignment: WrapAlignment.end,
+                spacing: 6,
+                runSpacing: 6,
+                children: [
+                  _navBtn(context, '← NOVO SONHO', false, () {
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(builder: (_) => const RecordDreamScreen()),
+                    );
+                  }),
+                  _navBtn(context, 'HISTÓRICO', false, () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const DreamHistoryScreen(userEmail: 'usuario@aion.app')),
+                    );
+                  }),
+                ],
+              ),
+            ),
           ],
         ),
       ],

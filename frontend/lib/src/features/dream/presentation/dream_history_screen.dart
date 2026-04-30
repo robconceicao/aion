@@ -307,12 +307,16 @@ class _DreamHistoryCardState extends State<_DreamHistoryCard> {
                     ),
                   ),
                   if (arquetipos.isNotEmpty)
-                    Text(
-                      arquetipos,
-                      style: GoogleFonts.ptSerif(
-                        fontSize: 9,
-                        color: AionTheme.silver.withOpacity(0.5),
-                        letterSpacing: 1,
+                    Expanded(
+                      child: Text(
+                        arquetipos,
+                        textAlign: TextAlign.right,
+                        style: GoogleFonts.ptSerif(
+                          fontSize: 9,
+                          color: AionTheme.silver.withOpacity(0.5),
+                          letterSpacing: 1,
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                 ],

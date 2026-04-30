@@ -34,6 +34,7 @@ class _RecordDreamScreenState extends State<RecordDreamScreen> with SingleTicker
   bool _isRecording = false;
   String? _audioPath;
   bool _isProcessing = false;
+  bool _isTranscribing = false;
   String _loadingMessage = 'Processando...';
   String? _transcription;
   final TextEditingController _reviewController = TextEditingController();
@@ -91,7 +92,7 @@ class _RecordDreamScreenState extends State<RecordDreamScreen> with SingleTicker
 
   Future<void> _sendToTranscription(String path) async {
     setState(() {
-      _isProcessing = true;
+      _isTranscribing = true;
       _loadingMessage = 'Transcrevendo sua voz...';
     });
     final dio = Dio();
@@ -111,11 +112,11 @@ class _RecordDreamScreenState extends State<RecordDreamScreen> with SingleTicker
         _textInputController.text = _textInputController.text.isNotEmpty 
           ? '${_textInputController.text} $_transcription'
           : _transcription ?? '';
-        _isProcessing = false;
+        _isTranscribing = false;
       });
     } catch (e) {
       debugPrint('Transcription error: $e');
-      setState(() => _isProcessing = false);
+      setState(() => _isTranscribing = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -193,16 +194,97 @@ class _RecordDreamScreenState extends State<RecordDreamScreen> with SingleTicker
     return Scaffold(
       backgroundColor: AionTheme.darkVoid,
       body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 820),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 36.0),
-              child: _isProcessing 
-                ? MandalaSpinner(message: _loadingMessage)
-                : _buildBody(theme),
+        child: Stack(
+          children: [
+            Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 820),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 36.0),
+                  child: _buildBody(theme),
+                ),
+              ),
             ),
-          ),
+            if (_isProcessing)
+              _buildLoadingOverlay(),
+            if (_isTranscribing)
+              _buildTranscribingOverlay(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTranscribingOverlay() {
+    return Container(
+      color: AionTheme.darkVoid.withOpacity(0.6),
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const SizedBox(
+              width: 60,
+              child: LinearProgressIndicator(
+                backgroundColor: Colors.transparent,
+                color: AionTheme.gold,
+                minHeight: 2,
+              ),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'AION ESTÁ OUVINDO...',
+              style: GoogleFonts.ptSerif(
+                fontSize: 10,
+                letterSpacing: 4,
+                color: AionTheme.gold,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLoadingOverlay() {
+    return Container(
+      color: AionTheme.darkVoid.withOpacity(0.92),
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const MandalaSpinner(message: ''),
+            const SizedBox(height: 32),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 40),
+              child: Text(
+                _loadingMessage.toUpperCase(),
+                textAlign: TextAlign.center,
+                style: GoogleFonts.ptSerif(
+                  fontSize: 10,
+                  letterSpacing: 4,
+                  color: AionTheme.gold,
+                  fontWeight: FontWeight.bold,
+                  backgroundColor: Colors.transparent, // Garante que não haja fundo
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 50),
+              child: Text(
+                _isTranscribing 
+                  ? 'Traduzindo sua jornada para a linguagem desperta...'
+                  : 'Tecendo os fios do inconsciente com a sabedoria ancestral...',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.cormorantGaramond(
+                  fontSize: 18,
+                  color: AionTheme.ghost.withOpacity(0.7),
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -214,35 +296,34 @@ class _RecordDreamScreenState extends State<RecordDreamScreen> with SingleTicker
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          crossAxisAlignment: CrossAxisAlignment.end,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('M I T O  &  P S I Q U E', style: TextStyle(fontSize: 9, letterSpacing: 5, color: AionTheme.gold)),
-                const SizedBox(height: 8),
-                const Text('Registrar Sonho', style: TextStyle(fontSize: 24, letterSpacing: 3, fontFamily: 'Georgia', color: Colors.white)),
+                const Text('M I T O  &  P S I Q U E', style: TextStyle(fontSize: 8, letterSpacing: 4, color: AionTheme.gold)),
+                const SizedBox(height: 4),
+                Text('A I O N', style: GoogleFonts.cormorantGaramond(fontSize: 28, fontWeight: FontWeight.bold, color: AionTheme.gold, letterSpacing: 2)),
+                Text('O Diário do Sonho', style: GoogleFonts.cormorantGaramond(fontSize: 14, fontStyle: FontStyle.italic, color: Colors.white70)),
+                const SizedBox(height: 12),
+                const Text('Registrar Sonho', style: TextStyle(fontSize: 11, letterSpacing: 1, fontFamily: 'Georgia', color: Colors.white38)),
               ],
             ),
-            Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              children: [
-                _navBtn(context, 'INÍCIO', false, () => Navigator.pop(context)),
-                _navBtn(context, '+ SONHO', true, () {}),
-                _navBtn(context, 'ARQUÉTIPOS', false, () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const ArchetypesScreen()),
-                  );
-                }),
-                _navBtn(context, 'CANAL', false, () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const CanalScreen()),
-                  );
-                }),
-              ],
+            Expanded(
+              child: Wrap(
+                alignment: WrapAlignment.end,
+                spacing: 6,
+                runSpacing: 6,
+                children: [
+                  _navBtn(context, 'INÍCIO', false, () => Navigator.pop(context)),
+                  _navBtn(context, 'ARQUÉTIPOS', false, () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const ArchetypesScreen()),
+                    );
+                  }),
+                ],
+              ),
             ),
           ],
         ),

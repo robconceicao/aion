@@ -8,6 +8,13 @@ if not settings.ANTHROPIC_API_KEY:
 
 async_client = anthropic.AsyncAnthropic(api_key=settings.ANTHROPIC_API_KEY)
 
+# Lista de modelos por prioridade para evitar erros 404
+AI_MODELS = [
+    "claude-3-5-sonnet-20241022", # Sonnet 3.5 New
+    "claude-3-5-sonnet-20240620", # Sonnet 3.5 v1
+    "claude-3-opus-20240229",    # Opus
+]
+
 # Modelo de embedding — singleton carregado na primeira chamada
 _embedding_model = None
 
@@ -15,14 +22,12 @@ def get_embedding_model() -> SentenceTransformer:
     global _embedding_model
     if _embedding_model is None:
         print("[AI_SERVICE] Carregando modelo de embedding...")
-        # Usamos o modelo multilingual para suportar Português nativamente
         _embedding_model = SentenceTransformer('paraphrase-multilingual-MiniLM-L12-v2')
         print("[AI_SERVICE] Modelo pronto.")
     return _embedding_model
 
 
 def generate_embedding(text: str) -> list:
-    """Gera vetor de 384 dimensões a partir do texto."""
     model = get_embedding_model()
     embedding = model.encode(text, normalize_embeddings=True)
     return embedding.tolist()
@@ -60,7 +65,7 @@ INSTRUÇÃO CRÍTICA: Responda APENAS com JSON válido:
   }},
   "prospeccao": "Um sinal para seu futuro próximo.",
   "pergunta_para_reflexao": "Uma pergunta para você pensar hoje.",
-  "mito_espelho": {{ "titulo": "Nome do Mito", "paralelo": "Conexão com sua história." }},
+  "mito_espelho": {{ "titulo": "Nome do Mito", "paralelo": "Conexão com sua histora." }},
   "intensidade_sombra": 1-10,
   "intensidade_heroi": 1-10,
   "intensidade_transformacao": 1-10
@@ -69,56 +74,36 @@ INSTRUÇÃO CRÍTICA: Responda APENAS com JSON válido:
 
 RECURRENCE_SYSTEM_PROMPT = """Você é Aion. O usuário tem um padrão de sonhos recorrentes.
 Analise a EVOLUÇÃO do símbolo ao longo do tempo — não interprete o sonho atual isoladamente.
-
-DIRETRIZES:
-1. Identifique o que MUDOU entre os sonhos anteriores e o atual.
-2. Explique que a repetição é um convite para dar atenção a algo não resolvido.
-3. Foque no progresso ou estagnação do tema — não repita interpretações antigas.
-4. Use "você" e "seu/sua". Tom empático e direto. Máximo 200 palavras.
-5. Texto corrido, sem títulos. Termine com uma pergunta sobre a evolução do padrão."""
+Foque no progresso ou estagnação do tema. Use "você" e "seu/sua". Máximo 200 palavras."""
 
 INTERVIEW_SYSTEM_PROMPT = """Você é um pesquisador de sonhos clínico do Aion.
 Analise o relato e identifique pontos cegos que precisam de mais contexto.
+Não interprete ainda. Apenas pergunte. Use "você" e "seu/sua". APENAS JSON."""
 
-DIRETRIZES: Não interprete ainda. Apenas pergunte. Use "você" e "seu/sua".
-
-FORMATO OBRIGATÓRIO — apenas JSON:
-{
-  "perguntas": ["Primeira pergunta?", "Segunda pergunta?", "Terceira pergunta?"]
-}"""
-
-NARRATIVE_SYSTEM_PROMPT = """Você é Aion. Fale como um amigo sábio — não professor ou terapeuta.
-
-Responda em 3 movimentos curtos, sem títulos:
-
-Primeiro: o que o sonho revela sobre o momento de vida da pessoa. 1-2 frases diretas.
-Segundo: o símbolo mais importante e seu significado real. Mito de passagem em 1 frase simples.
-Terceiro: termine com a PERGUNTA_FINAL exata fornecida. Não altere nada.
-
-Regras absolutas:
-- Proibido: arquétipo, inconsciente, individuação, amplificação, psíquico, Self, compensatório, projeção
-- Máximo 180 palavras. "você" e "seu/sua". Texto corrido. Última frase = PERGUNTA_FINAL exata."""
+NARRATIVE_SYSTEM_PROMPT = """Você é Aion. Fale como um amigo sábio.
+Responda em 3 movimentos curtos, sem títulos. Texto corrido. Máximo 180 palavras.
+Termine com a PERGUNTA_FINAL exata fornecida."""
 
 
 # ─── HELPERS ──────────────────────────────────────────────────
 
-def _build_contexto(tags_emocao=None, temas=None, residuos_diurnos=None, interview_answers=None) -> str:
-    lines = []
-    if tags_emocao:
-        lines.append(f"- EMOÇÕES: {', '.join(tags_emocao)}")
-    if temas:
-        lines.append(f"- TEMAS: {', '.join(temas)}")
-    if residuos_diurnos:
-        lines.append(f"- CONTEXTO DO DIA ANTERIOR: {', '.join(residuos_diurnos)}")
-    if interview_answers:
-        lines.append("\nASSOCIAÇÕES PESSOAIS:")
-        for item in interview_answers:
-            lines.append(f"  P: {item.get('pergunta', '')}")
-            lines.append(f"  R: {item.get('resposta', '')}")
-    if not lines:
-        return ""
-    return "\n\nCONTEXTO ADICIONAL:\n" + "\n".join(lines)
-
+async def call_claude(system_prompt: str, user_content: str, max_tokens=1024):
+    """Tenta chamar o Claude com fallback de modelos para evitar erros 404."""
+    ultimo_erro = None
+    for model_name in AI_MODELS:
+        try:
+            message = await async_client.messages.create(
+                model=model_name,
+                max_tokens=max_tokens,
+                system=system_prompt,
+                messages=[{"role": "user", "content": user_content}]
+            )
+            return message.content[0].text
+        except Exception as e:
+            print(f"[AI_SERVICE] Erro no modelo {model_name}: {e}")
+            ultimo_erro = e
+            continue
+    raise ultimo_erro
 
 def _parse_ai_json(content: str) -> dict:
     try:
@@ -129,6 +114,69 @@ def _parse_ai_json(content: str) -> dict:
     except Exception as e:
         raise ValueError(f"JSON inválido: {str(e)}")
 
+
+# ─── FUNÇÕES DE IA ────────────────────────────────────────────
+
+async def analyze_dream(dream_text: str, **kwargs) -> dict:
+    from app.services.ai_service import _build_contexto # lazy import
+    contexto = _build_contexto(
+        kwargs.get('tags_emocao'), kwargs.get('temas'), 
+        kwargs.get('residuos_diurnos'), kwargs.get('interview_answers')
+    )
+    prompt = PROMPT_TEMPLATE.format(texto=dream_text, contexto_estruturado=contexto)
+    
+    try:
+        content = await call_claude("", prompt, max_tokens=2048)
+        return _parse_ai_json(content)
+    except Exception as e:
+        print(f"[AI_SERVICE] Erro fatal análise: {e}")
+        from app.services.ai_service import _get_error_response
+        return _get_error_response(str(e))
+
+
+async def analyze_recurring_pattern(current_dream: str, similar_dreams: list) -> str:
+    history = "\n\nSONHOS ANTERIORES SIMILARES:\n"
+    for i, d in enumerate(similar_dreams[:3], 1):
+        relato = (d.get("relato") or "")[:200]
+        history += f"\n[{i}]: {relato}..."
+    
+    try:
+        return await call_claude(RECURRENCE_SYSTEM_PROMPT, f"Sonho atual: {current_dream}{history}", max_tokens=512)
+    except Exception as e:
+        print(f"[AI_SERVICE] Erro recorrência: {e}")
+        return ""
+
+
+async def generate_interview_questions(dream_text: str) -> list:
+    try:
+        content = await call_claude(INTERVIEW_SYSTEM_PROMPT, f"Sonho: {dream_text}", max_tokens=512)
+        return _parse_ai_json(content).get("perguntas", [])
+    except Exception as e:
+        print(f"[AI_SERVICE] Erro entrevista: {e}")
+        return ["Como você se sentiu ao acordar?", "O que esse sonho lembra da sua vida?", "Qual era a cor predominante?"]
+
+
+async def analyze_dream_narrative(dream_text: str, analysis_context: dict = None) -> str:
+    context_block = ""
+    if analysis_context:
+        pergunta = analysis_context.get("pergunta_para_reflexao", "")
+        context_block = f"\n\nCONTEXTO: {analysis_context.get('essencia','')}\nPERGUNTA_FINAL: {pergunta}"
+    
+    try:
+        return await call_claude(NARRATIVE_SYSTEM_PROMPT, f"Sonho: {dream_text}{context_block}", max_tokens=1024)
+    except Exception as e:
+        print(f"[AI_SERVICE] Erro narrativa: {e}")
+        return "O Oráculo está processando sua mensagem em silêncio..."
+
+def _build_contexto(tags_emocao=None, temas=None, residuos_diurnos=None, interview_answers=None) -> str:
+    lines = []
+    if tags_emocao: lines.append(f"- EMOÇÕES: {', '.join(tags_emocao)}")
+    if temas: lines.append(f"- TEMAS: {', '.join(temas)}")
+    if residuos_diurnos: lines.append(f"- CONTEXTO: {', '.join(residuos_diurnos)}")
+    if interview_answers:
+        for item in interview_answers:
+            lines.append(f"  P: {item.get('pergunta', '')}\n  R: {item.get('resposta', '')}")
+    return "\n\nCONTEXTO ADICIONAL:\n" + "\n".join(lines) if lines else ""
 
 def _get_error_response(error_msg: str) -> dict:
     return {
@@ -142,96 +190,3 @@ def _get_error_response(error_msg: str) -> dict:
         "pergunta_para_reflexao": "O que o silêncio faz você sentir?",
         "intensidade_sombra": 0, "intensidade_heroi": 0, "intensidade_transformacao": 0,
     }
-
-
-# ─── FUNÇÕES DE IA ────────────────────────────────────────────
-
-async def analyze_dream(
-    dream_text: str,
-    tags_emocao=None, temas=None, residuos_diurnos=None,
-    interview_answers=None, context: dict = None,
-) -> dict:
-    contexto = _build_contexto(tags_emocao, temas, residuos_diurnos, interview_answers)
-    prompt = PROMPT_TEMPLATE.format(texto=dream_text, contexto_estruturado=contexto)
-    
-    # Modelos prioritários (Claude 3.5 Sonnet é o ideal para Jung)
-    modelos = [
-        "claude-3-5-sonnet-20241022",
-        "claude-3-5-sonnet-latest", 
-        "claude-3-5-sonnet-20240620",
-    ]
-    
-    ultimo_erro = None
-    for model_name in modelos:
-        try:
-            message = await async_client.messages.create(
-                model=model_name, max_tokens=2048,
-                messages=[{"role": "user", "content": prompt}]
-            )
-            return _parse_ai_json(message.content[0].text)
-        except Exception as e:
-            ultimo_erro = str(e)
-            continue
-    return _get_error_response(f"Falha: {ultimo_erro}")
-
-
-async def analyze_recurring_pattern(current_dream: str, similar_dreams: list) -> str:
-    """Analisa evolução de símbolo recorrente ao longo do tempo."""
-    history = "\n\nSONHOS ANTERIORES SIMILARES:\n"
-    for i, d in enumerate(similar_dreams[:3], 1):
-        relato = (d.get("relato") or "")[:200]
-        created = (d.get("created_at") or "")[:10]
-        history += f"\n[{i}] ({created}): {relato}..."
-    try:
-        message = await async_client.messages.create(
-            model="claude-3-5-sonnet-20241022", max_tokens=512,
-            system=RECURRENCE_SYSTEM_PROMPT,
-            messages=[{"role": "user", "content": f"Sonho atual: {current_dream}{history}"}],
-        )
-        return message.content[0].text
-    except Exception as e:
-        print(f"[AI_SERVICE] Erro recorrência: {e}")
-        return ""
-
-
-async def generate_interview_questions(dream_text: str) -> list:
-    try:
-        message = await async_client.messages.create(
-            model="claude-3-5-sonnet-20241022", max_tokens=512,
-            system=INTERVIEW_SYSTEM_PROMPT,
-            messages=[{"role": "user", "content": f"Sonho: {dream_text}"}],
-        )
-        content = message.content[0].text
-        start, end = content.find('{'), content.rfind('}')
-        if start != -1 and end != -1:
-            return json.loads(content[start:end+1]).get("perguntas", [])
-        return []
-    except Exception as e:
-        print(f"[AI_SERVICE] Erro entrevista: {e}")
-        raise e
-
-
-async def analyze_dream_narrative(dream_text: str, analysis_context: dict = None) -> str:
-    context_block = ""
-    if analysis_context:
-        pergunta = analysis_context.get("pergunta_para_reflexao", "")
-        context_block = f"""
-
-CONTEXTO (coerência — não repita):
-- Essência: {analysis_context.get('essencia', '')}
-- Arquétipos: {', '.join([a.get('nome','') for a in analysis_context.get('arquetipos',[])])}
-- Mito: {analysis_context.get('mito_espelho',{}).get('titulo','')}
-- Fase: {analysis_context.get('fase_jornada',{}).get('nome','')}
-
-PERGUNTA_FINAL (última frase exata — não altere):
-{pergunta}"""
-    try:
-        message = await async_client.messages.create(
-            model="claude-3-5-sonnet-20241022", max_tokens=1024,
-            system=NARRATIVE_SYSTEM_PROMPT,
-            messages=[{"role": "user", "content": f"Sonho: {dream_text}{context_block}"}],
-        )
-        return message.content[0].text
-    except Exception as e:
-        print(f"[AI_SERVICE] Erro narrativa: {e}")
-        raise e

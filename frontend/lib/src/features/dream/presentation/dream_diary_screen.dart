@@ -8,9 +8,82 @@ import 'dream_history_screen.dart';
 import 'widgets/aion_logo.dart';
 import '../../../core/widgets/cinematic_background.dart';
 import '../../profile/presentation/profile_screen.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
-class DreamDiaryScreen extends StatelessWidget {
+class DreamDiaryScreen extends StatefulWidget {
   const DreamDiaryScreen({super.key});
+
+  @override
+  State<DreamDiaryScreen> createState() => _DreamDiaryScreenState();
+}
+
+class _DreamDiaryScreenState extends State<DreamDiaryScreen> {
+  int _totalDreams = 0;
+  int _favorites = 0;
+  int _thisMonth = 0;
+  String _topArchetype = '-';
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadStats();
+  }
+
+  Future<void> _loadStats() async {
+    try {
+      final user = Supabase.instance.client.auth.currentUser;
+      if (user == null) {
+        setState(() => _isLoading = false);
+        return;
+      }
+
+      // Busca os sonhos do usuário
+      final data = await Supabase.instance.client
+          .from('dreams')
+          .select('created_at, is_favorite, main_archetype');
+
+      int favs = 0;
+      int month = 0;
+      final now = DateTime.now();
+      Map<String, int> archetypesCount = {};
+
+      for (var dream in data) {
+        if (dream['is_favorite'] == true) favs++;
+        
+        if (dream['created_at'] != null) {
+          final createdAt = DateTime.parse(dream['created_at']);
+          if (createdAt.year == now.year && createdAt.month == now.month) {
+            month++;
+          }
+        }
+
+        final arch = dream['main_archetype'];
+        if (arch != null && arch.toString().trim().isNotEmpty) {
+          archetypesCount[arch] = (archetypesCount[arch] ?? 0) + 1;
+        }
+      }
+
+      String topArch = '-';
+      if (archetypesCount.isNotEmpty) {
+        var entry = archetypesCount.entries.reduce((a, b) => a.value > b.value ? a : b);
+        topArch = entry.key; // O arquétipo com maior contagem
+      }
+
+      if (mounted) {
+        setState(() {
+          _totalDreams = data.length;
+          _favorites = favs;
+          _thisMonth = month;
+          _topArchetype = topArch;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Erro ao carregar as estatísticas do banco: $e');
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -61,18 +134,20 @@ class DreamDiaryScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 32),
                     
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        _buildStatItem('12', 'SONHOS'),
-                        const SizedBox(width: 24),
-                        _buildStatItem('3', 'FAVORITOS'),
-                        const SizedBox(width: 24),
-                        _buildStatItem('2', 'ESTE MÊS'),
-                        const SizedBox(width: 24),
-                        _buildStatItem('Sábio', 'ARQUÉTIPO'),
-                      ],
-                    ),
+                    _isLoading 
+                      ? const SizedBox(height: 50, child: Center(child: CircularProgressIndicator(color: AionTheme.gold)))
+                      : Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            _buildStatItem('$_totalDreams', 'SONHOS'),
+                            const SizedBox(width: 24),
+                            _buildStatItem('$_favorites', 'FAVORITOS'),
+                            const SizedBox(width: 24),
+                            _buildStatItem('$_thisMonth', 'ESTE MÊS'),
+                            const SizedBox(width: 24),
+                            _buildStatItem(_topArchetype, 'ARQUÉTIPO'),
+                          ],
+                        ),
                     const SizedBox(height: 32),
   
                     Padding(
@@ -166,6 +241,8 @@ class DreamDiaryScreen extends StatelessWidget {
           if (transcription != null && transcription.isNotEmpty) {
             debugPrint('Relato recebido: $transcription');
           }
+          // Recarrega as estatísticas caso o usuário volte de um registro de novo sonho
+          _loadStats();
         } else if (text == 'HISTÓRICO') {
           Navigator.push(
             context,

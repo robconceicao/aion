@@ -5,11 +5,13 @@ import '../../../core/theme.dart';
 class NarrativeResultScreen extends StatefulWidget {
   final String dreamText;
   final String narrativeText;
+  final String perguntaReflexao;
 
   const NarrativeResultScreen({
     super.key,
     required this.dreamText,
     required this.narrativeText,
+    this.perguntaReflexao = '',
   });
 
   @override
@@ -38,19 +40,12 @@ class _NarrativeResultScreenState extends State<NarrativeResultScreen>
     super.dispose();
   }
 
-  List<_TextBlock> _parseNarrative(String text) {
-    final paragraphs = text
+  List<String> _parseNarrative(String text) {
+    return text
         .split('\n')
         .map((p) => p.trim())
         .where((p) => p.isNotEmpty)
         .toList();
-    final blocks = <_TextBlock>[];
-    for (int i = 0; i < paragraphs.length; i++) {
-      final p = paragraphs[i];
-      final isQuestion = p.endsWith('?') && i == paragraphs.length - 1;
-      blocks.add(_TextBlock(text: p, isQuestion: isQuestion));
-    }
-    return blocks;
   }
 
   List<InlineSpan> _buildRichSpans(String text) {
@@ -75,7 +70,7 @@ class _NarrativeResultScreenState extends State<NarrativeResultScreen>
 
   @override
   Widget build(BuildContext context) {
-    final blocks = _parseNarrative(widget.narrativeText);
+    final paragraphs = _parseNarrative(widget.narrativeText);
     return Scaffold(
       backgroundColor: AionTheme.darkVoid,
       body: SafeArea(
@@ -168,16 +163,19 @@ class _NarrativeResultScreenState extends State<NarrativeResultScreen>
                     padding: const EdgeInsets.symmetric(horizontal: 24),
                     sliver: SliverList(
                       delegate: SliverChildBuilderDelegate(
-                        (context, i) {
-                          final block = blocks[i];
-                          return block.isQuestion
-                              ? _buildQuestionBlock(block.text)
-                              : _buildParagraph(block.text);
-                        },
-                        childCount: blocks.length,
+                        (context, i) => _buildParagraph(paragraphs[i]),
+                        childCount: paragraphs.length,
                       ),
                     ),
                   ),
+                  // Caixa de reflexão sempre presente, vinda do JSON
+                  if (widget.perguntaReflexao.isNotEmpty)
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 24),
+                        child: _buildQuestionBlock(widget.perguntaReflexao),
+                      ),
+                    ),
                   SliverToBoxAdapter(
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(24, 48, 24, 64),
@@ -314,8 +312,4 @@ class _NarrativeResultScreenState extends State<NarrativeResultScreen>
   }
 }
 
-class _TextBlock {
-  final String text;
-  final bool isQuestion;
-  const _TextBlock({required this.text, required this.isQuestion});
-}
+

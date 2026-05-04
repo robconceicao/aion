@@ -138,9 +138,10 @@ class _DreamChoiceScreenState extends State<DreamChoiceScreen>
                               onTap: () => Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (_) => NarrativeResultScreen(
+                              builder: (_) => NarrativeResultScreen(
                                     dreamText: widget.dreamText,
                                     narrativeText: widget.narrativeText,
+                                    perguntaReflexao: widget.detailedAnalysis['pergunta_para_reflexao'] as String? ?? '',
                                   ),
                                 ),
                               ),

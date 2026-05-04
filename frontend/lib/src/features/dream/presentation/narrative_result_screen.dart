@@ -41,11 +41,21 @@ class _NarrativeResultScreenState extends State<NarrativeResultScreen>
   }
 
   List<String> _parseNarrative(String text) {
-    return text
+    final paragraphs = text
         .split('\n')
         .map((p) => p.trim())
+        // Remove formatações markdown como asteriscos
+        .map((p) => p.replaceAll(RegExp(r'^\*+|\*+$'), '').trim())
         .where((p) => p.isNotEmpty)
         .toList();
+
+    // Remove o último parágrafo se for a pergunta de reflexão
+    // (ela será exibida na caixa dedicada via JSON)
+    if (paragraphs.isNotEmpty && paragraphs.last.endsWith('?')) {
+      paragraphs.removeLast();
+    }
+
+    return paragraphs;
   }
 
   List<InlineSpan> _buildRichSpans(String text) {

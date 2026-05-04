@@ -59,7 +59,7 @@ async def call_claude(system_prompt: str, user_content: str, max_tokens=3500):
                 continue 
             break 
             
-    return await call_gemini(system_prompt, user_content)
+    return await call_deepseek(system_prompt, user_content)
 
 
 async def call_gemini(system_prompt: str, user_content: str):
@@ -73,6 +73,34 @@ async def call_gemini(system_prompt: str, user_content: str):
     except Exception as e:
         print(f"[AI_SERVICE] Erro fatal no Gemini: {e}")
         raise e
+
+
+async def call_deepseek(system_prompt: str, user_content: str, max_tokens=3500):
+    if not settings.DEEPSEEK_API_KEY:
+        return await call_gemini(system_prompt, user_content)
+    try:
+        url = "https://api.deepseek.com/chat/completions"
+        headers = {
+            "Authorization": f"Bearer {settings.DEEPSEEK_API_KEY}",
+            "Content-Type": "application/json"
+        }
+        payload = {
+            "model": "deepseek-chat",
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_content}
+            ],
+            "max_tokens": max_tokens,
+            "temperature": 0.7,
+            "response_format": {"type": "json_object"} if "JSON" in system_prompt else {"type": "text"}
+        }
+        async with httpx.AsyncClient() as client:
+            res = await client.post(url, headers=headers, json=payload, timeout=60.0)
+            res.raise_for_status()
+            return res.json()["choices"][0]["message"]["content"]
+    except Exception as e:
+        print(f"[AI_SERVICE] Erro no DeepSeek: {e}")
+        return await call_gemini(system_prompt, user_content)
 
 
 def _parse_ai_json(content: str) -> dict:

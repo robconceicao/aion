@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme.dart';
 import 'aion_logo.dart';
+import 'loading_tip.dart';
+
 
 class MandalaSpinner extends StatefulWidget {
   final String message;
@@ -73,6 +75,8 @@ class _MandalaSpinnerState extends State<MandalaSpinner> with SingleTickerProvid
             mainAxisAlignment: MainAxisAlignment.center,
             children: List.generate(3, (index) => _buildDot(index)),
           ),
+          const SizedBox(height: 24),
+          const LoadingTip(),
         ],
       ),
     );

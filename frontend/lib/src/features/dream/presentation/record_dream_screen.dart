@@ -18,6 +18,10 @@ import '../../auth/presentation/auth_screen.dart';
 import 'interview_screen.dart';
 import 'widgets/tag_selector.dart';
 import 'notification_service.dart';
+import 'widgets/dream_tips.dart';
+import 'widgets/hint_card.dart';
+import 'dart:math';
+
 
 enum DreamInputMode { selection, voice, text }
 
@@ -41,6 +45,8 @@ class _RecordDreamScreenState extends State<RecordDreamScreen> with SingleTicker
   String? _transcription;
   final TextEditingController _reviewController = TextEditingController();
   final TextEditingController _textInputController = TextEditingController();
+  late String _placeholder;
+
 
   @override
   void initState() {
@@ -51,6 +57,11 @@ class _RecordDreamScreenState extends State<RecordDreamScreen> with SingleTicker
       vsync: this,
       duration: const Duration(seconds: 2),
     )..repeat(reverse: true);
+    
+    // Placeholder rotativo — sorteado uma vez por abertura de tela
+    _placeholder = DreamTips.placeholders[
+      Random().nextInt(DreamTips.placeholders.length)
+    ];
   }
 
   @override
@@ -403,10 +414,20 @@ class _RecordDreamScreenState extends State<RecordDreamScreen> with SingleTicker
                 ),
                 const SizedBox(height: 8),
                 if (_isRecording)
-                   const Text(
-                     'Gravando...',
-                     style: TextStyle(color: AionTheme.crimson, fontSize: 12),
-                   ),
+                    const Text(
+                      'Gravando...',
+                      style: TextStyle(color: AionTheme.crimson, fontSize: 12),
+                    ),
+                
+                // — Hint Card (aparece quando campo vazio, descartável por dia)
+                ListenableBuilder(
+                  listenable: _textInputController,
+                  builder: (context, _) {
+                    if (_textInputController.text.isNotEmpty) return const SizedBox.shrink();
+                    return const DreamHintCard();
+                  },
+                ),
+
                 TextField(
                   controller: _textInputController,
                   maxLines: 6,
@@ -417,7 +438,7 @@ class _RecordDreamScreenState extends State<RecordDreamScreen> with SingleTicker
                   ),
                   decoration: InputDecoration(
                     border: InputBorder.none,
-                    hintText: 'Descreva seu sonho — personagens, lugares, sensações, cores, emoções, ações...',
+                    hintText: _placeholder,
                     hintStyle: theme.textTheme.bodyLarge?.copyWith(
                       color: Colors.white24,
                       fontFamily: 'Georgia',

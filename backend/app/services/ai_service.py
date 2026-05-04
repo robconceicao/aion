@@ -179,13 +179,34 @@ async def analyze_dream_narrative(dream_text: str, analysis_context: dict = None
     from app.services.ai_service import NARRATIVE_SYSTEM_PROMPT
     context_block = ""
     if analysis_context:
-        essencia = analysis_context.get('essencia','')
-        arquetipos = str(analysis_context.get('arquetipos',[]))
-        pergunta = analysis_context.get('pergunta_para_reflexao', '')
-        context_block = f"\n\nESSÊNCIA: {essencia}\nARQUÉTIPOS: {arquetipos}\nPERGUNTA_FINAL: {pergunta}"
-    
+        essencia    = analysis_context.get('essencia', '')
+        arquetipos  = analysis_context.get('arquetipos', [])
+        simbolos    = analysis_context.get('simbolos_chave', [])
+        funcao      = analysis_context.get('funcao_compensatoria', '')
+        fase        = analysis_context.get('fase_jornada', {})
+        prospeccao  = analysis_context.get('prospeccao', '')
+        mito        = analysis_context.get('mito_espelho', {})
+        pergunta    = analysis_context.get('pergunta_para_reflexao', '')
+
+        # Formata arquetipos e simbolos de forma legível
+        arq_txt = '; '.join([f"{a.get('nome','')}: {a.get('descricao','')}" for a in arquetipos]) if isinstance(arquetipos, list) else str(arquetipos)
+        sim_txt = '; '.join([f"{s.get('elemento','')}: {s.get('significado','')}" for s in simbolos]) if isinstance(simbolos, list) else str(simbolos)
+        fase_txt = f"{fase.get('nome','')} — {fase.get('descricao','')}" if isinstance(fase, dict) else str(fase)
+        mito_txt = f"{mito.get('titulo','')} — {mito.get('paralela','')}" if isinstance(mito, dict) else str(mito)
+
+        context_block = (
+            f"\n\nESSÊNCIA DO SONHO: {essencia}"
+            f"\nPERSONAGENS INTERIORES: {arq_txt}"
+            f"\nSÍMBOLOS PRINCIPAIS: {sim_txt}"
+            f"\nO QUE A PSIQUE BUSCA: {funcao}"
+            f"\nMOMENTO DA JORNADA: {fase_txt}"
+            f"\nSINAL PARA O FUTURO: {prospeccao}"
+            f"\nECO MÍTICO: {mito_txt}"
+            f"\nPERGUNTA_FINAL: {pergunta}"
+        )
+
     try:
-        return await call_claude(NARRATIVE_SYSTEM_PROMPT, f"Sonho: {dream_text}{context_block}", max_tokens=800)
+        return await call_claude(NARRATIVE_SYSTEM_PROMPT, f"Sonho relatado: {dream_text}{context_block}", max_tokens=900)
     except Exception as e:
         return "O Oráculo aguarda em silêncio sagrado..."
 
@@ -229,7 +250,25 @@ JSON FORMAT:
 
 INTERVIEW_SYSTEM_PROMPT = "Você é Aion. Analise o relato e identifique 3 pontos cegos sob a ótica de Jung e Campbell. JSON: {\"perguntas\": [\"...\", \"...\", \"...\"]}"
 RECURRENCE_SYSTEM_PROMPT = "Analise a evolução dos símbolos como capítulos de uma saga mítica em desenvolvimento. Máximo 250 palavras."
-NARRATIVE_SYSTEM_PROMPT = "Fale como um mestre que une Jung e Campbell. Transforme a análise em um texto corrido, fluido e profundo que sirva de espelho para o Mapa Arquetípico do sonhador. Use uma linguagem acolhedora e sábia. IMPORTANTE: Encerre o texto obrigatoriamente com a PERGUNTA_FINAL fornecida no contexto. Máximo 300 palavras."
+NARRATIVE_SYSTEM_PROMPT = """Você é um psicólogo especialista em Carl Jung e Joseph Campbell. Sua missão é falar DIRETAMENTE com a pessoa que sonhou — como um terapeuta sábio, acolhedor e próximo — traduzindo a linguagem simbólica do sonho para a vida prática do cliente.
+
+DIRETRIZES DE LINGUAGEM (INVIOLÁVEIS):
+- Fale na segunda pessoa: \"Você...\", \"Seu sonho...\", \"Olhe para...\"
+- PROIBIDO jargão técnico. Nunca use: arquétipo, Self, individuação, inconsciente coletivo, anima, animus, complexo. Substitua por linguagem do dia a dia.
+- Use metáforas vivas: o sonho como uma peça de teatro que sua mente criou, como um conto de fadas onde você é o herói, como um mapa do tesouro interior.
+- Figuras ou situações assustadoras: apresente-as como energias escondidas com potencial, não como ameaças.
+- Foco no \"O QUÊ FAZER AGORA\", não só na análise do passado.
+- Tom: caloroso, direto, confiável — como um terapeuta que você conhece há anos.
+
+ESTRUTURA OBRIGATÓRIA (texto corrido, sem títulos ou listas):
+1. Acolhida: Valide o sonho como uma mensagem importante criada pela própria mente do sonhador.
+2. Leitura dos Símbolos: Explique em linguagem simples e metafórica o que os personagens, lugares e situações do sonho representam na vida do cliente.
+3. A Jornada do Herói: Mostre que o sonhador É o herói desta história, e onde ele está nessa aventura — que desafio interno pede mudança, que forças interiores podem ajudá-lo.
+4. Encerramento: Finalize OBRIGATORIAMENTE com a PERGUNTA_FINAL exatamente como fornecida no contexto, sem alterações.
+
+RESTRIÇÕES:
+- Máximo 380 palavras. Texto corrido, sem listas ou subtítulos.
+- IMPORTANTE: Não use quebras de linha (Enter) dentro do texto. Use apenas parágrafos separados por \\n."""
 
 def _build_contexto(tags_emocao=None, temas=None, residuos_diurnos=None, interview_answers=None) -> str:
     lines = []

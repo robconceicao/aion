@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Request, Header
+from fastapi import APIRouter, Depends, HTTPException, Request, Header, BackgroundTasks
 from app.models.dream import (
     DreamCreate, InterviewRequest, InterviewResponse,
     NarrativeRequest, NarrativeResponse, SemanticSearchRequest
@@ -12,54 +12,29 @@ from app.services.ai_service import (
 from datetime import datetime
 from typing import Optional
 import uuid
+import asyncio
 
 router = APIRouter()
 
-@router.post("/", response_model=dict)
-async def create_dream(
-    dream_in: DreamCreate,
-    x_user_email: Optional[str] = Header(None),
+
+async def _background_save_and_recurrence(
+    supabase, dream_in: DreamCreate, analysis: dict,
+    embedding: list, user_email: str
 ):
-    supabase = get_supabase()
-    user_email = x_user_email or dream_in.user_email or "usuario@aion.app"
-
-    # 1. Analisa via IA (Estrutural com tags e entrevista)
-    analysis = await analyze_dream(
-        dream_text=dream_in.text,
-        tags_emocao=dream_in.tags_emocao,
-        temas=dream_in.temas,
-        residuos_diurnos=dream_in.residuos_diurnos,
-        interview_answers=dream_in.interview_answers,
-    )
-
-    # 2. Narrativa
-    try:
-        narrative = await analyze_dream_narrative(
-            dream_text=dream_in.text,
-            analysis_context=analysis,
-        )
-        analysis["narrative"] = narrative
-    except Exception as e:
-        print(f"[ROUTER] Erro ao gerar narrativa: {e}")
-        analysis["narrative"] = ""
-
-    # 3. Embedding para busca semântica
-    embedding = await generate_embedding(dream_in.text)
-
-    # 4. Detectar recorrência
+    """
+    Roda APÓS a resposta ser enviada ao cliente.
+    Detecta recorrência e persiste o sonho no Supabase.
+    """
     similar_dreams = []
     try:
-        # Busca sonhos similares do mesmo usuário no banco
         result = supabase.rpc("buscar_sonhos_semanticos", {
             "p_user_email": user_email,
             "query_emb": embedding,
             "threshold": 0.75,
             "max_results": 3,
         }).execute()
-        
         similar_dreams = result.data or []
-        
-        # Se encontrou 2 ou mais sonhos anteriores similares, analisa o padrão
+
         if len(similar_dreams) >= 2:
             recurrence_text = await analyze_recurring_pattern(
                 current_dream=dream_in.text,
@@ -71,9 +46,9 @@ async def create_dream(
                 "analise_evolucao": recurrence_text,
             }
     except Exception as e:
-        print(f"[ROUTER] Erro detecção recorrência: {e}")
+        print(f"[BACKGROUND] Erro recorrência: {e}")
 
-    # 5. Salva no Supabase
+    # Salva no Supabase
     dream_id = str(uuid.uuid4())
     dream_data = {
         "id": dream_id,
@@ -88,12 +63,53 @@ async def create_dream(
         "user_email": user_email,
         "created_at": datetime.utcnow().isoformat(),
     }
-
     try:
         supabase.table("dreams").insert(dream_data).execute()
+        print(f"[BACKGROUND] Sonho {dream_id} salvo com sucesso.")
     except Exception as e:
-        print(f"[AVISO SUPABASE]: Erro ao salvar: {str(e)}")
-    
+        print(f"[BACKGROUND] Erro ao salvar: {str(e)}")
+
+
+@router.post("/", response_model=dict)
+async def create_dream(
+    dream_in: DreamCreate,
+    background_tasks: BackgroundTasks,
+    x_user_email: Optional[str] = Header(None),
+):
+    supabase = get_supabase()
+    user_email = x_user_email or dream_in.user_email or "usuario@aion.app"
+
+    # ── OTIMIZAÇÃO #1: Análise e Embedding em PARALELO ──────────────
+    # Ambos precisam apenas do texto do sonho → rodam simultaneamente
+    analysis, embedding = await asyncio.gather(
+        analyze_dream(
+            dream_text=dream_in.text,
+            tags_emocao=dream_in.tags_emocao,
+            temas=dream_in.temas,
+            residuos_diurnos=dream_in.residuos_diurnos,
+            interview_answers=dream_in.interview_answers,
+        ),
+        generate_embedding(dream_in.text),
+    )
+
+    # ── Narrativa (precisa da análise, então é sequencial) ───────────
+    try:
+        narrative = await analyze_dream_narrative(
+            dream_text=dream_in.text,
+            analysis_context=analysis,
+        )
+        analysis["narrative"] = narrative
+    except Exception as e:
+        print(f"[ROUTER] Erro ao gerar narrativa: {e}")
+        analysis["narrative"] = ""
+
+    # ── OTIMIZAÇÃO #2: Recorrência + Supabase em BACKGROUND ─────────
+    # O cliente recebe a resposta AGORA. O resto acontece nos bastidores.
+    background_tasks.add_task(
+        _background_save_and_recurrence,
+        supabase, dream_in, analysis, embedding, user_email,
+    )
+
     return analysis
 
 

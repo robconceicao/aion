@@ -78,8 +78,16 @@ class _LoadingTipState extends State<LoadingTip>
     return FadeTransition(
       opacity: _fadeAnim,
       child: Container(
-        constraints: const BoxConstraints(maxWidth: 340),
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+        constraints: const BoxConstraints(maxWidth: 360),
+        margin: const EdgeInsets.symmetric(horizontal: 16),
+        padding: const EdgeInsets.fromLTRB(24, 18, 24, 18),
+        decoration: BoxDecoration(
+          color: AionTheme.darkAbyss.withOpacity(0.6),
+          border: Border(
+            left: BorderSide(color: AionTheme.gold.withOpacity(0.45), width: 1),
+            right: BorderSide(color: AionTheme.gold.withOpacity(0.45), width: 1),
+          ),
+        ),
         child: Column(
           children: [
             // Divisor decorativo
@@ -88,21 +96,21 @@ class _LoadingTipState extends State<LoadingTip>
                 height: 1,
                 decoration: BoxDecoration(gradient: LinearGradient(colors: [
                   Colors.transparent,
-                  AionTheme.gold.withOpacity(0.25),
+                  AionTheme.gold.withOpacity(0.5),
                 ])),
               )),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 10),
                 child: Text('✦',
                     style: TextStyle(
-                      color: AionTheme.gold.withOpacity(0.35),
+                      color: AionTheme.gold.withOpacity(0.7),
                       fontSize: 9,
                     )),
               ),
               Expanded(child: Container(
                 height: 1,
                 decoration: BoxDecoration(gradient: LinearGradient(colors: [
-                  AionTheme.gold.withOpacity(0.25),
+                  AionTheme.gold.withOpacity(0.5),
                   Colors.transparent,
                 ])),
               )),
@@ -117,8 +125,8 @@ class _LoadingTipState extends State<LoadingTip>
                 fontSize: 15,
                 height: 1.65,
                 fontStyle: FontStyle.italic,
-                color: AionTheme.silver.withOpacity(0.55),
-                letterSpacing: 0.2,
+                color: AionTheme.silver.withOpacity(0.85),
+                letterSpacing: 0.3,
               ),
             ),
           ],

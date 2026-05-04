@@ -246,11 +246,13 @@ class _NarrativeResultScreenState extends State<NarrativeResultScreen>
   }
 
   Widget _buildQuestionBlock(String text) {
+    // Remove aspas externas duplicadas se já existirem
+    final cleanText = text.startsWith('"') ? text : '"$text"';
     return Container(
       margin: const EdgeInsets.only(top: 16, bottom: 40),
-      padding: const EdgeInsets.all(28),
+      padding: const EdgeInsets.fromLTRB(28, 24, 28, 28),
       decoration: BoxDecoration(
-        border: Border.all(color: AionTheme.gold.withOpacity(0.2)),
+        border: Border.all(color: AionTheme.gold.withOpacity(0.55), width: 1),
         color: AionTheme.darkAbyss,
       ),
       child: Column(
@@ -258,13 +260,13 @@ class _NarrativeResultScreenState extends State<NarrativeResultScreen>
           Text('PERGUNTA PARA REFLEXÃO',
               style: GoogleFonts.ptSerif(
                 fontSize: 9, letterSpacing: 4,
-                color: AionTheme.gold.withOpacity(0.6),
+                color: AionTheme.gold.withOpacity(0.8),
               )),
-          const SizedBox(height: 16),
-          Text(text,
+          const SizedBox(height: 20),
+          Text(cleanText,
               textAlign: TextAlign.center,
               style: GoogleFonts.cormorantGaramond(
-                fontSize: 20, height: 1.6, color: AionTheme.ghost,
+                fontSize: 20, height: 1.65, color: AionTheme.gold,
                 fontStyle: FontStyle.italic, fontWeight: FontWeight.w300,
               )),
         ],

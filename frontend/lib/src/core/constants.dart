@@ -1,5 +1,5 @@
 class AionConfig {
-  // O Oráculo está oficialmente vivo no Render!
+  // AION está oficialmente vivo no Render!
   static const String apiBaseUrl = 'https://aion-vvx7.onrender.com';
   
   static const String transcribeUrl = '$apiBaseUrl/voice/transcribe';

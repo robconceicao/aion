@@ -663,7 +663,7 @@ class _RecordDreamScreenState extends State<RecordDreamScreen> with SingleTicker
       children: [
         _buildSelectionCard(
           title: 'RELATO VOCAL',
-          subtitle: 'Fale sua jornada para o Oráculo',
+          subtitle: 'Fale sua jornada para o AION',
           icon: Icons.mic_none,
           color: Colors.amber.shade200,
           onTap: () => setState(() => _currentMode = DreamInputMode.voice),

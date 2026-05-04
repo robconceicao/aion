@@ -5,12 +5,12 @@ class DreamTips {
   static const List<String> registry = [
     'Anote palavras-chave antes de qualquer coisa — emoções primeiro, cena depois.',
     'Registre antes de verificar o celular. Notificações apagam a memória do sonho.',
-    'Mesmo fragmentos têm valor. "Escuridão, água, medo" já é suficiente para o Oráculo.',
+    'Mesmo fragmentos têm valor. "Escuridão, água, medo" já é suficiente para o AION.',
     'Não interprete enquanto anota — apenas descreva o que você viu e sentiu.',
     'O corpo também sonha. Inclua sensações físicas que permaneceram ao acordar.',
     'A última cena antes de acordar geralmente é a mais significativa.',
     'Se só se lembrar de uma emoção, registre só ela. Emoção sem cena ainda é um sonho.',
-    'Não julgue o que sonhou. O Oráculo não tem filtro moral — e nem precisa ter.',
+    'Não julgue o que sonhou. O AION não tem filtro moral — e nem precisa ter.',
     'Sonhos recorrentes ficam mais claros quando anotados em série.',
     'Deixe um caderno ao lado da cama. O gesto físico de anotar consolida a memória.',
   ];

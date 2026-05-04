@@ -247,7 +247,7 @@ class _DreamDiaryScreenState extends State<DreamDiaryScreen> {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            'Aqui você busca por ideias, não apenas palavras. A IA entende o conceito: se buscar "superação", ela encontrará sonhos sobre subir montanhas ou vencer desafios, mesmo que a palavra não esteja no texto.',
+                            'Aqui você busca por ideias, não apenas palavras. AION entende o conceito: se buscar "superação", ele encontrará sonhos sobre subir montanhas ou vencer desafios, mesmo que a palavra não esteja no texto.',
                             style: GoogleFonts.ptSerif(
                               fontSize: 11,
                               height: 1.5,

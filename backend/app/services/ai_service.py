@@ -185,7 +185,7 @@ async def analyze_dream_narrative(dream_text: str, analysis_context: dict = None
         context_block = f"\n\nESSÊNCIA: {essencia}\nARQUÉTIPOS: {arquetipos}\nPERGUNTA_FINAL: {pergunta}"
     
     try:
-        return await call_claude(NARRATIVE_SYSTEM_PROMPT, f"Sonho: {dream_text}{context_block}", max_tokens=2000)
+        return await call_claude(NARRATIVE_SYSTEM_PROMPT, f"Sonho: {dream_text}{context_block}", max_tokens=800)
     except Exception as e:
         return "O Oráculo aguarda em silêncio sagrado..."
 

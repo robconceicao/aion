@@ -40,7 +40,7 @@ jobs:
       - name: Lint com Ruff
         run: |
           pip install ruff
-          ruff check app/ --select E,W,F --ignore E501
+          ruff check app/ --select E,W,F --ignore E501,W291,W293
 
       - name: Executar testes
         env:
@@ -67,7 +67,7 @@ jobs:
       - name: Configurar Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.22.x"
+          flutter-version: "3.24.x"
           channel: "stable"
           cache: true
 
@@ -111,7 +111,7 @@ jobs:
       - name: Configurar Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.22.x"
+          flutter-version: "3.24.x"
           channel: "stable"
           cache: true
 

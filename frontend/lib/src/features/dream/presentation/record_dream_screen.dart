@@ -2,7 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:record/record.dart';
-import 'package:dio/dio.dart';
+import 'package:dio/dio.dart' as dio_pkg;
 import '../../../core/theme.dart';
 import '../../../core/constants.dart';
 import 'widgets/mandala_spinner.dart';
@@ -109,13 +109,13 @@ class _RecordDreamScreenState extends State<RecordDreamScreen> with SingleTicker
       _isTranscribing = true;
       _loadingMessage = 'Transcrevendo sua voz...';
     });
-    final dio = Dio();
+    final dio = dio_pkg.Dio();
     try {
       // Usamos a abstração para pegar os bytes do áudio (seja de arquivo ou BLOB)
       final bytes = await _platformRecorder.getAudioBytes(path);
       
-      final formData = FormData.fromMap({
-        'file': MultipartFile.fromBytes(bytes, filename: 'recording.m4a'),
+      final formData = dio_pkg.FormData.fromMap({
+        'file': dio_pkg.MultipartFile.fromBytes(bytes, filename: 'recording.m4a'),
       });
 
       // Talking to the backend via central config
@@ -153,7 +153,7 @@ class _RecordDreamScreenState extends State<RecordDreamScreen> with SingleTicker
     // Cancela notificação do dia quando usuário inicia um registro
     await AionNotificationService.cancelTodaysMorning();
 
-    final dio = Dio();
+    final dio = dio_pkg.Dio();
     try {
       // Solicita 3 perguntas de entrevista ao Claude
       final response = await dio.post(
@@ -179,7 +179,7 @@ class _RecordDreamScreenState extends State<RecordDreamScreen> with SingleTicker
           ),
         ),
       );
-    } on DioException catch (e) {
+    } on dio_pkg.DioException catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

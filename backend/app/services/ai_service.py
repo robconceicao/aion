@@ -136,7 +136,6 @@ def _parse_ai_json(content: str) -> dict:
 # ─── FUNÇÕES DO AION (ALMA JUNG & CAMPBELL) ───────────────────
 
 async def analyze_dream(dream_text: str, **kwargs) -> dict:
-    from app.services.ai_service import PROMPT_TEMPLATE, _build_contexto, _get_error_response
     contexto = _build_contexto(
         kwargs.get('tags_emocao'), kwargs.get('temas'), 
         kwargs.get('residuos_diurnos'), kwargs.get('interview_answers')
@@ -153,7 +152,6 @@ async def analyze_dream(dream_text: str, **kwargs) -> dict:
 
 
 async def generate_interview_questions(dream_text: str) -> list:
-    from app.services.ai_service import INTERVIEW_SYSTEM_PROMPT
     try:
         content = await call_claude(INTERVIEW_SYSTEM_PROMPT, f"Sonho: {dream_text}", max_tokens=1000)
         data = _parse_ai_json(content)
@@ -163,7 +161,6 @@ async def generate_interview_questions(dream_text: str) -> list:
 
 
 async def analyze_recurring_pattern(current_dream: str, similar_dreams: list) -> str:
-    from app.services.ai_service import RECURRENCE_SYSTEM_PROMPT
     history = "\n\nANTERIORES:\n"
     for i, d in enumerate(similar_dreams[:3], 1):
         relato = (d.get("relato") or "")[:300]
@@ -176,7 +173,6 @@ async def analyze_recurring_pattern(current_dream: str, similar_dreams: list) ->
 
 
 async def analyze_dream_narrative(dream_text: str, analysis_context: dict = None) -> str:
-    from app.services.ai_service import NARRATIVE_SYSTEM_PROMPT
     context_block = ""
     if analysis_context:
         essencia    = analysis_context.get('essencia', '')

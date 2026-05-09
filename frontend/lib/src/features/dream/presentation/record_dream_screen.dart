@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:record/record.dart';
@@ -6,22 +5,11 @@ import 'package:dio/dio.dart' as dio_pkg;
 import '../../../core/theme.dart';
 import '../../../core/constants.dart';
 import 'widgets/mandala_spinner.dart';
-import 'analysis_result_screen.dart';
-import 'audio_recorder.dart';
-import 'audio_recorder_platform.dart';
-import 'archetypes_screen.dart';
-import 'canal_screen.dart';
-import 'dream_choice_screen.dart';
-import 'narrative_result_screen.dart';
-import 'dream_history_screen.dart';
 import '../../auth/presentation/auth_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'interview_screen.dart';
-import 'widgets/tag_selector.dart';
+import 'dream_history_screen.dart';
 import 'notification_service.dart';
-import 'widgets/dream_tips.dart';
-import 'widgets/hint_card.dart';
-import 'dart:math';
 
 
 enum DreamInputMode { selection, voice, text }

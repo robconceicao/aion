@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, Header, BackgroundTasks
 from app.models.dream import (
     DreamCreate, InterviewRequest, InterviewResponse,
-    NarrativeRequest, NarrativeResponse, SemanticSearchRequest
+    NarrativeRequest, SemanticSearchRequest
 )
 from app.database import get_supabase
 from app.services.ai_service import (

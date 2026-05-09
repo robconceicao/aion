@@ -15,6 +15,7 @@ import 'dream_choice_screen.dart';
 import 'narrative_result_screen.dart';
 import 'dream_history_screen.dart';
 import '../../auth/presentation/auth_screen.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'interview_screen.dart';
 import 'widgets/tag_selector.dart';
 import 'notification_service.dart';
@@ -330,7 +331,7 @@ class _RecordDreamScreenState extends State<RecordDreamScreen> with SingleTicker
                   _navBtn(context, 'HISTÓRICO', false, () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (_) => const DreamHistoryScreen(userEmail: 'usuario@aion.app')),
+                      MaterialPageRoute(builder: (_) => DreamHistoryScreen(userEmail: Supabase.instance.client.auth.currentUser?.email ?? '')),
                     );
                   }),
                   _navBtn(context, 'SAIR', false, () {

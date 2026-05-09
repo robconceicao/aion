@@ -77,7 +77,7 @@ async def create_dream(
     x_user_email: Optional[str] = Header(None),
 ):
     supabase = get_supabase()
-    user_email = x_user_email or dream_in.user_email or "usuario@aion.app"
+    user_email = x_user_email or dream_in.user_email or "anonimo@aion.app"
 
     # ── OTIMIZAÇÃO #1: Análise e Embedding em PARALELO ──────────────
     # Ambos precisam apenas do texto do sonho → rodam simultaneamente
@@ -142,7 +142,7 @@ async def get_interview_questions(request: InterviewRequest):
 @router.post("/search")
 async def semantic_search(request: SemanticSearchRequest, x_user_email: Optional[str] = Header(None)):
     """Busca semântica no diário de sonhos."""
-    user_email = x_user_email or "usuario@aion.app"
+    user_email = x_user_email or "anonimo@aion.app"
     try:
         query_embedding = await generate_embedding(request.query)
         supabase = get_supabase()
@@ -164,7 +164,7 @@ async def filter_dreams(
     x_user_email: Optional[str] = Header(None)
 ):
     """Filtra sonhos por emoção, fase da jornada ou texto livre."""
-    user_email = x_user_email or "usuario@aion.app"
+    user_email = x_user_email or "anonimo@aion.app"
     try:
         supabase = get_supabase()
         q = (supabase.table("dreams").select("*")

@@ -77,7 +77,7 @@ class _DreamDiaryScreenState extends State<DreamDiaryScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => DreamHistoryScreen(
-        userEmail: 'usuario@aion.app',
+        userEmail: Supabase.instance.client.auth.currentUser?.email ?? '',
         filtroEmocao: emocao,
         filtroFase: fase,
       )),
@@ -111,7 +111,7 @@ class _DreamDiaryScreenState extends State<DreamDiaryScreen> {
   Future<void> _loadStats() async {
     try {
       // Busca os sonhos do usuário (usando o e-mail padrão para consistência com o histórico)
-      const String userEmail = 'usuario@aion.app';
+      final String userEmail = Supabase.instance.client.auth.currentUser?.email ?? '';
       final data = await Supabase.instance.client
           .from('dreams')
           .select('created_at, is_favorite, main_archetype')
@@ -432,7 +432,7 @@ class _DreamDiaryScreenState extends State<DreamDiaryScreen> {
         } else if (text == 'HISTÓRICO') {
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (_) => const DreamHistoryScreen(userEmail: 'usuario@aion.app')),
+            MaterialPageRoute(builder: (_) => DreamHistoryScreen(userEmail: Supabase.instance.client.auth.currentUser?.email ?? '')),
           );
         } else if (text == 'ARQUÉTIPOS') {
           Navigator.push(

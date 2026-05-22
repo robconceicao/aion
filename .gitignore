@@ -39,3 +39,10 @@ Thumbs.db
 
 # Local SDKs
 frontend/flutter/
+
+# Python bytecode
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/

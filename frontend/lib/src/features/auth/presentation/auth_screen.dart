@@ -21,6 +21,21 @@ class _AuthScreenState extends State<AuthScreen> {
   String? _selectedGender;
 
   @override
+  void initState() {
+    super.initState();
+    _checkActiveSession();
+  }
+
+  void _checkActiveSession() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final session = Supabase.instance.client.auth.currentSession;
+      if (session != null && mounted) {
+        Navigator.pushReplacementNamed(context, '/home');
+      }
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     

@@ -1,16 +1,27 @@
 from fastapi import APIRouter, Depends
 from app.routers.auth import get_current_admin
-from app.database import get_database
-from datetime import datetime, timedelta
+from app.database import get_supabase
 
 router = APIRouter()
 
 @router.get("/dashboard")
 async def get_dashboard_summary(admin: dict = Depends(get_current_admin)):
-    db = await get_database()
-    total_users = await db.users.count_documents({})
-    total_dreams = await db.dreams.count_documents({})
+    supabase = get_supabase()
+    total_users = 0
+    total_dreams = 0
     
+    try:
+        res_users = supabase.table("users").select("*", count="exact").limit(1).execute()
+        total_users = res_users.count or 0
+    except Exception as e:
+        print(f"Error counting users: {e}")
+        
+    try:
+        res_dreams = supabase.table("dreams").select("*", count="exact").limit(1).execute()
+        total_dreams = res_dreams.count or 0
+    except Exception as e:
+        print(f"Error counting dreams: {e}")
+        
     return {
         "status": "online",
         "total_users": total_users,
@@ -20,26 +31,10 @@ async def get_dashboard_summary(admin: dict = Depends(get_current_admin)):
 
 @router.get("/stats/geo")
 async def get_geo_stats(admin: dict = Depends(get_current_admin)):
-    db = await get_database()
-    pipeline = [
-        {"$group": {"_id": "$location.country", "count": {"$sum": 1}}},
-        {"$sort": {"count": -1}}
-    ]
-    cursor = db.analytics_events.aggregate(pipeline)
-    stats = await cursor.to_list(length=100)
-    return stats
+    # Return empty list since analytics_events is a MongoDB collection not migrated to SQL
+    return []
 
 @router.get("/stats/daily")
 async def get_daily_stats(admin: dict = Depends(get_current_admin)):
-    db = await get_database()
-    # Simplified daily dreams count
-    pipeline = [
-        {"$match": {"event_type": "dream_created"}},
-        {"$group": {
-            "_id": {"$dateToString": {"format": "%Y-%m-%d", "date": "$timestamp"}},
-            "count": {"$sum": 1}
-        }},
-        {"$sort": {"_id": -1}}
-    ]
-    cursor = db.analytics_events.aggregate(pipeline)
-    return await cursor.to_list(length=30)
+    # Return empty list since analytics_events is a MongoDB collection not migrated to SQL
+    return []

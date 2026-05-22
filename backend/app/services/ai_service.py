@@ -66,9 +66,9 @@ async def call_gemini(system_prompt: str, user_content: str):
     if not settings.GEMINI_API_KEY:
         raise ValueError("Nenhuma chave de IA disponível.")
     try:
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        model = genai.GenerativeModel('gemini-2.5-flash')
         full_prompt = f"{system_prompt}\n\nUSUÁRIO: {user_content}"
-        response = model.generate_content(full_prompt)
+        response = await model.generate_content_async(full_prompt)
         return response.text
     except Exception as e:
         print(f"[AI_SERVICE] Erro fatal no Gemini: {e}")

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:dio/dio.dart';
+import '../../../core/api_service.dart';
 import '../../../core/theme.dart';
 import '../../../core/constants.dart';
 import '../../../core/widgets/cinematic_background.dart';
@@ -40,7 +41,7 @@ class _DreamHistoryScreenState extends State<DreamHistoryScreen> {
     });
 
     try {
-      final dio = Dio();
+      final dio = ApiService.client;
       Response response;
       
       if (widget.filtroEmocao != null || widget.filtroFase != null) {
@@ -51,7 +52,6 @@ class _DreamHistoryScreenState extends State<DreamHistoryScreen> {
             'emocao': widget.filtroEmocao,
             'fase': widget.filtroFase,
           },
-          options: Options(headers: {'x-user-email': widget.userEmail}),
         );
         setState(() {
           _dreams = List<Map<String, dynamic>>.from(response.data['dreams'] ?? []);
@@ -61,7 +61,6 @@ class _DreamHistoryScreenState extends State<DreamHistoryScreen> {
         // Carrega o histórico normal
         response = await dio.get(
           AionConfig.historyUrl,
-          queryParameters: {'user_email': widget.userEmail},
         );
         setState(() {
           _dreams = List<Map<String, dynamic>>.from(response.data);
@@ -291,7 +290,7 @@ class _DreamHistoryScreenState extends State<DreamHistoryScreen> {
 
   void _openDream(Map<String, dynamic> dream) {
     final analysis = dream['interpretacao'] as Map<String, dynamic>? ?? {};
-    final narrative = dream['narrativa'] as String? ?? '';
+    final narrative = (analysis['narrative'] as String?) ?? '';
     final relato = dream['relato'] as String? ?? '';
 
     Navigator.push(

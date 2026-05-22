@@ -17,6 +17,7 @@ app.add_middleware(
 # Routes
 app.include_router(auth.router, prefix="/auth", tags=["Authentication"])
 app.include_router(dreams.router, prefix="/dreams", tags=["Dreams"])
+app.include_router(feedback.router, prefix="/dreams", tags=["Feedback"])
 app.include_router(analytics.router, prefix="/admin", tags=["Analytics"])
 app.include_router(feedback.router, prefix="/feedback", tags=["Feedback"])
 app.include_router(voice.router, prefix="/voice", tags=["Voice"])

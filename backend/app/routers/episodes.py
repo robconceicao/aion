@@ -1,6 +1,7 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from app.models.episode import EpisodeCreate, EpisodeModel
 from app.database import get_supabase
+from app.routers.auth import get_current_admin
 from datetime import datetime
 import uuid
 
@@ -23,7 +24,7 @@ async def get_episode(episode_number: int):
     return response.data[0]
 
 @router.post("/", response_model=EpisodeModel, status_code=201)
-async def create_episode(episode_in: EpisodeCreate):
+async def create_episode(episode_in: EpisodeCreate, admin: dict = Depends(get_current_admin)):
     """Cria um novo episódio no canal."""
     supabase = get_supabase()
 
@@ -43,7 +44,7 @@ async def create_episode(episode_in: EpisodeCreate):
     return response.data[0]
 
 @router.put("/{episode_number}", response_model=EpisodeModel)
-async def update_episode(episode_number: int, episode_in: EpisodeCreate):
+async def update_episode(episode_number: int, episode_in: EpisodeCreate, admin: dict = Depends(get_current_admin)):
     """Atualiza os dados de um episódio existente."""
     supabase = get_supabase()
     
@@ -56,9 +57,10 @@ async def update_episode(episode_number: int, episode_in: EpisodeCreate):
     return response.data[0]
 
 @router.delete("/{episode_number}", status_code=204)
-async def delete_episode(episode_number: int):
+async def delete_episode(episode_number: int, admin: dict = Depends(get_current_admin)):
     """Remove um episódio do canal."""
     supabase = get_supabase()
     response = supabase.table("episodes").delete().eq("number", episode_number).execute()
     if not response.data:
         raise HTTPException(status_code=404, detail="Episódio não encontrado")
+

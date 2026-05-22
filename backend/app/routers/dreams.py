@@ -13,13 +13,13 @@ from datetime import datetime
 from typing import Optional
 import uuid
 import asyncio
+from app.routers.auth import get_current_user
 
 router = APIRouter()
 
-
 async def _background_save_and_recurrence(
     supabase, dream_in: DreamCreate, analysis: dict,
-    embedding: list, user_email: str
+    embedding: list, user_id: str, user_email: str
 ):
     """
     Roda APÓS a resposta ser enviada ao cliente.
@@ -27,8 +27,9 @@ async def _background_save_and_recurrence(
     """
     similar_dreams = []
     try:
+        # Busca sonhos do mesmo usuário para detectar recorrência
         result = supabase.rpc("buscar_sonhos_semanticos", {
-            "p_user_email": user_email,
+            "p_user_id": user_id,
             "query_emb": embedding,
             "threshold": 0.75,
             "max_results": 3,
@@ -60,6 +61,7 @@ async def _background_save_and_recurrence(
         "residuos_diurnos": dream_in.residuos_diurnos or [],
         "is_recurrent": len(similar_dreams) >= 2,
         "recurrence_count": len(similar_dreams),
+        "user_id": user_id,
         "user_email": user_email,
         "created_at": datetime.utcnow().isoformat(),
     }
@@ -74,13 +76,13 @@ async def _background_save_and_recurrence(
 async def create_dream(
     dream_in: DreamCreate,
     background_tasks: BackgroundTasks,
-    x_user_email: Optional[str] = Header(None),
+    current_user: dict = Depends(get_current_user),
 ):
     supabase = get_supabase()
-    user_email = x_user_email or dream_in.user_email or "anonimo@aion.app"
+    user_id = current_user.get("sub")
+    user_email = current_user.get("email", "anonimo@aion.app")
 
     # ── OTIMIZAÇÃO #1: Análise e Embedding em PARALELO ──────────────
-    # Ambos precisam apenas do texto do sonho → rodam simultaneamente
     analysis, embedding = await asyncio.gather(
         analyze_dream(
             dream_text=dream_in.text,
@@ -92,7 +94,7 @@ async def create_dream(
         generate_embedding(dream_in.text),
     )
 
-    # ── Narrativa (precisa da análise, então é sequencial) ───────────
+    # ── Narrativa ───────────
     try:
         narrative = await analyze_dream_narrative(
             dream_text=dream_in.text,
@@ -104,23 +106,23 @@ async def create_dream(
         analysis["narrative"] = ""
 
     # ── OTIMIZAÇÃO #2: Recorrência + Supabase em BACKGROUND ─────────
-    # O cliente recebe a resposta AGORA. O resto acontece nos bastidores.
     background_tasks.add_task(
         _background_save_and_recurrence,
-        supabase, dream_in, analysis, embedding, user_email,
+        supabase, dream_in, analysis, embedding, user_id, user_email,
     )
 
     return analysis
 
 
 @router.get("/history", response_model=list)
-async def get_user_history(user_email: str):
+async def get_user_history(current_user: dict = Depends(get_current_user)):
     supabase = get_supabase()
+    user_id = current_user.get("sub")
     try:
         res = (
             supabase.table("dreams")
             .select("id, relato, interpretacao, created_at")
-            .eq("user_email", user_email)
+            .eq("user_id", user_id)
             .order("created_at", desc=True)
             .limit(50)
             .execute()
@@ -140,14 +142,17 @@ async def get_interview_questions(request: InterviewRequest):
 
 
 @router.post("/search")
-async def semantic_search(request: SemanticSearchRequest, x_user_email: Optional[str] = Header(None)):
+async def semantic_search(
+    request: SemanticSearchRequest, 
+    current_user: dict = Depends(get_current_user)
+):
     """Busca semântica no diário de sonhos."""
-    user_email = x_user_email or "anonimo@aion.app"
+    user_id = current_user.get("sub")
     try:
         query_embedding = await generate_embedding(request.query)
         supabase = get_supabase()
         result = supabase.rpc("buscar_sonhos_semanticos", {
-            "p_user_email": user_email,
+            "p_user_id": user_id,
             "query_emb": query_embedding,
             "threshold": request.threshold,
             "max_results": request.max_results,
@@ -161,14 +166,14 @@ async def semantic_search(request: SemanticSearchRequest, x_user_email: Optional
 async def filter_dreams(
     emocao: str = None, fase: str = None,
     query: str = None, limit: int = 20, offset: int = 0,
-    x_user_email: Optional[str] = Header(None)
+    current_user: dict = Depends(get_current_user)
 ):
     """Filtra sonhos por emoção, fase da jornada ou texto livre."""
-    user_email = x_user_email or "anonimo@aion.app"
+    user_id = current_user.get("sub")
     try:
         supabase = get_supabase()
         q = (supabase.table("dreams").select("*")
-             .eq("user_email", user_email)
+             .eq("user_id", user_id)
              .order("created_at", desc=True)
              .range(offset, offset + limit - 1))
              

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:dio/dio.dart';
+import '../../../core/api_service.dart';
 import '../../../core/theme.dart';
 import '../../../core/constants.dart';
 import 'dream_choice_screen.dart';
@@ -29,7 +30,7 @@ class InterviewScreen extends StatefulWidget {
 class _InterviewScreenState extends State<InterviewScreen>
     with SingleTickerProviderStateMixin {
   final List<TextEditingController> _controllers = [];
-  final _dio = Dio();
+  final _dio = ApiService.client;
   bool _isLoading = false;
 
   late AnimationController _animController;

@@ -3,7 +3,6 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme.dart';
 import '../../../core/widgets/cinematic_background.dart';
 import '../../dream/presentation/widgets/aion_logo.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import '../../dream/presentation/notification_service.dart';
 
 class ProfileScreen extends StatefulWidget {

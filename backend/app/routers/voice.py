@@ -9,14 +9,15 @@ router = APIRouter()
 
 @router.post("/transcribe")
 async def transcribe_voice(
-    file: UploadFile = File(...)
+    file: UploadFile = File(...),
+    current_user: dict = Depends(get_current_user)
 ):
     """
     Receives an audio file, transcribes it using Gemini, and returns the text.
     The file is stored temporarily and deleted after processing.
     """
     # Verify file type (basic extension check)
-    extension = os.path.splitext(file.filename)[1]
+    extension = os.path.splitext(file.filename)[1].lower()
     if extension not in ['.m4a', '.mp3', '.wav', '.ogg', '.aac', '.webm', '.flac']:
          raise HTTPException(status_code=400, detail="Unsupported audio format")
 

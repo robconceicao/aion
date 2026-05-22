@@ -1,18 +1,23 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:record/record.dart';
 import 'package:dio/dio.dart' as dio_pkg;
 import '../../../core/theme.dart';
 import '../../../core/constants.dart';
+import '../../../core/api_service.dart';
 import 'widgets/mandala_spinner.dart';
 import '../../auth/presentation/auth_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'interview_screen.dart';
 import 'dream_history_screen.dart';
 import 'notification_service.dart';
+import 'audio_recorder.dart';
+import 'audio_recorder_platform.dart';
+import 'widgets/tag_selector.dart';
+import 'widgets/dream_tips.dart';
+import 'widgets/hint_card.dart';
 
-
-enum DreamInputMode { selection, voice, text }
 
 class RecordDreamScreen extends StatefulWidget {
   const RecordDreamScreen({super.key});
@@ -25,14 +30,11 @@ class _RecordDreamScreenState extends State<RecordDreamScreen> with SingleTicker
   late AudioRecorder _audioRecorder;
   late AnimationController _animationController;
   late AudioRecorderPlatform _platformRecorder;
-  DreamInputMode _currentMode = DreamInputMode.selection;
   bool _isRecording = false;
-  String? _audioPath;
   bool _isProcessing = false;
   bool _isTranscribing = false;
   String _loadingMessage = 'Processando...';
   String? _transcription;
-  final TextEditingController _reviewController = TextEditingController();
   final TextEditingController _textInputController = TextEditingController();
   late String _placeholder;
 
@@ -57,7 +59,6 @@ class _RecordDreamScreenState extends State<RecordDreamScreen> with SingleTicker
   void dispose() {
     _audioRecorder.dispose();
     _animationController.dispose();
-    _reviewController.dispose();
     _textInputController.dispose();
     super.dispose();
   }
@@ -81,7 +82,6 @@ class _RecordDreamScreenState extends State<RecordDreamScreen> with SingleTicker
       final path = await _platformRecorder.stop(_audioRecorder);
       setState(() {
         _isRecording = false;
-        _audioPath = path;
       });
 
       if (path != null) {
@@ -97,7 +97,7 @@ class _RecordDreamScreenState extends State<RecordDreamScreen> with SingleTicker
       _isTranscribing = true;
       _loadingMessage = 'Transcrevendo sua voz...';
     });
-    final dio = dio_pkg.Dio();
+    final dio = ApiService.client;
     try {
       // Usamos a abstração para pegar os bytes do áudio (seja de arquivo ou BLOB)
       final bytes = await _platformRecorder.getAudioBytes(path);
@@ -141,7 +141,7 @@ class _RecordDreamScreenState extends State<RecordDreamScreen> with SingleTicker
     // Cancela notificação do dia quando usuário inicia um registro
     await AionNotificationService.cancelTodaysMorning();
 
-    final dio = dio_pkg.Dio();
+    final dio = ApiService.client;
     try {
       // Solicita 3 perguntas de entrevista ao Claude
       final response = await dio.post(
@@ -646,187 +646,5 @@ class _RecordDreamScreenState extends State<RecordDreamScreen> with SingleTicker
     );
   }
 
-  Widget _buildSelectionView(ThemeData theme) {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        _buildSelectionCard(
-          title: 'RELATO VOCAL',
-          subtitle: 'Fale sua jornada para o AION',
-          icon: Icons.mic_none,
-          color: Colors.amber.shade200,
-          onTap: () => setState(() => _currentMode = DreamInputMode.voice),
-        ),
-        const SizedBox(height: 30),
-        _buildSelectionCard(
-          title: 'RELATO ESCRITO',
-          subtitle: 'Escreva suas imagens e visões',
-          icon: Icons.history_edu,
-          color: Colors.deepPurple.shade200,
-          onTap: () => setState(() => _currentMode = DreamInputMode.text),
-        ),
-      ],
-    );
-  }
 
-  Widget _buildSelectionCard({
-    required String title,
-    required String subtitle,
-    required IconData icon,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(30),
-        decoration: BoxDecoration(
-          color: AionTheme.darkAbyss,
-          borderRadius: BorderRadius.circular(2),
-          border: Border.all(color: AionTheme.gold.withOpacity(0.2)),
-          boxShadow: [
-            BoxShadow(
-              color: color.withOpacity(0.05),
-              blurRadius: 20,
-              spreadRadius: 5,
-            )
-          ],
-        ),
-        child: Column(
-          children: [
-            Icon(icon, size: 48, color: AionTheme.gold),
-            const SizedBox(height: 20),
-            Text(
-              title,
-              style: AionTheme.serifStyle(fontSize: 22, color: AionTheme.gold),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              subtitle,
-              style: GoogleFonts.inter(fontSize: 14, color: Colors.white60),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildRecordingView(ThemeData theme) {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        ScaleTransition(
-          scale: Tween(begin: 1.0, end: 1.1).animate(_animationController),
-          child: Container(
-            width: 150,
-            height: 150,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(color: AionTheme.gold.withOpacity(0.3), width: 1),
-              boxShadow: [
-                BoxShadow(
-                  color: AionTheme.gold.withOpacity(_isRecording ? 0.2 : 0.05),
-                  blurRadius: 30,
-                  spreadRadius: 10,
-                )
-              ],
-            ),
-            child: IconButton(
-              iconSize: 60,
-              icon: Icon(
-                _isRecording ? Icons.stop : Icons.mic_none,
-                color: AionTheme.gold,
-              ),
-              onPressed: _isRecording ? _stopRecording : _startRecording,
-            ),
-          ),
-        ),
-        const SizedBox(height: 40),
-        Text(
-          _isRecording ? 'Gravando Jornada...' : 'Toque para iniciar o relato',
-          style: AionTheme.serifStyle(fontSize: 20, color: AionTheme.gold),
-          textAlign: TextAlign.center,
-        ),
-      ],
-    );
-  }
-
-  Widget _buildTextInputView(ThemeData theme) {
-    return Column(
-      children: [
-        const SizedBox(height: 20),
-        Expanded(
-          child: Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: AionTheme.darkAbyss,
-              border: Border.all(color: AionTheme.gold.withOpacity(0.3)),
-            ),
-            child: TextField(
-              controller: _textInputController,
-              maxLines: null,
-              keyboardType: TextInputType.multiline,
-              style: theme.textTheme.bodyLarge,
-              decoration: InputDecoration(
-                border: InputBorder.none,
-                hintText: 'Descreva seu sonho com detalhes...',
-                hintStyle: GoogleFonts.inter(color: Colors.white24),
-              ),
-              onChanged: (val) => setState(() {}),
-            ),
-          ),
-        ),
-        const SizedBox(height: 30),
-        ElevatedButton(
-          onPressed: _textInputController.text.trim().length > 10
-              ? () => _analyzeAndNavigate(_textInputController.text)
-              : null,
-          child: const Text('INTERPRETAR A MENSAGEM DO SONHO'),
-        ),
-        const SizedBox(height: 20),
-      ],
-    );
-  }
-
-  Widget _buildReviewView(ThemeData theme) {
-    return SingleChildScrollView(
-      child: Column(
-        children: [
-          const SizedBox(height: 20),
-          Text(
-            'Aion traduziu seu relato:',
-            style: AionTheme.serifStyle(fontSize: 24, color: AionTheme.gold),
-          ),
-          const SizedBox(height: 30),
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: AionTheme.darkAbyss,
-              border: Border.all(color: AionTheme.gold.withOpacity(0.3)),
-            ),
-            child: TextField(
-              controller: _reviewController,
-              maxLines: 10,
-              style: theme.textTheme.bodyLarge,
-              decoration: const InputDecoration(border: InputBorder.none),
-            ),
-          ),
-          const SizedBox(height: 40),
-          ElevatedButton(
-            onPressed: () => _analyzeAndNavigate(_reviewController.text),
-            child: const Text('CONFIRMAR E ANALISAR'),
-          ),
-          TextButton(
-            onPressed: () => setState(() => _transcription = null),
-            child: Text(
-              'TENTAR NOVAMENTE',
-              style: GoogleFonts.cormorantGaramond(color: AionTheme.gold, letterSpacing: 1),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }

@@ -4,6 +4,7 @@ import '../../../core/theme.dart';
 import '../../../core/widgets/cinematic_background.dart';
 import '../../dream/presentation/widgets/aion_logo.dart';
 import '../../dream/presentation/notification_service.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -189,8 +190,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       const SizedBox(height: 16),
                       
                       TextButton(
-                        onPressed: () {
-                          Navigator.of(context).pushNamedAndRemoveUntil('/auth', (route) => false);
+                        onPressed: () async {
+                          await Supabase.instance.client.auth.signOut();
+                          if (mounted) {
+                            Navigator.of(context).pushNamedAndRemoveUntil('/auth', (route) => false);
+                          }
                         },
                         child: Text(
                           'sair da conta',

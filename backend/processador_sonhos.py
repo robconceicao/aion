@@ -125,7 +125,7 @@ def processar_novo_sonho():
         print(f"\n[ERRO CRÍTICO]: {e}")
 
 if __name__ == "__main__":
-    print("O Oráculo está em vigília... (Modo Worker Ativo)")
+    print("Aion está em vigília... (Modo Worker Ativo)")
     while True:
         processar_novo_sonho()
         time.sleep(5)

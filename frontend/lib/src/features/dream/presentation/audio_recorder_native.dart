@@ -6,12 +6,14 @@ import 'audio_recorder_platform.dart';
 
 class AudioRecorderNative implements AudioRecorderPlatform {
   @override
-  Future<void> start(AudioRecorder recorder, RecordConfig config) async {
+  Future<bool> start(AudioRecorder recorder, RecordConfig config) async {
     if (await Permission.microphone.request().isGranted) {
       final directory = await getTemporaryDirectory();
       final path = '${directory.path}/dream_recording_${DateTime.now().millisecondsSinceEpoch}.m4a';
       await recorder.start(config, path: path);
+      return true;
     }
+    return false;
   }
 
   @override

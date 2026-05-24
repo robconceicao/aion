@@ -4,9 +4,14 @@ import 'audio_recorder_platform.dart';
 
 class AudioRecorderWeb implements AudioRecorderPlatform {
   @override
-  Future<void> start(AudioRecorder recorder, RecordConfig config) async {
-    // Na Web, o path vazio faz o Record usar BLOBs internos
-    await recorder.start(config, path: '');
+  Future<bool> start(AudioRecorder recorder, RecordConfig config) async {
+    try {
+      // Na Web, o path vazio faz o Record usar BLOBs internos
+      await recorder.start(config, path: '');
+      return true;
+    } catch (e) {
+      return false;
+    }
   }
 
   @override

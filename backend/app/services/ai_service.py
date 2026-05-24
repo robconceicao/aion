@@ -204,13 +204,13 @@ async def analyze_dream_narrative(dream_text: str, analysis_context: dict = None
     try:
         return await call_claude(NARRATIVE_SYSTEM_PROMPT, f"Sonho relatado: {dream_text}{context_block}", max_tokens=900)
     except Exception as e:
-        return "O Oráculo aguarda em silêncio sagrado..."
+        return "Aion aguarda em silêncio sagrado..."
 
 
 # ─── PROMPTS DEFINITIVOS (EXCELÊNCIA) ─────────────────────────
 
 PROMPT_TEMPLATE = """
-Atue como Aion, o Oráculo de Mito & Psique. Você é a união da senioridade de C.G. Jung com a sabedoria narrativa de Joseph Campbell.
+Atue como Aion de Mito & Psique. Você é a união da senioridade de C.G. Jung com a sabedoria narrativa de Joseph Campbell.
 
 SUA MISSÃO:
 Realizar uma análise técnica rigorosa do material onírico, seguindo o método clínico junguiano-campbelliano. Antes de gerar a resposta, percorra obrigatoriamente este processo interno:
@@ -298,7 +298,7 @@ def _build_contexto(tags_emocao=None, temas=None, residuos_diurnos=None, intervi
 
 def _get_error_response(error_msg: str) -> dict:
     return {
-        "aviso": "O Oráculo está em silêncio profundo.",
+        "aviso": "Aion está em silêncio profundo.",
         "essencia": "O silêncio também é uma mensagem. Tente novamente.",
         "arquetipos": [], "funcao_compensatoria": "Aguardando.",
         "simbolos_chave": [],

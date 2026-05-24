@@ -261,11 +261,14 @@ class _DreamChoiceScreenState extends State<DreamChoiceScreen>
                       MaterialPageRoute(builder: (_) => DreamHistoryScreen(userEmail: Supabase.instance.client.auth.currentUser?.email ?? '')),
                     );
                   }),
-                  _navBtn(context, 'SAIR', false, () {
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(builder: (_) => const AuthScreen()),
-                    );
+                  _navBtn(context, 'SAIR', false, () async {
+                    await Supabase.instance.client.auth.signOut();
+                    if (context.mounted) {
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(builder: (_) => const AuthScreen()),
+                      );
+                    }
                   }),
                 ],
               ),

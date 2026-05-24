@@ -67,11 +67,22 @@ class _RecordDreamScreenState extends State<RecordDreamScreen> with SingleTicker
   Future<void> _startRecording() async {
     try {
       const config = RecordConfig();
-      await _platformRecorder.start(_audioRecorder, config);
+      final started = await _platformRecorder.start(_audioRecorder, config);
 
-      setState(() {
-        _isRecording = true;
-      });
+      if (started) {
+        setState(() {
+          _isRecording = true;
+        });
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Permissão do microfone negada. Não é possível gravar áudio.'),
+              backgroundColor: AionTheme.crimson,
+            ),
+          );
+        }
+      }
     } catch (e) {
       debugPrint('Error starting recording: $e');
     }
@@ -322,11 +333,14 @@ class _RecordDreamScreenState extends State<RecordDreamScreen> with SingleTicker
                       MaterialPageRoute(builder: (_) => DreamHistoryScreen(userEmail: Supabase.instance.client.auth.currentUser?.email ?? '')),
                     );
                   }),
-                  _navBtn(context, 'SAIR', false, () {
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(builder: (_) => const AuthScreen()),
-                    );
+                  _navBtn(context, 'SAIR', false, () async {
+                    await Supabase.instance.client.auth.signOut();
+                    if (context.mounted) {
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(builder: (_) => const AuthScreen()),
+                      );
+                    }
                   }),
                 ],
               ),

@@ -102,13 +102,20 @@ class _InterviewScreenState extends State<InterviewScreen>
       );
     } on DioException catch (e) {
       if (!mounted) return;
+      String msg;
+      if (e.response?.statusCode == 403 || e.response?.statusCode == 401) {
+        msg = 'Sessão expirada. Faça logout e entre novamente para continuar.';
+      } else if (e.type == DioExceptionType.receiveTimeout ||
+                 e.type == DioExceptionType.connectionTimeout) {
+        msg = 'O servidor demorou a responder. Tente novamente — ele já deve estar acordado.';
+      } else {
+        msg = 'Não foi possível analisar o sonho. Verifique sua internet e tente novamente.';
+      }
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            'Erro ao analisar: ${e.message}',
-            style: GoogleFonts.ptSerif(color: Colors.white),
-          ),
+          content: Text(msg, style: GoogleFonts.ptSerif(color: Colors.white)),
           backgroundColor: AionTheme.crimson,
+          duration: const Duration(seconds: 6),
         ),
       );
     } finally {

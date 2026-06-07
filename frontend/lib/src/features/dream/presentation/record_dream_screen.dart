@@ -146,7 +146,7 @@ class _RecordDreamScreenState extends State<RecordDreamScreen> with SingleTicker
     if (text.trim().isEmpty) return;
     setState(() {
       _isProcessing = true;
-      _loadingMessage = 'Buscando os melhores significados\nsegundo o seu contexto...';
+      _loadingMessage = 'Aion está acordando...\nIsso pode levar até 1 minuto na primeira vez.';
     });
     
     // Cancela notificação do dia quando usuário inicia um registro
@@ -155,6 +155,7 @@ class _RecordDreamScreenState extends State<RecordDreamScreen> with SingleTicker
     final dio = ApiService.client;
     try {
       // Solicita 3 perguntas de entrevista ao Claude
+      setState(() => _loadingMessage = 'Preparando perguntas\npara aprofundar seu sonho...');
       final response = await dio.post(
         AionConfig.interviewUrl,
         data: {'text': text},
@@ -180,13 +181,17 @@ class _RecordDreamScreenState extends State<RecordDreamScreen> with SingleTicker
       );
     } on dio_pkg.DioException catch (e) {
       if (!mounted) return;
+      final isTimeout = e.type == dio_pkg.DioExceptionType.receiveTimeout ||
+          e.type == dio_pkg.DioExceptionType.connectionTimeout ||
+          e.type == dio_pkg.DioExceptionType.sendTimeout;
+      final msg = isTimeout
+          ? 'O servidor demorou a responder. Tente novamente — ele já deve estar acordado.'
+          : 'Não foi possível conectar. Verifique sua internet e tente novamente.';
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            'Erro ao preparar a entrevista: ${e.message}',
-            style: GoogleFonts.ptSerif(color: Colors.white),
-          ),
+          content: Text(msg, style: GoogleFonts.ptSerif(color: Colors.white)),
           backgroundColor: AionTheme.crimson,
+          duration: const Duration(seconds: 5),
         ),
       );
     } finally {

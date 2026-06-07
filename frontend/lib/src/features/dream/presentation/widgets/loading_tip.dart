@@ -12,6 +12,10 @@ class LoadingTip extends StatefulWidget {
   State<LoadingTip> createState() => _LoadingTipState();
 }
 
+// Alias para compatibilidade com a spec
+typedef LoadingTipWidget = LoadingTip;
+
+
 class _LoadingTipState extends State<LoadingTip>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;

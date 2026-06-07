@@ -110,7 +110,7 @@ class _DreamHintCardState extends State<DreamHintCard>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'DICA DE REGISTRO',
+                      'DICA DO AION',
                       style: GoogleFonts.ptSerif(
                         fontSize: 8,
                         letterSpacing: 2.5,

@@ -40,8 +40,12 @@ async def get_current_user(token: HTTPAuthorizationCredentials = Depends(securit
             "apikey": settings.SUPABASE_KEY,
             "Authorization": f"Bearer {token.credentials}"
         }
+        
+        # Garante que não há barra no final da URL
+        base_url = settings.SUPABASE_URL.rstrip('/')
+        
         async with httpx.AsyncClient() as client:
-            response = await client.get(f"{settings.SUPABASE_URL}/auth/v1/user", headers=headers, timeout=10.0)
+            response = await client.get(f"{base_url}/auth/v1/user", headers=headers, timeout=10.0)
             if response.status_code == 200:
                 user_data = response.json()
                 mapped_payload = {
@@ -52,7 +56,9 @@ async def get_current_user(token: HTTPAuthorizationCredentials = Depends(securit
                 }
                 return mapped_payload
             else:
-                print(f"[AUTH] Falha na validação via API: HTTP {response.status_code} - {response.text}")
+                print(f"[AUTH FALLBACK FAILED] Status: {response.status_code}")
+                print(f"[AUTH FALLBACK FAILED] Body: {response.text}")
+                print(f"[AUTH FALLBACK FAILED] URL Called: {base_url}/auth/v1/user")
     except Exception as e:
         print(f"[AUTH] Erro ao consultar a API do Supabase: {e}")
         

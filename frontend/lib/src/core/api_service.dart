@@ -24,6 +24,29 @@ class ApiService {
           return handler.next(options);
         },
         onError: (DioException err, handler) async {
+          final statusCode = err.response?.statusCode;
+          final isAuthError = statusCode == 401 || statusCode == 403;
+          final isAuthRetry = err.requestOptions.extra['_isAuthRetry'] == true;
+
+          // On 401/403 refresh the Supabase token silently and retry once
+          if (isAuthError && !isAuthRetry) {
+            try {
+              final result =
+                  await Supabase.instance.client.auth.refreshSession();
+              final newSession = result.session;
+              if (newSession != null) {
+                final opts = err.requestOptions;
+                opts.headers['Authorization'] =
+                    'Bearer ${newSession.accessToken}';
+                opts.extra['_isAuthRetry'] = true;
+                final response = await _dio.fetch(opts);
+                return handler.resolve(response);
+              }
+            } catch (_) {
+              // Refresh failed — propagate so callers can redirect to login
+            }
+          }
+
           // Retry automático para timeout e erros de servidor (cold start do Render free tier)
           final shouldRetry =
               err.type == DioExceptionType.receiveTimeout ||

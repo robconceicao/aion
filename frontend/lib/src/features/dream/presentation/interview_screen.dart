@@ -102,11 +102,14 @@ class _InterviewScreenState extends State<InterviewScreen>
       );
     } on DioException catch (e) {
       if (!mounted) return;
-      String msg;
-      if (e.response?.statusCode == 403 || e.response?.statusCode == 401) {
-        msg = 'Sessão expirada. Faça logout e entre novamente para continuar.';
-      } else if (e.type == DioExceptionType.receiveTimeout ||
-                 e.type == DioExceptionType.connectionTimeout) {
+      if (e.response?.statusCode == 401 || e.response?.statusCode == 403) {
+        // Token refresh already failed in the interceptor — redirect to login
+        Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
+        return;
+      }
+      final String msg;
+      if (e.type == DioExceptionType.receiveTimeout ||
+          e.type == DioExceptionType.connectionTimeout) {
         msg = 'O servidor demorou a responder. Tente novamente — ele já deve estar acordado.';
       } else {
         msg = 'Não foi possível analisar o sonho. Verifique sua internet e tente novamente.';

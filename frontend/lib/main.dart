@@ -17,6 +17,9 @@ void main() async {
   await Supabase.initialize(
     url: 'https://gfpicpmopbmvlyslnrrr.supabase.co',
     anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdmcGljcG1vcGJtdmx5c2xucnJyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk5OTM5NzEsImV4cCI6MjA5NTU2OTk3MX0.exLLr6vYBG7E2LCMSOLV_Nc6y-pBuBxskXJTKM9iYCk',
+    authOptions: const FlutterAuthClientOptions(
+      autoRefreshToken: true,
+    ),
   );
 
   // Initialize Hive

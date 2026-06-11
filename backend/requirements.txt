@@ -13,3 +13,4 @@ email-validator==2.1.0.post1
 gunicorn==21.2.0
 uvicorn[standard]==0.24.0
 google-generativeai==0.7.2
+edge-tts==0.0.14

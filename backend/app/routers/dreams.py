@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Request, Header, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, Request, Header, BackgroundTasks, Response
 from app.models.dream import (
     DreamCreate, InterviewRequest, InterviewResponse,
     NarrativeRequest, SemanticSearchRequest
@@ -9,6 +9,7 @@ from app.services.ai_service import (
     generate_interview_questions, analyze_recurring_pattern,
     generate_embedding
 )
+from app.services.audio_service import generate_narrative_audio
 from datetime import datetime
 from typing import Optional
 import uuid
@@ -130,6 +131,26 @@ async def get_user_history(current_user: dict = Depends(get_current_user)):
         return res.data
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erro ao buscar histórico: {str(e)}")
+
+
+@router.get("/{dream_id}/audio")
+async def get_dream_audio(dream_id: str, current_user: dict = Depends(get_current_user)):
+    """Gera e retorna o áudio narrado (texto falado) da interpretação do sonho sob demanda."""
+    supabase = get_supabase()
+    user_id = current_user.get("sub")
+    try:
+        res = supabase.table("dreams").select("interpretacao").eq("id", dream_id).eq("user_id", user_id).execute()
+        if not res.data:
+            raise HTTPException(status_code=404, detail="Sonho não encontrado")
+            
+        narrative = res.data[0].get("interpretacao", {}).get("narrative")
+        if not narrative:
+            raise HTTPException(status_code=404, detail="Narrativa não disponível para este sonho")
+            
+        audio_bytes = await generate_narrative_audio(narrative)
+        return Response(content=audio_bytes, media_type="audio/mpeg")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post("/interview", response_model=InterviewResponse)

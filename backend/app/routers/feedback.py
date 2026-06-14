@@ -2,13 +2,12 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from typing import Optional
 from app.routers.auth import get_current_user
-from app.database import get_database
-from datetime import datetime
+from app.database import get_supabase
 
 router = APIRouter()
 
 class FeedbackCreate(BaseModel):
-    rating: int # 1 to 5
+    rating: int  # 1 to 5
     comment: Optional[str] = None
     accurate_archetypes: bool = True
 
@@ -16,30 +15,24 @@ class FeedbackCreate(BaseModel):
 async def create_feedback(
     dream_id: str,
     feedback_in: FeedbackCreate,
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user),
 ):
-    db = await get_database()
-    
-    # Verify dream belongs to user
-    dream = await db.dreams.find_one({"_id": dream_id, "user_id": str(current_user["_id"])})
-    if not dream:
+    supabase = get_supabase()
+    user_id = current_user.get("sub")
+
+    # Verifica se o sonho pertence ao usuário
+    res = supabase.table("dreams").select("id").eq("id", dream_id).eq("user_id", user_id).execute()
+    if not res.data:
         raise HTTPException(status_code=404, detail="Dream not found")
-        
-    feedback_dict = feedback_in.dict()
-    feedback_dict["dream_id"] = dream_id
-    feedback_dict["user_id"] = str(current_user["_id"])
-    feedback_dict["created_at"] = datetime.utcnow()
-    
-    # Store feedback
-    await db.feedback.insert_one(feedback_dict)
-    
-    # Log Analytics Event
-    await db.analytics_events.insert_one({
-        "event_type": "feedback_submitted",
-        "user_id": str(current_user["_id"]),
+
+    # Persiste o feedback (id e created_at preenchidos pelo banco via default)
+    feedback_data = {
         "dream_id": dream_id,
+        "user_id": user_id,
         "rating": feedback_in.rating,
-        "timestamp": datetime.utcnow()
-    })
-    
+        "comment": feedback_in.comment,
+        "accurate_archetypes": feedback_in.accurate_archetypes,
+    }
+    supabase.table("feedback").insert(feedback_data).execute()
+
     return {"status": "success", "message": "Feedback recorded. The Oracle learns."}

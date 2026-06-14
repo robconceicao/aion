@@ -12,8 +12,5 @@ class EpisodeCreate(BaseModel):
 
 
 class EpisodeModel(EpisodeCreate):
-    id: str = Field(alias="_id")
+    id: str
     created_at: datetime
-
-    class Config:
-        populate_by_name = True

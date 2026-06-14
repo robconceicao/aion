@@ -8,6 +8,7 @@
 .env.production.local
 *.env
 secrets.json
+dart_define.json
 
 # Dependencies
 node_modules/

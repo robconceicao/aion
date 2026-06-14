@@ -285,10 +285,16 @@ docker-compose up
 ```bash
 cd frontend
 flutter pub get
-flutter run -d chrome          # web
-flutter run                    # mobile conectado
-flutter build web              # build produção web
-sh build.sh                    # script de build completo
+
+# Criar o arquivo de variáveis (apenas na primeira vez):
+cp ../dart_define.example.json ../dart_define.json
+# Editar dart_define.json com os valores reais (NÃO commitar este arquivo)
+
+flutter run -d chrome --dart-define-from-file=../dart_define.json   # web
+flutter run --dart-define-from-file=../dart_define.json             # mobile
+flutter build web --dart-define-from-file=../dart_define.json       # build web
+flutter build apk --dart-define-from-file=../dart_define.json       # build Android
+sh build.sh                                                          # script completo
 
 # Gerar código Riverpod/Hive
 dart run build_runner build
@@ -315,4 +321,6 @@ python test_voice.py           # Testar endpoint de voz
 - Não adicionar URLs de API hardcodadas fora de `constants.dart`
 - Não bloquear a thread principal do Flutter com operações pesadas — usar `async/await`
 - Não commitar o `backend/.env`
-- Não alterar `SUPABASE_URL`/`anonKey` em `main.dart` sem atualizar os secrets do CI/CD em `.github/workflows/`
+- Não commitar `dart_define.json` (contém credenciais reais; está no .gitignore)
+- Não colocar a anonKey ou SUPABASE_URL literalmente em nenhum arquivo .dart
+- Para CI/CD: injetar SUPABASE_URL e SUPABASE_ANON_KEY como GitHub Secrets e passar via --dart-define-from-file em `.github/workflows/`

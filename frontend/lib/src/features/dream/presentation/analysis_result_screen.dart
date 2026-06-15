@@ -426,7 +426,7 @@ class AnalysisResultScreen extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           Text(
-            mito['paralelo'] ?? '',
+            mito['paralela'] ?? '',
             style: const TextStyle(fontSize: 13, color: AionTheme.silver, height: 1.8),
           ),
         ],

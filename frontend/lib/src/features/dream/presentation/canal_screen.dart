@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:dio/dio.dart';
 import '../../../core/theme.dart';
 import '../../../core/constants.dart';
 import 'record_dream_screen.dart';
 import 'archetypes_screen.dart';
+import '../../../core/api_service.dart';
 
 // ─── Modelo de Episódio ────────────────────────────────────────────────────
 class Episode {
@@ -55,8 +55,7 @@ class _CanalScreenState extends State<CanalScreen> {
       _error = null;
     });
     try {
-      final dio = Dio();
-      final response = await dio.get(AionConfig.episodesUrl);
+      final response = await ApiService.client.get(AionConfig.episodesUrl);
       final List<dynamic> data = response.data as List<dynamic>;
       setState(() {
         _episodes = data.map((e) => Episode.fromJson(e as Map<String, dynamic>)).toList();

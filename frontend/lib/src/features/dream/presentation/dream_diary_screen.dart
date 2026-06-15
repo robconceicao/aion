@@ -9,8 +9,8 @@ import 'widgets/aion_logo.dart';
 import '../../../core/widgets/cinematic_background.dart';
 import '../../profile/presentation/profile_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:dio/dio.dart';
 import '../../../core/constants.dart';
+import '../../../core/api_service.dart';
 import 'widgets/hero_journey_widget.dart';
 
 class DreamDiaryScreen extends StatefulWidget {
@@ -28,7 +28,6 @@ class _DreamDiaryScreenState extends State<DreamDiaryScreen> {
   bool _isLoading = true;
 
   // — Upgrade 2: Busca e Filtros
-  final _dio = Dio();
   final _searchController = TextEditingController();
   String? _filtroEmocao;
   String? _filtroFase;
@@ -53,7 +52,7 @@ class _DreamDiaryScreenState extends State<DreamDiaryScreen> {
     }
     setState(() => _isSearching = true);
     try {
-      final response = await _dio.post(
+      final response = await ApiService.client.post(
         AionConfig.searchUrl,
         data: {'query': query.trim(), 'threshold': 0.60, 'max_results': 8},
       );

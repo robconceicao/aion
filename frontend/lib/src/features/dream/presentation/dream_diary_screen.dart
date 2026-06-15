@@ -22,9 +22,7 @@ class DreamDiaryScreen extends StatefulWidget {
 
 class _DreamDiaryScreenState extends State<DreamDiaryScreen> {
   int _totalDreams = 0;
-  int _favorites = 0;
   int _thisMonth = 0;
-  String _topArchetype = '-';
   bool _isLoading = true;
 
   // — Upgrade 2: Busca e Filtros
@@ -113,42 +111,25 @@ class _DreamDiaryScreenState extends State<DreamDiaryScreen> {
       final String userEmail = Supabase.instance.client.auth.currentUser?.email ?? '';
       final data = await Supabase.instance.client
           .from('dreams')
-          .select('created_at, is_favorite, main_archetype')
+          .select('created_at')
           .eq('user_email', userEmail);
 
-      int favs = 0;
       int month = 0;
       final now = DateTime.now();
-      Map<String, int> archetypesCount = {};
 
       for (var dream in data) {
-        if (dream['is_favorite'] == true) favs++;
-        
         if (dream['created_at'] != null) {
           final createdAt = DateTime.parse(dream['created_at']);
           if (createdAt.year == now.year && createdAt.month == now.month) {
             month++;
           }
         }
-
-        final arch = dream['main_archetype'];
-        if (arch != null && arch.toString().trim().isNotEmpty) {
-          archetypesCount[arch] = (archetypesCount[arch] ?? 0) + 1;
-        }
-      }
-
-      String topArch = '-';
-      if (archetypesCount.isNotEmpty) {
-        var entry = archetypesCount.entries.reduce((a, b) => a.value > b.value ? a : b);
-        topArch = entry.key; // O arquétipo com maior contagem
       }
 
       if (mounted) {
         setState(() {
           _totalDreams = data.length;
-          _favorites = favs;
           _thisMonth = month;
-          _topArchetype = topArch;
           _isLoading = false;
         });
       }
@@ -214,11 +195,7 @@ class _DreamDiaryScreenState extends State<DreamDiaryScreen> {
                           children: [
                             _buildStatItem('$_totalDreams', 'SONHOS'),
                             const SizedBox(width: 24),
-                            _buildStatItem('$_favorites', 'FAVORITOS'),
-                            const SizedBox(width: 24),
                             _buildStatItem('$_thisMonth', 'ESTE MÊS'),
-                            const SizedBox(width: 24),
-                            _buildStatItem(_topArchetype, 'ARQUÉTIPO'),
                           ],
                         ),
                     const SizedBox(height: 32),

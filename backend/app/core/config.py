@@ -3,9 +3,6 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     PROJECT_NAME: str = "Aion"
-    JWT_SECRET: str = os.getenv("JWT_SECRET", "super_secret_key")
-    ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     ALLOWED_ORIGINS: list = [
         o.strip() for o in os.getenv(
             "ALLOWED_ORIGINS",

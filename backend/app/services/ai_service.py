@@ -21,9 +21,12 @@ AI_MODELS = [
 
 # ─── EMBEDDINGS (VIA REMOTE API - 768 DIM) ────────────────────
 
-async def generate_embedding(text: str) -> list:
+async def generate_embedding(text: str) -> list | None:
+    """Retorna o vetor de embedding ou None em caso de falha (A-02).
+    Nunca retorna vetor zero — None sinaliza ausência de indexação."""
     if not settings.GEMINI_API_KEY:
-        return [0.0] * 768
+        print("[AI_SERVICE] GEMINI_API_KEY ausente — embedding nao gerado.")
+        return None
     try:
         url = f"https://generativelanguage.googleapis.com/v1beta/models/embedding-001:embedContent?key={settings.GEMINI_API_KEY}"
         async with httpx.AsyncClient() as client:
@@ -33,38 +36,53 @@ async def generate_embedding(text: str) -> list:
             })
             if res.status_code == 200:
                 return res.json()['embedding']['values']
-            return [0.0] * 768
-    except:
-        return [0.0] * 768
+            print(f"[AI_SERVICE] Embedding falhou: HTTP {res.status_code}")
+            return None
+    except Exception as e:
+        print(f"[AI_SERVICE] Embedding falhou: {e}")
+        return None
 
 
 # ─── HELPERS DE IA ────────────────────────────────────────────
 
 async def call_claude(system_prompt: str, user_content: str, max_tokens=3500):
-    if not async_client:
-        return await call_gemini(system_prompt, user_content)
+    """Cascata completa: 3 modelos Claude -> Gemini -> DeepSeek (A-05).
+    Levanta RuntimeError se todos os provedores falharem, para que
+    analyze_dream capture e retorne _get_error_response com _error:True."""
 
-    for model_name in AI_MODELS:
-        try:
-            message = await async_client.messages.create(
-                model=model_name,
-                max_tokens=max_tokens,
-                system=system_prompt,
-                messages=[{"role": "user", "content": user_content}]
-            )
-            return message.content[0].text
-        except Exception as e:
-            print(f"[AI_SERVICE] Erro no modelo {model_name}: {e}")
-            if "not_found_error" in str(e).lower() or "404" in str(e):
-                continue 
-            break 
-            
-    return await call_deepseek(system_prompt, user_content)
+    if async_client:
+        for model_name in AI_MODELS:
+            try:
+                message = await async_client.messages.create(
+                    model=model_name,
+                    max_tokens=max_tokens,
+                    system=system_prompt,
+                    messages=[{"role": "user", "content": user_content}]
+                )
+                return message.content[0].text
+            except Exception as e:
+                print(f"[AI_SERVICE] {model_name} falhou ({type(e).__name__}): {e}")
+                continue  # A-05: tenta sempre o proximo modelo, qualquer que seja o erro
+        # todos os Claude falharam — cai para Gemini
+
+    # Fallback 1: Gemini (antes do DeepSeek — A-05: ordem Claude->Gemini->DeepSeek)
+    try:
+        return await call_gemini(system_prompt, user_content)
+    except Exception as e:
+        print(f"[AI_SERVICE] Gemini falhou ({type(e).__name__}): {e}")
+
+    # Fallback 2: DeepSeek
+    try:
+        return await call_deepseek(system_prompt, user_content)
+    except Exception as e:
+        print(f"[AI_SERVICE] DeepSeek falhou ({type(e).__name__}): {e}")
+
+    raise RuntimeError("[AI_SERVICE] Todos os provedores de IA falharam.")
 
 
 async def call_gemini(system_prompt: str, user_content: str):
     if not settings.GEMINI_API_KEY:
-        raise ValueError("Nenhuma chave de IA disponível.")
+        raise ValueError("GEMINI_API_KEY ausente.")
     try:
         model = genai.GenerativeModel('gemini-2.5-flash')
         full_prompt = f"{system_prompt}\n\nUSUÁRIO: {user_content}"
@@ -76,8 +94,10 @@ async def call_gemini(system_prompt: str, user_content: str):
 
 
 async def call_deepseek(system_prompt: str, user_content: str, max_tokens=3500):
+    """Chama o DeepSeek diretamente. Nao tem fallback interno — a orquestracao
+    de fallback e responsabilidade de call_claude (A-05)."""
     if not settings.DEEPSEEK_API_KEY:
-        return await call_gemini(system_prompt, user_content)
+        raise ValueError("[AI_SERVICE] DEEPSEEK_API_KEY ausente.")
     try:
         url = "https://api.deepseek.com/chat/completions"
         headers = {
@@ -100,7 +120,7 @@ async def call_deepseek(system_prompt: str, user_content: str, max_tokens=3500):
             return res.json()["choices"][0]["message"]["content"]
     except Exception as e:
         print(f"[AI_SERVICE] Erro no DeepSeek: {e}")
-        return await call_gemini(system_prompt, user_content)
+        raise
 
 
 def _parse_ai_json(content: str) -> dict:
@@ -116,11 +136,10 @@ def _parse_ai_json(content: str) -> dict:
             content = content[start:end+1]
         
         # 3. Resolve problemas de quebra de linha dentro de strings JSON
-        # Esta regex procura por quebras de linha que não estão precedendo uma chave ou fechamento
         content = re.sub(r'(?<![:{,])\n(?![}\],])', ' ', content)
         
         # 4. Remove vírgulas extras
-        content = re.sub(r',\s*([\}\]])', r'\1', content)
+        content = re.sub(r',\s*([\}\/\]])', r'\1', content)
         
         return json.loads(content)
     except Exception as e:
@@ -130,7 +149,7 @@ def _parse_ai_json(content: str) -> dict:
             return json.loads(cleaned)
         except:
             print(f"[AI_SERVICE] Falha total parse JSON. Erro: {e}")
-            raise ValueError(f"JSON inválido: {str(e)}")
+            raise ValueError(f"JSON invalido: {str(e)}")
 
 
 # ─── FUNÇÕES DO AION (ALMA JUNG & CAMPBELL) ───────────────────
@@ -147,7 +166,7 @@ async def analyze_dream(dream_text: str, **kwargs) -> dict:
         content = await call_claude("", prompt, max_tokens=4000)
         return _parse_ai_json(content)
     except Exception as e:
-        print(f"[AI_SERVICE] Erro fatal análise: {e}")
+        print(f"[AI_SERVICE] Erro fatal analise: {e}")
         return _get_error_response(str(e))
 
 
@@ -184,27 +203,26 @@ async def analyze_dream_narrative(dream_text: str, analysis_context: dict = None
         mito        = analysis_context.get('mito_espelho', {})
         pergunta    = analysis_context.get('pergunta_para_reflexao', '')
 
-        # Formata arquetipos e simbolos de forma legível
         arq_txt = '; '.join([f"{a.get('nome','')}: {a.get('descricao','')}" for a in arquetipos]) if isinstance(arquetipos, list) else str(arquetipos)
         sim_txt = '; '.join([f"{s.get('elemento','')}: {s.get('significado','')}" for s in simbolos]) if isinstance(simbolos, list) else str(simbolos)
         fase_txt = f"{fase.get('nome','')} — {fase.get('descricao','')}" if isinstance(fase, dict) else str(fase)
         mito_txt = f"{mito.get('titulo','')} — {mito.get('paralela','')}" if isinstance(mito, dict) else str(mito)
 
         context_block = (
-            f"\n\nESSÊNCIA DO SONHO: {essencia}"
+            f"\n\nESSENCIA DO SONHO: {essencia}"
             f"\nPERSONAGENS INTERIORES: {arq_txt}"
-            f"\nSÍMBOLOS PRINCIPAIS: {sim_txt}"
+            f"\nSIMBOLOS PRINCIPAIS: {sim_txt}"
             f"\nO QUE A PSIQUE BUSCA: {funcao}"
             f"\nMOMENTO DA JORNADA: {fase_txt}"
             f"\nSINAL PARA O FUTURO: {prospeccao}"
-            f"\nECO MÍTICO: {mito_txt}"
+            f"\nECO MITICO: {mito_txt}"
             f"\nPERGUNTA_FINAL: {pergunta}"
         )
 
     try:
         return await call_claude(NARRATIVE_SYSTEM_PROMPT, f"Sonho relatado: {dream_text}{context_block}", max_tokens=900)
     except Exception as e:
-        return "Aion aguarda em silêncio sagrado..."
+        return "Aion aguarda em silencio sagrado..."
 
 
 # ─── PROMPTS DEFINITIVOS (EXCELÊNCIA) ─────────────────────────
@@ -288,9 +306,9 @@ RESTRIÇÕES:
 
 def _build_contexto(tags_emocao=None, temas=None, residuos_diurnos=None, interview_answers=None) -> str:
     lines = []
-    if tags_emocao: lines.append(f"EMOÇÕES: {', '.join(tags_emocao)}")
+    if tags_emocao: lines.append(f"EMOCOES: {', '.join(tags_emocao)}")
     if temas: lines.append(f"TEMAS: {', '.join(temas)}")
-    if residuos_diurnos: lines.append(f"CONTEÚDO DIURNO: {', '.join(residuos_diurnos)}")
+    if residuos_diurnos: lines.append(f"CONTEUDO DIURNO: {', '.join(residuos_diurnos)}")
     if interview_answers:
         for item in interview_answers:
             lines.append(f"P: {item.get('pergunta', '')} | R: {item.get('resposta', '')}")
@@ -298,13 +316,14 @@ def _build_contexto(tags_emocao=None, temas=None, residuos_diurnos=None, intervi
 
 def _get_error_response(error_msg: str) -> dict:
     return {
-        "aviso": "Aion está em silêncio profundo.",
-        "essencia": "O silêncio também é uma mensagem. Tente novamente.",
+        "_error": True,   # A-03: marcador explícito para detecção em _background_save_and_recurrence
+        "aviso": "Aion esta em silencio profundo.",
+        "essencia": "O silencio tambem e uma mensagem. Tente novamente.",
         "arquetipos": [], "funcao_compensatoria": "Aguardando.",
         "simbolos_chave": [],
         "fase_jornada": {"nome": "O Mundo Comum", "descricao": "Reequilibrando."},
         "prospeccao": "Aguarde.",
-        "mito_espelho": {"titulo": "O Silêncio", "paralela": "Aguarde."},
-        "pergunta_para_reflexao": "O que o silêncio faz você sentir?",
+        "mito_espelho": {"titulo": "O Silencio", "paralela": "Aguarde."},
+        "pergunta_para_reflexao": "O que o silencio faz voce sentir?",
         "intensidade_sombra": 0, "intensidade_heroi": 0, "intensidade_transformacao": 0,
     }

@@ -20,43 +20,49 @@ router = APIRouter()
 
 async def _background_save_and_recurrence(
     supabase, dream_in: DreamCreate, analysis: dict,
-    embedding: list, user_id: str, user_email: str
+    embedding: list | None, user_id: str, user_email: str
 ):
     """
-    Roda APÓS a resposta ser enviada ao cliente.
-    Detecta recorrência e persiste o sonho no Supabase.
+    Roda APOS a resposta ser enviada ao cliente.
+    Detecta recorrencia e persiste o sonho no Supabase.
+    Sempre salva o relato — nunca descarta o sonho do usuario.
+    Marca interpretation_status e embedding_status conforme resultado (A-02, A-03).
     """
     similar_dreams = []
-    try:
-        # Busca sonhos do mesmo usuário para detectar recorrência
-        result = supabase.rpc("buscar_sonhos_semanticos", {
-            "p_user_id": user_id,
-            "query_emb": embedding,
-            "threshold": 0.75,
-            "max_results": 3,
-        }).execute()
-        similar_dreams = result.data or []
+    interpretation_failed = analysis.get("_error") is True  # A-03: marcador explicito
 
-        if len(similar_dreams) >= 2:
-            recurrence_text = await analyze_recurring_pattern(
-                current_dream=dream_in.text,
-                similar_dreams=similar_dreams,
-            )
-            analysis["analise_recorrencia"] = {
-                "is_recorrente": True,
-                "numero_aparicoes": len(similar_dreams) + 1,
-                "analise_evolucao": recurrence_text,
-            }
-    except Exception as e:
-        print(f"[BACKGROUND] Erro recorrência: {e}")
+    # So busca recorrencia se ha embedding valido e interpretacao bem-sucedida
+    if embedding is not None and not interpretation_failed:
+        try:
+            # Busca sonhos do mesmo usuario para detectar recorrencia
+            result = supabase.rpc("buscar_sonhos_semanticos", {
+                "p_user_id": user_id,
+                "query_emb": embedding,
+                "threshold": 0.75,
+                "max_results": 3,
+            }).execute()
+            similar_dreams = result.data or []
 
-    # Salva no Supabase
+            if len(similar_dreams) >= 2:
+                recurrence_text = await analyze_recurring_pattern(
+                    current_dream=dream_in.text,
+                    similar_dreams=similar_dreams,
+                )
+                analysis["analise_recorrencia"] = {
+                    "is_recorrente": True,
+                    "numero_aparicoes": len(similar_dreams) + 1,
+                    "analise_evolucao": recurrence_text,
+                }
+        except Exception as e:
+            print(f"[BACKGROUND] Erro recorrencia: {e}")
+
+    # Salva no Supabase — relato SEMPRE preservado
     dream_id = str(uuid.uuid4())
     dream_data = {
         "id": dream_id,
         "relato": dream_in.text,
         "interpretacao": analysis,
-        "embedding": embedding,
+        "embedding": embedding,          # None se falhou — pgvector aceita NULL (A-02)
         "tags_emocao": dream_in.tags_emocao or [],
         "temas": dream_in.temas or [],
         "residuos_diurnos": dream_in.residuos_diurnos or [],
@@ -65,10 +71,16 @@ async def _background_save_and_recurrence(
         "user_id": user_id,
         "user_email": user_email,
         "created_at": datetime.utcnow().isoformat(),
+        "interpretation_status": "failed" if interpretation_failed else "ok",  # A-03
+        "embedding_status":      "failed" if embedding is None else "ok",       # A-02
     }
     try:
         supabase.table("dreams").insert(dream_data).execute()
-        print(f"[BACKGROUND] Sonho {dream_id} salvo com sucesso.")
+        print(
+            f"[BACKGROUND] Sonho {dream_id} salvo "
+            f"(interpretation={dream_data['interpretation_status']}, "
+            f"embedding={dream_data['embedding_status']})."
+        )
     except Exception as e:
         print(f"[BACKGROUND] Erro ao salvar: {str(e)}")
 

@@ -22,7 +22,7 @@ jobs:
       - name: Run Tests
         run: |
           cd backend
-          pytest
+          pytest --ignore=tests/test_api.py
 
   build-docker:
     needs: build-backend

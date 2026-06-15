@@ -18,6 +18,8 @@ from app.routers.auth import get_current_user
 
 router = APIRouter()
 
+from app.core.recurrence import is_recurrence_triggered, numero_aparicoes
+
 async def _background_save_and_recurrence(
     supabase, dream_in: DreamCreate, analysis: dict,
     embedding: list | None, user_id: str, user_email: str
@@ -39,18 +41,18 @@ async def _background_save_and_recurrence(
                 "p_user_id": user_id,
                 "query_emb": embedding,
                 "threshold": 0.75,
-                "max_results": 3,
+                "max_results": 5,
             }).execute()
             similar_dreams = result.data or []
 
-            if len(similar_dreams) >= 2:
+            if is_recurrence_triggered(len(similar_dreams)):
                 recurrence_text = await analyze_recurring_pattern(
                     current_dream=dream_in.text,
                     similar_dreams=similar_dreams,
                 )
                 analysis["analise_recorrencia"] = {
                     "is_recorrente": True,
-                    "numero_aparicoes": len(similar_dreams) + 1,
+                    "numero_aparicoes": numero_aparicoes(len(similar_dreams)),
                     "analise_evolucao": recurrence_text,
                 }
         except Exception as e:
@@ -66,7 +68,7 @@ async def _background_save_and_recurrence(
         "tags_emocao": dream_in.tags_emocao or [],
         "temas": dream_in.temas or [],
         "residuos_diurnos": dream_in.residuos_diurnos or [],
-        "is_recurrent": len(similar_dreams) >= 2,
+        "is_recurrent": is_recurrence_triggered(len(similar_dreams)),
         "recurrence_count": len(similar_dreams),
         "user_id": user_id,
         "user_email": user_email,

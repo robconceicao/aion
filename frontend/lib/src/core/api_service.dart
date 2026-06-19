@@ -10,14 +10,30 @@ class ApiService {
     sendTimeout: const Duration(seconds: 60),
   ));
 
+  static Future<Session?>? _pendingRefresh;
+
+  static Future<Session?> _doRefresh() async {
+    try {
+      final result = await Supabase.instance.client.auth.refreshSession();
+      return result.session;
+    } catch (_) {
+      return null;
+    } finally {
+      _pendingRefresh = null;
+    }
+  }
+
   static Dio get client {
     // Adiciona interceptors se não existirem
     if (_dio.interceptors.isEmpty) {
       // Interceptor de autenticação + retry automático
       _dio.interceptors.add(InterceptorsWrapper(
         onRequest: (options, handler) async {
-          // Injeta o Bearer token do Supabase em todas as requisições
-          final session = Supabase.instance.client.auth.currentSession;
+          var session = Supabase.instance.client.auth.currentSession;
+          if (session == null) {
+            _pendingRefresh ??= _doRefresh();
+            session = await _pendingRefresh;
+          }
           if (session != null) {
             options.headers['Authorization'] = 'Bearer ${session.accessToken}';
           }

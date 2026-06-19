@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:dio/dio.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import '../../../core/api_service.dart';
 import '../../../core/theme.dart';
 import '../../../core/constants.dart';
@@ -42,6 +43,7 @@ class _InterviewScreenState extends State<InterviewScreen>
     for (var _ in widget.perguntas) {
       _controllers.add(TextEditingController());
     }
+    _tryRestoreDraft();
     _animController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 700),
@@ -57,12 +59,36 @@ class _InterviewScreenState extends State<InterviewScreen>
     super.dispose();
   }
 
+  void _tryRestoreDraft() {
+    try {
+      final draft = Hive.box('dreams').get('interview_draft');
+      if (draft == null || draft['dreamText'] != widget.dreamText) return;
+      final savedQs = List<String>.from(draft['questions'] as List? ?? []);
+      if (savedQs.length != widget.perguntas.length) return;
+      for (int i = 0; i < savedQs.length; i++) {
+        if (savedQs[i] != widget.perguntas[i]) return;
+      }
+      final answers = List<String>.from(draft['answers'] as List? ?? []);
+      for (int i = 0; i < _controllers.length && i < answers.length; i++) {
+        _controllers[i].text = answers[i];
+      }
+    } catch (_) {}
+  }
+
   bool get _allAnswered =>
       _controllers.every((c) => c.text.trim().isNotEmpty);
 
   Future<void> _submitAnswers() async {
     if (!_allAnswered || _isLoading) return;
     setState(() => _isLoading = true);
+
+    try {
+      Hive.box('dreams').put('interview_draft', {
+        'dreamText': widget.dreamText,
+        'questions': widget.perguntas,
+        'answers': _controllers.map((c) => c.text).toList(),
+      });
+    } catch (_) {}
 
     try {
       final interviewAnswers = List.generate(
@@ -90,6 +116,8 @@ class _InterviewScreenState extends State<InterviewScreen>
 
       if (!mounted) return;
 
+      try { Hive.box('dreams').delete('interview_draft'); } catch (_) {}
+
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
@@ -102,13 +130,12 @@ class _InterviewScreenState extends State<InterviewScreen>
       );
     } on DioException catch (e) {
       if (!mounted) return;
-      if (e.response?.statusCode == 401 || e.response?.statusCode == 403) {
-        // Token refresh already failed in the interceptor — redirect to login
-        Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
-        return;
-      }
+      final int? status = e.response?.statusCode;
       final String msg;
-      if (e.type == DioExceptionType.receiveTimeout ||
+      if (status == 401 || status == 403) {
+        msg = 'Sua sessão expirou. Suas respostas estão preservadas — '
+            'feche e reabra o app, depois toque em Revelar o Significado novamente.';
+      } else if (e.type == DioExceptionType.receiveTimeout ||
           e.type == DioExceptionType.connectionTimeout) {
         msg = 'O servidor demorou a responder. Tente novamente — ele já deve estar acordado.';
       } else {
@@ -118,7 +145,19 @@ class _InterviewScreenState extends State<InterviewScreen>
         SnackBar(
           content: Text(msg, style: GoogleFonts.ptSerif(color: Colors.white)),
           backgroundColor: AionTheme.crimson,
-          duration: const Duration(seconds: 6),
+          duration: const Duration(seconds: 10),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Ocorreu um erro inesperado. Suas respostas estão preservadas — tente novamente.',
+            style: GoogleFonts.ptSerif(color: Colors.white),
+          ),
+          backgroundColor: AionTheme.crimson,
+          duration: const Duration(seconds: 8),
         ),
       );
     } finally {

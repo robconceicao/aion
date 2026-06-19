@@ -120,15 +120,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 );
                                 if (picked != null) {
                                   setState(() => _wakeUpTime = picked);
-                                  await AionNotificationService.requestAndSchedule(picked);
+                                  final ok = await AionNotificationService.requestAndSchedule(picked);
                                   if (mounted) {
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       SnackBar(
                                         content: Text(
-                                          'Notificação agendada para ${picked.format(context)}',
-                                          style: GoogleFonts.ptSerif(color: AionTheme.darkVoid),
+                                          ok
+                                            ? 'Notificação agendada para ${picked.format(context)}'
+                                            : 'Permissão negada ou alarme exato indisponível.\nHabilite em Configurações → Apps → Aion → Acesso especial.',
+                                          style: GoogleFonts.ptSerif(
+                                            color: ok ? AionTheme.darkVoid : AionTheme.ghost,
+                                          ),
                                         ),
-                                        backgroundColor: AionTheme.gold,
+                                        backgroundColor: ok ? AionTheme.gold : AionTheme.crimson,
+                                        duration: Duration(seconds: ok ? 3 : 6),
                                       ),
                                     );
                                   }

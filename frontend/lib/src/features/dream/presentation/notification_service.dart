@@ -53,14 +53,27 @@ class AionNotificationService {
     _initialized = true;
   }
 
-  /// Solicita permissão e agenda notificações
-  static Future<void> requestAndSchedule(TimeOfDay wakeUpTime) async {
+  /// Solicita permissão e agenda notificações.
+  /// Retorna true se agendado com sucesso; false se permissão negada
+  /// ou alarme exato indisponível (Android 12).
+  static Future<bool> requestAndSchedule(TimeOfDay wakeUpTime) async {
     final status = await Permission.notification.request();
-    if (!status.isGranted) return;
+    if (!status.isGranted) return false;
+
+    // Android 12 (API 31–32): SCHEDULE_EXACT_ALARM requer opt-in em
+    // Configurações → Apps → Aion → Acesso especial. Verificar antes
+    // de agendar para evitar falha silenciosa.
+    final androidImpl = _plugin.resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>();
+    if (androidImpl != null) {
+      final canSchedule = await androidImpl.canScheduleExactNotifications();
+      if (canSchedule == false) return false;
+    }
 
     await _saveWakeUpTime(wakeUpTime);
     await _scheduleMorningNotification(wakeUpTime);
     await _scheduleNightNotification();
+    return true;
   }
 
   /// Cancela a notificação matinal do dia (usuário já registrou o sonho)

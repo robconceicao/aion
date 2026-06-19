@@ -4,6 +4,7 @@ import '../../../core/theme.dart';
 import '../../dream/presentation/dream_diary_screen.dart';
 import '../../dream/presentation/widgets/aion_logo.dart';
 import '../../../core/widgets/cinematic_background.dart';
+import '../../dream/presentation/notification_service.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -24,11 +25,20 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     if (_currentStep < _totalSteps) {
       setState(() => _currentStep++);
     } else {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const DreamDiaryScreen()),
-      );
+      _finishOnboarding();
     }
+  }
+
+  // Permissão é opcional — se negada, o fluxo continua normalmente.
+  Future<void> _finishOnboarding() async {
+    await AionNotificationService.requestAndSchedule(
+      const TimeOfDay(hour: 8, minute: 0),
+    );
+    if (!mounted) return;
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => const DreamDiaryScreen()),
+    );
   }
 
   @override

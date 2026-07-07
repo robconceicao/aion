@@ -5,7 +5,7 @@ import '../../../core/api_service.dart';
 import '../../../core/theme.dart';
 import '../../../core/constants.dart';
 import '../../../core/widgets/cinematic_background.dart';
-import 'dream_choice_screen.dart';
+import 'dual_interpretation_screen.dart';
 
 class DreamHistoryScreen extends StatefulWidget {
   final String userEmail;
@@ -28,10 +28,42 @@ class _DreamHistoryScreenState extends State<DreamHistoryScreen> {
   bool _isLoading = true;
   String? _error;
 
+  // Busca semântica — movida da DreamDiaryScreen (Fase 4 — SPEC)
+  final _searchController = TextEditingController();
+  bool _isSearching = false;
+
   @override
   void initState() {
     super.initState();
     _loadHistory();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _buscarSemantico(String query) async {
+    if (query.trim().isEmpty) {
+      await _loadHistory();
+      return;
+    }
+    setState(() => _isSearching = true);
+    try {
+      final response = await ApiService.client.post(
+        AionConfig.searchUrl,
+        data: {'query': query.trim(), 'threshold': 0.60, 'max_results': 8},
+      );
+      final results = List<Map<String, dynamic>>.from(
+        (response.data['results'] as List).map((e) => e as Map<String, dynamic>),
+      );
+      if (mounted) setState(() => _dreams = results);
+    } catch (e) {
+      debugPrint('[HISTORY] Erro busca semântica: $e');
+    } finally {
+      if (mounted) setState(() => _isSearching = false);
+    }
   }
 
   Future<void> _loadHistory() async {
@@ -232,6 +264,51 @@ class _DreamHistoryScreenState extends State<DreamHistoryScreen> {
             ),
           ),
         Padding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+          child: Container(
+            decoration: BoxDecoration(
+              color: AionTheme.darkAbyss,
+              border: Border.all(color: AionTheme.shadow),
+            ),
+            child: TextField(
+              controller: _searchController,
+              style: GoogleFonts.ptSerif(fontSize: 14, color: AionTheme.ghost),
+              decoration: InputDecoration(
+                hintText: 'Busque por significado... (ex: "perda", "voo")',
+                hintStyle: GoogleFonts.ptSerif(
+                    color: AionTheme.silver.withOpacity(0.35), fontSize: 13),
+                prefixIcon: Icon(Icons.search,
+                    color: AionTheme.silver.withOpacity(0.5), size: 18),
+                suffixIcon: _isSearching
+                    ? const Padding(
+                        padding: EdgeInsets.all(12),
+                        child: SizedBox(
+                          width: 16, height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ))
+                    : _searchController.text.isNotEmpty
+                        ? IconButton(
+                            icon: Icon(Icons.close,
+                                size: 16, color: AionTheme.silver.withOpacity(0.5)),
+                            onPressed: () {
+                              _searchController.clear();
+                              _loadHistory();
+                            },
+                          )
+                        : null,
+                border: InputBorder.none,
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              ),
+              onSubmitted: _buscarSemantico,
+              onChanged: (v) {
+                setState(() {});
+                if (v.isEmpty) _loadHistory();
+              },
+            ),
+          ),
+        ),
+        Padding(
           padding: const EdgeInsets.fromLTRB(20, 24, 20, 8),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -289,17 +366,32 @@ class _DreamHistoryScreenState extends State<DreamHistoryScreen> {
   }
 
   void _openDream(Map<String, dynamic> dream) {
-    final analysis = dream['interpretacao'] as Map<String, dynamic>? ?? {};
-    final narrative = (analysis['narrative'] as String?) ?? '';
+    final dreamId = dream['id'] as String? ?? '';
     final relato = dream['relato'] as String? ?? '';
+
+    // Novos campos (migration 003) — disponíveis em sonhos criados após a Fase 1
+    final narrativa = (dream['interpretacao_narrativa'] as String?)?.isNotEmpty == true
+        ? dream['interpretacao_narrativa'] as String
+        : (dream['interpretacao'] as Map<String, dynamic>?)?['narrative'] as String? ?? '';
+
+    final pergunta = (dream['pergunta_reflexao'] as String?)?.isNotEmpty == true
+        ? dream['pergunta_reflexao'] as String
+        : (dream['interpretacao'] as Map<String, dynamic>?)?['pergunta_para_reflexao'] as String? ?? '';
+
+    final analiseCompleta =
+        (dream['analise_completa'] as Map<String, dynamic>?)?.isNotEmpty == true
+            ? dream['analise_completa'] as Map<String, dynamic>
+            : <String, dynamic>{};
 
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => DreamChoiceScreen(
+        builder: (_) => DualInterpretationScreen(
+          dreamId: dreamId,
           dreamText: relato,
-          detailedAnalysis: analysis,
-          narrativeText: narrative,
+          narrativeText: narrativa,
+          perguntaReflexao: pergunta,
+          analiseCompleta: analiseCompleta,
         ),
       ),
     );

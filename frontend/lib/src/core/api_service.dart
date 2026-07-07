@@ -91,4 +91,20 @@ class ApiService {
     }
     return _dio;
   }
+
+  /// Requisita o áudio on-demand de uma interpretação (SPEC §6.2).
+  ///
+  /// POST /interpretacoes/{dreamId}/audio
+  /// Retorna a signed URL do áudio MP3 gerado ou recuperado do cache.
+  ///
+  /// Lança [DioException] em caso de erro de rede ou resposta não-2xx.
+  /// O chamador deve tratar e exibir estado de erro sem afetar o texto.
+  static Future<String> requestAudio(String dreamId) async {
+    final response = await client.post(AionConfig.audioUrl(dreamId));
+    final signedUrl = response.data['signed_url'] as String?;
+    if (signedUrl == null || signedUrl.isEmpty) {
+      throw Exception('Resposta de áudio inválida: signed_url ausente');
+    }
+    return signedUrl;
+  }
 }

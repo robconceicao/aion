@@ -12,4 +12,8 @@ class AionConfig {
   static const String searchUrl    = '$apiBaseUrl/dreams/search';
   static const String filterUrl    = '$apiBaseUrl/dreams/filter';
   static const String narrativeUrl = '$apiBaseUrl/dreams/narrative';
+
+  /// Endpoint de áudio on-demand com cache (Fase 2 — SPEC §6.2).
+  /// POST para este URL gera ou recupera o áudio da interpretação narrativa.
+  static String audioUrl(String dreamId) => '$apiBaseUrl/interpretacoes/$dreamId/audio';
 }

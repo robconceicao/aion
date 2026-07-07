@@ -10,7 +10,6 @@ import '../../../core/widgets/cinematic_background.dart';
 import '../../profile/presentation/profile_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/constants.dart';
-import '../../../core/api_service.dart';
 import 'widgets/hero_journey_widget.dart';
 
 class DreamDiaryScreen extends StatefulWidget {
@@ -25,13 +24,9 @@ class _DreamDiaryScreenState extends State<DreamDiaryScreen> {
   int _thisMonth = 0;
   bool _isLoading = true;
 
-  // — Upgrade 2: Busca e Filtros
-  final _searchController = TextEditingController();
+  // Filtros de emoção e fase da jornada — navegam para DreamHistoryScreen filtrado
   String? _filtroEmocao;
   String? _filtroFase;
-  List<Map<String, dynamic>> _searchResults = [];
-  bool _isSearching = false;
-  bool _showSearchResults = false;
 
   static const _fases = [
     'O Mundo Comum', 'O Chamado', 'A Travessia do Limiar',
@@ -43,30 +38,6 @@ class _DreamDiaryScreenState extends State<DreamDiaryScreen> {
     'Impotência', 'Alívio', 'Confusão', 'Nostalgia',
   ];
 
-  Future<void> _buscarSemantico(String query) async {
-    if (query.trim().isEmpty) {
-      setState(() { _showSearchResults = false; _searchResults = []; });
-      return;
-    }
-    setState(() => _isSearching = true);
-    try {
-      final response = await ApiService.client.post(
-        AionConfig.searchUrl,
-        data: {'query': query.trim(), 'threshold': 0.60, 'max_results': 8},
-      );
-      final results = List<Map<String, dynamic>>.from(
-        (response.data['results'] as List).map((e) => e as Map<String, dynamic>),
-      );
-      setState(() { 
-        _searchResults = results; 
-        _showSearchResults = results.isNotEmpty; 
-      });
-    } catch (e) {
-      debugPrint('Erro busca semântica: $e');
-    } finally {
-      setState(() => _isSearching = false);
-    }
-  }
 
   Future<void> _filtrarSonhos({String? emocao, String? fase}) async {
     // Aqui poderíamos atualizar a lista principal de sonhos ou navegar para o histórico filtrado
@@ -200,67 +171,12 @@ class _DreamDiaryScreenState extends State<DreamDiaryScreen> {
                         ),
                     const SizedBox(height: 32),
 
-                    // — Upgrade 2: Interface de Busca e Filtros
+                    // Filtros de emoção e fase da jornada
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16.0),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Row(
-                            children: [
-                              Icon(Icons.psychology_outlined, size: 16, color: AionTheme.gold.withOpacity(0.7)),
-                              const SizedBox(width: 8),
-                              Text(
-                                'BUSCA SEMÂNTICA (POR SENTIDO)',
-                                style: GoogleFonts.ptSerif(
-                                  fontSize: 10,
-                                  letterSpacing: 2,
-                                  color: AionTheme.gold,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Aqui você busca por ideias, não apenas palavras. AION entende o conceito: se buscar "superação", ele encontrará sonhos sobre subir montanhas ou vencer desafios, mesmo que a palavra não esteja no texto.',
-                            style: GoogleFonts.ptSerif(
-                              fontSize: 11,
-                              height: 1.5,
-                              color: AionTheme.silver.withOpacity(0.75),
-                              fontStyle: FontStyle.italic,
-                            ),
-                          ),
-                          const SizedBox(height: 14),
-                          // Busca Semântica
-                          Container(
-                            margin: const EdgeInsets.only(bottom: 12),
-                            decoration: BoxDecoration(
-                              color: AionTheme.darkAbyss,
-                              border: Border.all(color: AionTheme.shadow),
-                            ),
-                            child: TextField(
-                              controller: _searchController,
-                              style: GoogleFonts.ptSerif(fontSize: 14, color: AionTheme.ghost),
-                              decoration: InputDecoration(
-                                hintText: 'Busque por significado... (ex: "perda", "voo")',
-                                hintStyle: GoogleFonts.ptSerif(
-                                    color: AionTheme.silver.withOpacity(0.35), fontSize: 13),
-                                prefixIcon: Icon(Icons.search,
-                                    color: AionTheme.silver.withOpacity(0.5), size: 18),
-                                suffixIcon: _isSearching
-                                    ? const Padding(padding: EdgeInsets.all(12),
-                                        child: SizedBox(width: 16, height: 16,
-                                            child: CircularProgressIndicator(strokeWidth: 2)))
-                                    : null,
-                                border: InputBorder.none,
-                                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                              ),
-                              onSubmitted: _buscarSemantico,
-                              onChanged: (v) { if (v.isEmpty) setState(() => _showSearchResults = false); },
-                            ),
-                          ),
-
                           Row(
                             children: [
                               Icon(Icons.filter_list_outlined, size: 16, color: AionTheme.gold.withOpacity(0.7)),

@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme.dart';
-import 'analysis_result_screen.dart';
-import 'narrative_result_screen.dart';
+import 'dual_interpretation_screen.dart';
 import 'record_dream_screen.dart';
 import 'dream_history_screen.dart';
 import '../../auth/presentation/auth_screen.dart';
@@ -139,10 +138,16 @@ class _DreamChoiceScreenState extends State<DreamChoiceScreen>
                               onTap: () => Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                              builder: (_) => NarrativeResultScreen(
+                                  builder: (_) => DualInterpretationScreen(
+                                    dreamId: (widget.detailedAnalysis['dream_id'] as String?) ?? '',
                                     dreamText: widget.dreamText,
                                     narrativeText: widget.narrativeText,
-                                    perguntaReflexao: widget.detailedAnalysis['pergunta_para_reflexao'] as String? ?? '',
+                                    perguntaReflexao: (widget.detailedAnalysis['pergunta_reflexao']
+                                        ?? widget.detailedAnalysis['pergunta_para_reflexao']
+                                        ?? '') as String,
+                                    analiseCompleta: (widget.detailedAnalysis['analise_completa']
+                                        as Map<String, dynamic>?) ?? {},
+                                    initialTab: 0,
                                   ),
                                 ),
                               ),
@@ -160,9 +165,16 @@ class _DreamChoiceScreenState extends State<DreamChoiceScreen>
                               onTap: () => Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (_) => AnalysisResultScreen(
+                                  builder: (_) => DualInterpretationScreen(
+                                    dreamId: (widget.detailedAnalysis['dream_id'] as String?) ?? '',
                                     dreamText: widget.dreamText,
-                                    analysis: widget.detailedAnalysis,
+                                    narrativeText: widget.narrativeText,
+                                    perguntaReflexao: (widget.detailedAnalysis['pergunta_reflexao']
+                                        ?? widget.detailedAnalysis['pergunta_para_reflexao']
+                                        ?? '') as String,
+                                    analiseCompleta: (widget.detailedAnalysis['analise_completa']
+                                        as Map<String, dynamic>?) ?? {},
+                                    initialTab: 1,
                                   ),
                                 ),
                               ),

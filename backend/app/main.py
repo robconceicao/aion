@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
-from app.routers import dreams, auth, analytics, feedback, voice, episodes
+from app.routers import dreams, auth, analytics, feedback, voice, episodes, interpretacoes
 
 app = FastAPI(title=settings.PROJECT_NAME)
 
@@ -21,6 +21,7 @@ app.include_router(feedback.router, prefix="/dreams", tags=["Feedback"])
 app.include_router(analytics.router, prefix="/admin", tags=["Analytics"])
 app.include_router(voice.router, prefix="/voice", tags=["Voice"])
 app.include_router(episodes.router, prefix="/episodes", tags=["Canal"])
+app.include_router(interpretacoes.router, prefix="/interpretacoes", tags=["Interpretacoes"])
 
 @app.get("/")
 async def root():

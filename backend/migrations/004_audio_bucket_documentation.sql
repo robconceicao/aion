@@ -1,0 +1,26 @@
+-- Migration 004 -- Documentação do bucket de áudio (sem SQL executável)
+-- Aplicada em: 2026-07-07
+-- Referência: SPEC §6.4 (Storage e RLS)
+--
+-- AÇÃO MANUAL NECESSÁRIA no Supabase Dashboard (Storage):
+--
+-- 1. Criar bucket privado:
+--    Nome: interpretacoes-audio
+--    Tipo: Private (desmarcar "Public bucket")
+--
+-- 2. Estrutura de path no bucket:
+--    {user_id}/{dream_id}.mp3
+--    Ex: "a1b2c3-user-id/d4e5f6-dream-id.mp3"
+--
+-- 3. RLS (Row Level Security) no Storage:
+--    - INSERT: somente via service_role (backend autenticado com SUPABASE_SERVICE_KEY)
+--    - SELECT: via signed URL emitida pelo backend após verificação de ownership
+--    - Usuário A NÃO pode acessar objeto do usuário B sem signed URL válida
+--    - Signed URL expira em 3600 segundos (1 hora)
+--
+-- 4. Verificar que SUPABASE_SERVICE_KEY está configurada como env var no Render
+--    (nunca hardcoded — ver SPEC §8.3 e app/core/config.py)
+--
+-- NOTA: Migrations do Supabase Storage não são SQL DDL — devem ser aplicadas
+-- via Dashboard ou CLI do Supabase. Este arquivo serve como documentação
+-- rastreável no histórico do repositório.

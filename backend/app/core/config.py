@@ -19,6 +19,15 @@ class Settings(BaseSettings):
     SUPABASE_KEY: str = os.getenv("SUPABASE_KEY", "")
     SUPABASE_JWT_SECRET: str = os.getenv("SUPABASE_JWT_SECRET", "")
 
+    # Chave service_role do Supabase — necessária para upload no Storage (Fase 2).
+    # NUNCA hardcoded. Configurar exclusivamente como env var no Render.
+    # Referência: SPEC §6.4 e §8.3 (regra de secrets).
+    SUPABASE_SERVICE_KEY: str = os.getenv("SUPABASE_SERVICE_KEY", "")
+
+    # Provider de TTS: 'edge' (padrão, zero credencial) ou 'google' (stub P2).
+    # Ver app/services/tts_service.py para detalhes de cada implementação.
+    TTS_PROVIDER: str = os.getenv("TTS_PROVIDER", "edge")
+
     class Config:
         env_file = ".env"
 

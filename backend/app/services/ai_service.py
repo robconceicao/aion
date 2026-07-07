@@ -4,6 +4,7 @@ import google.generativeai as genai
 import httpx
 import re
 from app.core.config import settings
+from app.models.dream import SynthesisResult, SynthesisError
 
 # Clientes de IA
 async_client = anthropic.AsyncAnthropic(api_key=settings.ANTHROPIC_API_KEY) if settings.ANTHROPIC_API_KEY else None
@@ -47,8 +48,7 @@ async def generate_embedding(text: str) -> list | None:
 
 async def call_claude(system_prompt: str, user_content: str, max_tokens=3500):
     """Cascata completa: 3 modelos Claude -> Gemini -> DeepSeek (A-05).
-    Levanta RuntimeError se todos os provedores falharem, para que
-    analyze_dream capture e retorne _get_error_response com _error:True."""
+    Levanta RuntimeError se todos os provedores falharem."""
 
     if async_client:
         for model_name in AI_MODELS:
@@ -129,18 +129,18 @@ def _parse_ai_json(content: str) -> dict:
         # 1. Limpeza básica e remoção de Markdown
         content = content.strip()
         content = re.sub(r'```json\s*|\s*```', '', content)
-        
+
         # 2. Localiza o bloco JSON
         start, end = content.find('{'), content.rfind('}')
         if start != -1 and end != -1:
             content = content[start:end+1]
-        
+
         # 3. Resolve problemas de quebra de linha dentro de strings JSON
         content = re.sub(r'(?<![:{,])\n(?![}\],])', ' ', content)
-        
+
         # 4. Remove vírgulas extras
         content = re.sub(r',\s*([\}\/\]])', r'\1', content)
-        
+
         return json.loads(content)
     except Exception as e:
         try:
@@ -152,21 +152,160 @@ def _parse_ai_json(content: str) -> dict:
             raise ValueError(f"JSON invalido: {str(e)}")
 
 
-# ─── FUNÇÕES DO AION (ALMA JUNG & CAMPBELL) ───────────────────
+# ─── SÍNTESE DUAL (FUNÇÃO PRINCIPAL — SPEC §5) ────────────────
+
+SYNTHESIS_PROMPT = """
+Você é Aion de Mito & Psique — a união da senioridade clínica de C.G. Jung com a sabedoria narrativa de Joseph Campbell.
+
+SUA MISSÃO NESTA CHAMADA:
+Realizar UMA ÚNICA análise do material onírico e devolvê-la em DOIS FORMATOS SIMULTÂNEOS dentro de um único JSON.
+Os dois formatos devem ter CONTEÚDO INTERPRETATIVO IDÊNTICO — os mesmos símbolos, os mesmos arquétipos, as mesmas conclusões.
+A diferença é APENAS de forma e linguagem.
+
+ANTES DE GERAR A RESPOSTA, percorra internamente:
+① COMPENSAÇÃO (Jung): Que atitude consciente o sonho compensa?
+② ESTRUTURA DRAMÁTICA: Exposição → Desenvolvimento → Clímax → Lise
+③ AMPLIFICAÇÃO ARQUETÍPICA: Para cada símbolo, paralelo mítico universal
+④ COMPONENTES PSÍQUICOS: Sombra, Anima/Animus, Velho Sábio, Self
+⑤ JORNADA DO HERÓI (Campbell): Localização precisa no Monomito
+⑥ FUNÇÃO PROSPECTIVA: Para onde este sonho conduz o desenvolvimento?
+
+REGRAS PARA analise_completa (formato técnico):
+- Linguagem clínica junguiana-campbelliana
+- Termos técnicos permitidos e esperados
+- Máximo de profundidade e precisão conceitual
+
+REGRAS INVIOLÁVEIS para interpretacao_narrativa (formato acessível):
+- Tom: psicólogo junguiano em consulta — caloroso, direto, segunda pessoa ("Você...", "Seu sonho...")
+- ZERO jargão sem tradução. Substituições obrigatórias:
+  * "conteúdo compensatório" → "seu sonho parece estar equilibrando algo que você vive no dia a dia"
+  * "confronto com a Sombra" → "uma parte sua que você normalmente não olha de frente apareceu no sonho"
+  * "processo de individuação" → "seu caminho de se tornar quem você realmente é"
+  * "arquétipo", "Self", "anima", "animus", "complexo", "inconsciente coletivo" → substituir por metáforas vivas
+- Texto corrido, sem títulos ou listas
+- Máximo 4.000 caracteres (teto suave para TTS)
+- Estrutura: acolhida → leitura dos símbolos em linguagem simples → jornada do herói como aventura pessoal
+
+REGRAS para pergunta_reflexao:
+- Em linguagem acessível (mesmas regras da narrativa — zero jargão)
+- Uma única pergunta que integra o aprendizado simbólico à vida prática do sonhador
+- Exemplo correto: "O que essa parte sua que você evita poderia te ensinar se você parasse para ouvi-la?"
+- Exemplo errado: "Como o confronto com a Sombra ilumina seu processo de individuação?"
+
+DADOS DO SONHO:
+- RELATO: {texto}
+{contexto_estruturado}
+
+IMPORTANTE: Responda APENAS JSON válido. Não use quebras de linha (Enter) dentro dos valores de string — use \\n se precisar separar parágrafos.
+
+JSON FORMAT:
+{{
+  "analise_completa": {{
+    "simbolos": [
+      {{ "elemento": "...", "significado": "amplificação arquetípica técnica", "amplificacao": "paralelo mítico universal" }}
+    ],
+    "arquetipos": [
+      {{ "arquetipo": "nome técnico (ex: Sombra, Anima, Self)", "manifestacao": "como aparece especificamente neste sonho" }}
+    ],
+    "compensacao": "que atitude consciente unilateral o sonho compensa — linguagem clínica",
+    "fase_jornada": "estágio preciso do Monomito de Campbell e o que ele exige do herói agora",
+    "sintese_tecnica": "síntese clínica integrando compensação, arquétipos e função prospectiva"
+  }},
+  "interpretacao_narrativa": "texto corrido, segunda pessoa, zero jargão, máximo 4000 chars. Mesmo conteúdo que analise_completa, linguagem completamente diferente.",
+  "pergunta_reflexao": "uma pergunta em linguagem simples que integra o aprendizado à vida prática"
+}}
+"""
+
+
+async def synthesize_dual(dream_text: str, **kwargs) -> SynthesisResult:
+    """
+    Síntese dual única: gera analise_completa + interpretacao_narrativa + pergunta_reflexao
+    em UMA ÚNICA chamada ao LLM, garantindo não-divergência por construção (SPEC §5).
+
+    Cascata: Claude -> Gemini -> DeepSeek (todos usam o mesmo SYNTHESIS_PROMPT e schema).
+
+    Em caso de falha de todos os provedores OU JSON malformado após esgotamento da cascata:
+    levanta SynthesisError — nada é persistido no banco.
+    """
+    contexto = _build_contexto(
+        kwargs.get('tags_emocao'), kwargs.get('temas'),
+        kwargs.get('residuos_diurnos'), kwargs.get('interview_answers')
+    )
+    prompt = SYNTHESIS_PROMPT.format(texto=dream_text, contexto_estruturado=contexto)
+
+    last_error = None
+    # Tenta cada provider individualmente para capturar erros de parse por provider
+    providers = []
+
+    # Claude (todos os modelos na cascata via call_claude)
+    if async_client:
+        for model_name in AI_MODELS:
+            try:
+                message = await async_client.messages.create(
+                    model=model_name,
+                    max_tokens=5000,
+                    system="",
+                    messages=[{"role": "user", "content": prompt}]
+                )
+                raw = message.content[0].text
+                data = _parse_ai_json(raw)
+                result = SynthesisResult.model_validate(data)
+                print(f"[SYNTHESIS] Sucesso via {model_name}.")
+                return result
+            except Exception as e:
+                print(f"[SYNTHESIS] {model_name} falhou ({type(e).__name__}): {e}")
+                last_error = e
+                continue
+
+    # Fallback 1: Gemini
+    if settings.GEMINI_API_KEY:
+        try:
+            raw = await call_gemini("", prompt)
+            data = _parse_ai_json(raw)
+            result = SynthesisResult.model_validate(data)
+            print("[SYNTHESIS] Sucesso via Gemini.")
+            return result
+        except Exception as e:
+            print(f"[SYNTHESIS] Gemini falhou ({type(e).__name__}): {e}")
+            last_error = e
+
+    # Fallback 2: DeepSeek
+    if settings.DEEPSEEK_API_KEY:
+        try:
+            raw = await call_deepseek("", prompt, max_tokens=5000)
+            data = _parse_ai_json(raw)
+            result = SynthesisResult.model_validate(data)
+            print("[SYNTHESIS] Sucesso via DeepSeek.")
+            return result
+        except Exception as e:
+            print(f"[SYNTHESIS] DeepSeek falhou ({type(e).__name__}): {e}")
+            last_error = e
+
+    # Todos os provedores falharam — erro tipado, nada persiste
+    reason = str(last_error) if last_error else "nenhum provider configurado"
+    raise SynthesisError(reason)
+
+
+# ─── FUNÇÕES DEPRECATED (mantidas temporariamente para evitar quebra de imports) ──
+# Sem call sites ativos após Fase 1. Remoção agendada para P2.
 
 async def analyze_dream(dream_text: str, **kwargs) -> dict:
+    """
+    DEPRECATED (Fase 1, 2026-07-07). Substituída por synthesize_dual().
+    Mantida apenas para evitar ImportError em código legado não atualizado.
+    REMOVER em P2. Nenhum call site ativo deve usar esta função.
+    """
+    print("[AI_SERVICE] AVISO: analyze_dream() está DEPRECATED. Use synthesize_dual().")
     contexto = _build_contexto(
-        kwargs.get('tags_emocao'), kwargs.get('temas'), 
+        kwargs.get('tags_emocao'), kwargs.get('temas'),
         kwargs.get('residuos_diurnos'), kwargs.get('interview_answers')
     )
     prompt = PROMPT_TEMPLATE.format(texto=dream_text, contexto_estruturado=contexto)
-    
     try:
-        # Aumentamos o limite de tokens para permitir análises profundas
         content = await call_claude("", prompt, max_tokens=4000)
         return _parse_ai_json(content)
     except Exception as e:
-        print(f"[AI_SERVICE] Erro fatal analise: {e}")
+        print(f"[AI_SERVICE] Erro fatal analise (deprecated): {e}")
         return _get_error_response(str(e))
 
 
@@ -184,7 +323,7 @@ async def analyze_recurring_pattern(current_dream: str, similar_dreams: list) ->
     for i, d in enumerate(similar_dreams[:3], 1):
         relato = (d.get("relato") or "")[:300]
         history += f"\n[{i}]: {relato}..."
-    
+
     try:
         return await call_claude(RECURRENCE_SYSTEM_PROMPT, f"Atual: {current_dream}{history}", max_tokens=1200)
     except Exception as e:
@@ -192,6 +331,12 @@ async def analyze_recurring_pattern(current_dream: str, similar_dreams: list) ->
 
 
 async def analyze_dream_narrative(dream_text: str, analysis_context: dict = None) -> str:
+    """
+    DEPRECATED (Fase 1, 2026-07-07). Substituída por synthesize_dual().
+    A narrativa agora é gerada no mesmo passo da análise técnica.
+    REMOVER em P2. Nenhum call site ativo deve usar esta função.
+    """
+    print("[AI_SERVICE] AVISO: analyze_dream_narrative() está DEPRECATED. Use synthesize_dual().")
     context_block = ""
     if analysis_context:
         essencia    = analysis_context.get('essencia', '')
@@ -225,7 +370,7 @@ async def analyze_dream_narrative(dream_text: str, analysis_context: dict = None
         return "Aion aguarda em silencio sagrado..."
 
 
-# ─── PROMPTS DEFINITIVOS (EXCELÊNCIA) ─────────────────────────
+# ─── PROMPTS LEGADOS (mantidos para as funções deprecated) ────
 
 PROMPT_TEMPLATE = """
 Atue como Aion de Mito & Psique. Você é a união da senioridade de C.G. Jung com a sabedoria narrativa de Joseph Campbell.
@@ -291,7 +436,7 @@ DIRETRIZES DE LINGUAGEM (INVIOLÁVEIS):
 - PROIBIDO jargão técnico. Nunca use: arquétipo, Self, individuação, inconsciente coletivo, anima, animus, complexo. Substitua por linguagem do dia a dia.
 - Use metáforas vivas: o sonho como uma peça de teatro que sua mente criou, como um conto de fadas onde você é o herói, como um mapa do tesouro interior.
 - Figuras ou situações assustadoras: apresente-as como energias escondidas com potencial, não como ameaças.
-- Foco no \"O QUÊ FAZER AGORA\", não só na análise do passado.
+- Foco no "O QUÊ FAZER AGORA", não só na análise do passado.
 - Tom: caloroso, direto, confiável — como um terapeuta que você conhece há anos.
 
 ESTRUTURA OBRIGATÓRIA (texto corrido, sem títulos ou listas):
@@ -315,6 +460,7 @@ def _build_contexto(tags_emocao=None, temas=None, residuos_diurnos=None, intervi
     return "\nCONTEXTO ADICIONAL:\n" + "\n".join(lines) if lines else ""
 
 def _get_error_response(error_msg: str) -> dict:
+    """Usado apenas pela função deprecated analyze_dream(). Não usar em código novo."""
     return {
         "_error": True,   # A-03: marcador explícito para detecção em _background_save_and_recurrence
         "aviso": "Aion esta em silencio profundo.",

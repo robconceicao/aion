@@ -142,6 +142,8 @@ class _RecordDreamScreenState extends State<RecordDreamScreen> with SingleTicker
   }
 
   // --- Common Analysis Logic ---
+  // Sempre entra no Modo Entrevista. Recorrência é detectada no backend
+  // (embedding + pgvector), sem toggle manual do usuário.
   Future<void> _analyzeAndNavigate(String text) async {
     if (text.trim().isEmpty) return;
     setState(() {
@@ -152,13 +154,37 @@ class _RecordDreamScreenState extends State<RecordDreamScreen> with SingleTicker
     // Cancela notificação do dia quando usuário inicia um registro
     await AionNotificationService.cancelTodaysMorning();
 
+    // Refresh proativo da sessão antes da chamada longa
+    final session = await ApiService.ensureFreshSession();
+    if (session == null && mounted) {
+      setState(() => _isProcessing = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Sua sessão expirou. Entre novamente para continuar.',
+            style: GoogleFonts.ptSerif(color: Colors.white),
+          ),
+          backgroundColor: AionTheme.crimson,
+        ),
+      );
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const AuthScreen()),
+        (_) => false,
+      );
+      return;
+    }
+
     final dio = ApiService.client;
     try {
-      // Solicita 3 perguntas de entrevista ao Claude
+      // Sempre: 3 perguntas guiadas (Modo Entrevista)
       setState(() => _loadingMessage = 'Preparando perguntas\npara aprofundar seu sonho...');
       final response = await dio.post(
         AionConfig.interviewUrl,
         data: {'text': text},
+        options: dio_pkg.Options(
+          receiveTimeout: const Duration(seconds: 180),
+          sendTimeout: const Duration(seconds: 90),
+        ),
       );
 
       final perguntas = List<String>.from(
@@ -202,8 +228,6 @@ class _RecordDreamScreenState extends State<RecordDreamScreen> with SingleTicker
   final List<String> _tagsEmocao = [];
   final List<String> _temas = [];
   final List<String> _residuosDiurnos = [];
-  bool _recurring = false;
-  bool _deepMode = false;
 
   @override
   Widget build(BuildContext context) {
@@ -217,9 +241,15 @@ class _RecordDreamScreenState extends State<RecordDreamScreen> with SingleTicker
             Center(
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 820),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 36.0),
-                  child: _buildBody(theme),
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final padH = (constraints.maxWidth * 0.05).clamp(12.0, 24.0);
+                    return Padding(
+                      padding: EdgeInsets.symmetric(
+                          horizontal: padH, vertical: 24.0),
+                      child: _buildBody(theme),
+                    );
+                  },
                 ),
               ),
             ),
@@ -572,65 +602,19 @@ class _RecordDreamScreenState extends State<RecordDreamScreen> with SingleTicker
             }),
             maxSelect: 3,
           ),
-          const SizedBox(height: 32),
-
-          // Options
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final isWide = constraints.maxWidth > 500;
-              final children = [
-                Expanded(
-                  flex: isWide ? 1 : 0,
-                  child: InkWell(
-                    onTap: () => setState(() => _recurring = !_recurring),
-                    child: Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: _recurring ? AionTheme.gold.withOpacity(0.05) : AionTheme.darkVoid,
-                        border: Border.all(color: _recurring ? AionTheme.gold : AionTheme.shadow),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(_recurring ? Icons.check_box : Icons.check_box_outline_blank, color: _recurring ? AionTheme.gold : AionTheme.silver, size: 16),
-                          const SizedBox(width: 12),
-                          const Text('Sonho recorrente', style: TextStyle(color: AionTheme.silver, fontSize: 13, fontFamily: 'Georgia')),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                if (isWide) const SizedBox(width: 12) else const SizedBox(height: 12),
-                Expanded(
-                  flex: isWide ? 1 : 0,
-                  child: InkWell(
-                    onTap: () => setState(() => _deepMode = !_deepMode),
-                    child: Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: _deepMode ? AionTheme.gold.withOpacity(0.05) : AionTheme.darkVoid,
-                        border: Border.all(color: _deepMode ? AionTheme.gold : AionTheme.shadow),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(_deepMode ? Icons.check_box : Icons.check_box_outline_blank, color: _deepMode ? AionTheme.gold : AionTheme.silver, size: 16),
-                          const SizedBox(width: 12),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: const [
-                              Text('Análise Aprofundada', style: TextStyle(color: AionTheme.silver, fontSize: 13, fontFamily: 'Georgia')),
-                              Text('Perguntas guiadas', style: TextStyle(color: AionTheme.silver, fontSize: 10, fontFamily: 'Georgia')),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ];
-              return isWide ? Row(children: children) : Column(children: children);
-            },
-          ),
           const SizedBox(height: 24),
+          // Recorrência: automática no backend. Entrevista: sempre ativa.
+          Text(
+            'Aion preparará perguntas guiadas e detectará recorrências no seu diário automaticamente.',
+            textAlign: TextAlign.center,
+            style: GoogleFonts.ptSerif(
+              fontSize: 11,
+              color: AionTheme.silver.withOpacity(0.55),
+              fontStyle: FontStyle.italic,
+              height: 1.5,
+            ),
+          ),
+          const SizedBox(height: 20),
 
           SizedBox(
             width: double.infinity,

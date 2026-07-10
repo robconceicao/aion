@@ -73,10 +73,10 @@ class DreamTips {
   static const List<String> placeholders = [
     'Comece pelas emoções que sentiu — a cena vem depois...',
     'Mesmo fragmentos têm valor. O que você viu?',
-    'Não interprete ainda. Apenas descreva...',
-    'Qual foi a última imagem antes de acordar?',
+    'Não interprete ainda. Apenas descreva o que você viu e sentiu...',
     'Esta noite eu sonhei que...',
     'Descreva qualquer detalhe que ainda está presente...',
+    'O que ficou na memória ao acordar? Descreva livremente...',
   ];
 
   // ── Dicas de loading (contemplativas, sobre o processo simbólico)

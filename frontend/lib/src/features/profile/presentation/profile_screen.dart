@@ -15,13 +15,26 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   final _nameController = TextEditingController(text: 'Explorador do Inconsciente');
-  final _emailController = TextEditingController(text: 'aluno@mitopsique.com.br');
+  final _emailController = TextEditingController();
   TimeOfDay? _wakeUpTime;
 
   @override
   void initState() {
     super.initState();
+    final user = Supabase.instance.client.auth.currentUser;
+    _emailController.text = user?.email ?? '';
+    final metaName = user?.userMetadata?['full_name'] as String?;
+    if (metaName != null && metaName.trim().isNotEmpty) {
+      _nameController.text = metaName.trim();
+    }
     _loadWakeUpTime();
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _emailController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadWakeUpTime() async {
@@ -32,6 +45,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final size = MediaQuery.sizeOf(context);
+    final pad = (size.width * 0.06).clamp(16.0, 28.0);
 
     return Scaffold(
       backgroundColor: AionTheme.darkVoid,
@@ -58,7 +73,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
               Expanded(
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(24.0),
+                  padding: EdgeInsets.all(pad),
                   child: Column(
                     children: [
                       const SizedBox(height: 20),
@@ -75,7 +90,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         label: 'E-MAIL',
                         controller: _emailController,
                         theme: theme,
-                        enabled: false,
+                        readOnly: true,
                       ),
                       
                       const SizedBox(height: 40),
@@ -224,7 +239,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     required String label,
     required TextEditingController controller,
     required ThemeData theme,
-    bool enabled = true,
+    bool readOnly = false,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -237,24 +252,41 @@ class _ProfileScreenState extends State<ProfileScreen> {
             color: AionTheme.gold.withOpacity(0.7),
           ),
         ),
+        if (readOnly) ...[
+          const SizedBox(height: 4),
+          Text(
+            'Vinculado à sua conta — não editável aqui',
+            style: GoogleFonts.ptSerif(
+              fontSize: 10,
+              color: AionTheme.silver.withOpacity(0.45),
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+        ],
         const SizedBox(height: 8),
-        TextField(
-          controller: controller,
-          enabled: enabled,
-          style: theme.textTheme.bodyLarge?.copyWith(color: Colors.white),
-          decoration: InputDecoration(
-            filled: true,
-            fillColor: AionTheme.darkAbyss.withOpacity(0.3),
-            enabledBorder: const UnderlineInputBorder(
-              borderSide: BorderSide(color: AionTheme.veil),
+        Opacity(
+          opacity: readOnly ? 0.6 : 1.0,
+          child: TextField(
+            controller: controller,
+            readOnly: readOnly,
+            enableInteractiveSelection: !readOnly,
+            style: theme.textTheme.bodyLarge?.copyWith(
+              color: Colors.white,
             ),
-            focusedBorder: const UnderlineInputBorder(
-              borderSide: BorderSide(color: AionTheme.gold),
+            decoration: InputDecoration(
+              filled: true,
+              fillColor: AionTheme.darkAbyss.withOpacity(readOnly ? 0.45 : 0.3),
+              enabledBorder: const UnderlineInputBorder(
+                borderSide: BorderSide(color: AionTheme.veil),
+              ),
+              focusedBorder: UnderlineInputBorder(
+                borderSide: BorderSide(
+                  color: readOnly ? AionTheme.veil : AionTheme.gold,
+                ),
+              ),
+              contentPadding:
+                  const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
             ),
-            disabledBorder: const UnderlineInputBorder(
-              borderSide: BorderSide(color: AionTheme.veil, style: BorderStyle.none),
-            ),
-            contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 0),
           ),
         ),
       ],

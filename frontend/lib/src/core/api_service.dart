@@ -6,8 +6,9 @@ class ApiService {
   static final Dio _dio = Dio(BaseOptions(
     baseUrl: AionConfig.apiBaseUrl,
     connectTimeout: const Duration(seconds: 60),
-    receiveTimeout: const Duration(seconds: 120),
-    sendTimeout: const Duration(seconds: 60),
+    // Interpretação dual + cold start do Render: tolerância alta
+    receiveTimeout: const Duration(seconds: 180),
+    sendTimeout: const Duration(seconds: 90),
   ));
 
   static Future<Session?>? _pendingRefresh;
@@ -20,6 +21,25 @@ class ApiService {
       return null;
     } finally {
       _pendingRefresh = null;
+    }
+  }
+
+  /// Atualiza proativamente a sessão Supabase antes de operações longas
+  /// (entrevista / análise de sonho), reduzindo risco de token expirar no meio.
+  static Future<Session?> ensureFreshSession() async {
+    try {
+      final current = Supabase.instance.client.auth.currentSession;
+      // Se não há sessão ou o token expira em menos de 5 minutos, refresh
+      final expiresAt = current?.expiresAt;
+      final needsRefresh = current == null ||
+          expiresAt == null ||
+          DateTime.fromMillisecondsSinceEpoch(expiresAt * 1000)
+              .isBefore(DateTime.now().add(const Duration(minutes: 5)));
+      if (!needsRefresh) return current;
+      _pendingRefresh ??= _doRefresh();
+      return await _pendingRefresh;
+    } catch (_) {
+      return Supabase.instance.client.auth.currentSession;
     }
   }
 

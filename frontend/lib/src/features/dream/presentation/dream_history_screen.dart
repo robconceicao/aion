@@ -6,6 +6,7 @@ import '../../../core/theme.dart';
 import '../../../core/constants.dart';
 import '../../../core/widgets/cinematic_background.dart';
 import 'dual_interpretation_screen.dart';
+import 'widgets/hero_journey_widget.dart';
 
 class DreamHistoryScreen extends StatefulWidget {
   final String userEmail;
@@ -28,13 +29,27 @@ class _DreamHistoryScreenState extends State<DreamHistoryScreen> {
   bool _isLoading = true;
   String? _error;
 
-  // Busca semântica — movida da DreamDiaryScreen (Fase 4 — SPEC)
+  // Busca semântica + filtros por categoria — exclusivos desta tela
   final _searchController = TextEditingController();
   bool _isSearching = false;
+  String? _filtroEmocao;
+  String? _filtroFase;
+
+  static const _fases = [
+    'O Mundo Comum', 'O Chamado', 'A Travessia do Limiar',
+    'Provas e Aliados', 'O Abismo', 'A Recompensa', 'O Retorno',
+  ];
+
+  static const _emocoesFilter = [
+    'Ansiedade', 'Calmaria', 'Pavor', 'Euforia',
+    'Impotência', 'Alívio', 'Confusão', 'Nostalgia',
+  ];
 
   @override
   void initState() {
     super.initState();
+    _filtroEmocao = widget.filtroEmocao;
+    _filtroFase = widget.filtroFase;
     _loadHistory();
   }
 
@@ -76,13 +91,12 @@ class _DreamHistoryScreenState extends State<DreamHistoryScreen> {
       final dio = ApiService.client;
       Response response;
       
-      if (widget.filtroEmocao != null || widget.filtroFase != null) {
-        // Usa o endpoint de filtros
+      if (_filtroEmocao != null || _filtroFase != null) {
         response = await dio.get(
           AionConfig.filterUrl,
           queryParameters: {
-            'emocao': widget.filtroEmocao,
-            'fase': widget.filtroFase,
+            if (_filtroEmocao != null) 'emocao': _filtroEmocao,
+            if (_filtroFase != null) 'fase': _filtroFase,
           },
         );
         setState(() {
@@ -90,10 +104,7 @@ class _DreamHistoryScreenState extends State<DreamHistoryScreen> {
           _isLoading = false;
         });
       } else {
-        // Carrega o histórico normal
-        response = await dio.get(
-          AionConfig.historyUrl,
-        );
+        response = await dio.get(AionConfig.historyUrl);
         setState(() {
           _dreams = List<Map<String, dynamic>>.from(response.data);
           _isLoading = false;
@@ -105,6 +116,24 @@ class _DreamHistoryScreenState extends State<DreamHistoryScreen> {
         _isLoading = false;
       });
     }
+  }
+
+  Widget _buildFilterChip(String label, bool isActive, Color color, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: isActive ? color.withOpacity(0.15) : Colors.transparent,
+          border: Border.all(color: isActive ? color.withOpacity(0.6) : AionTheme.shadow),
+        ),
+        child: Text(label, style: GoogleFonts.ptSerif(
+          fontSize: 10, letterSpacing: 1,
+          color: isActive ? color : AionTheme.silver.withOpacity(0.7),
+        )),
+      ),
+    );
   }
 
   String _formatDate(String? isoDate) {
@@ -215,34 +244,42 @@ class _DreamHistoryScreenState extends State<DreamHistoryScreen> {
       );
     }
 
-    if (_dreams.isEmpty) {
+    final padH = (MediaQuery.sizeOf(context).width * 0.05).clamp(12.0, 20.0);
+    final hasActiveQuery = _searchController.text.isNotEmpty ||
+        _filtroEmocao != null ||
+        _filtroFase != null;
+
+    if (_dreams.isEmpty && !hasActiveQuery) {
       return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              '☽',
-              style: TextStyle(fontSize: 48, color: AionTheme.gold.withOpacity(0.3)),
-            ),
-            const SizedBox(height: 24),
-            Text(
-              'O DIÁRIO AINDA ESTÁ EM BRANCO',
-              style: GoogleFonts.ptSerif(
-                fontSize: 10,
-                letterSpacing: 4,
-                color: AionTheme.silver.withOpacity(0.5),
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: padH),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                '☽',
+                style: TextStyle(fontSize: 48, color: AionTheme.gold.withOpacity(0.3)),
               ),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              'Registre seu primeiro sonho para começar.',
-              style: GoogleFonts.ptSerif(
-                fontSize: 13,
-                color: AionTheme.silver.withOpacity(0.4),
-                fontStyle: FontStyle.italic,
+              const SizedBox(height: 24),
+              Text(
+                'O DIÁRIO AINDA ESTÁ EM BRANCO',
+                style: GoogleFonts.ptSerif(
+                  fontSize: 10,
+                  letterSpacing: 4,
+                  color: AionTheme.silver.withOpacity(0.5),
+                ),
               ),
-            ),
-          ],
+              const SizedBox(height: 10),
+              Text(
+                'Registre seu primeiro sonho para começar.',
+                style: GoogleFonts.ptSerif(
+                  fontSize: 13,
+                  color: AionTheme.silver.withOpacity(0.4),
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ],
+          ),
         ),
       );
     }
@@ -250,21 +287,8 @@ class _DreamHistoryScreenState extends State<DreamHistoryScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (widget.filtroEmocao != null || widget.filtroFase != null)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
-            child: Wrap(
-              spacing: 8,
-              children: [
-                if (widget.filtroEmocao != null)
-                  _buildActiveFilterBadge(widget.filtroEmocao!, AionTheme.silver),
-                if (widget.filtroFase != null)
-                  _buildActiveFilterBadge(widget.filtroFase!, AionTheme.gold),
-              ],
-            ),
-          ),
         Padding(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+          padding: EdgeInsets.fromLTRB(padH, 16, padH, 8),
           child: Container(
             decoration: BoxDecoration(
               color: AionTheme.darkAbyss,
@@ -308,17 +332,101 @@ class _DreamHistoryScreenState extends State<DreamHistoryScreen> {
             ),
           ),
         ),
+        // Filtros por emoção / fase da jornada (centralizados no Histórico)
         Padding(
-          padding: const EdgeInsets.fromLTRB(20, 24, 20, 8),
+          padding: EdgeInsets.fromLTRB(padH, 4, padH, 0),
+          child: Text(
+            'FILTRAR POR EMOÇÃO OU JORNADA',
+            style: GoogleFonts.ptSerif(
+              fontSize: 9,
+              letterSpacing: 2,
+              color: AionTheme.gold.withOpacity(0.8),
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          padding: EdgeInsets.symmetric(horizontal: padH),
+          child: Row(children: [
+            _buildFilterChip(
+              'Todos',
+              _filtroEmocao == null && _filtroFase == null,
+              AionTheme.gold,
+              () {
+                setState(() {
+                  _filtroEmocao = null;
+                  _filtroFase = null;
+                });
+                _loadHistory();
+              },
+            ),
+            const SizedBox(width: 6),
+            ..._emocoesFilter.map((e) => Padding(
+                  padding: const EdgeInsets.only(right: 6),
+                  child: _buildFilterChip(
+                    e,
+                    _filtroEmocao == e,
+                    AionTheme.silver,
+                    () {
+                      setState(() {
+                        _filtroEmocao = _filtroEmocao == e ? null : e;
+                        _filtroFase = null;
+                      });
+                      _loadHistory();
+                    },
+                  ),
+                )),
+            Container(
+              width: 1,
+              height: 20,
+              color: AionTheme.shadow,
+              margin: const EdgeInsets.symmetric(horizontal: 8),
+            ),
+            ..._fases.map((f) => Padding(
+                  padding: const EdgeInsets.only(right: 6),
+                  child: _buildFilterChip(
+                    f.split(' ').last,
+                    _filtroFase == f,
+                    HeroJourneyMapper.getColor(f),
+                    () {
+                      setState(() {
+                        _filtroFase = _filtroFase == f ? null : f;
+                        _filtroEmocao = null;
+                      });
+                      _loadHistory();
+                    },
+                  ),
+                )),
+          ]),
+        ),
+        if (_filtroEmocao != null || _filtroFase != null)
+          Padding(
+            padding: EdgeInsets.fromLTRB(padH, 10, padH, 0),
+            child: Wrap(
+              spacing: 8,
+              children: [
+                if (_filtroEmocao != null)
+                  _buildActiveFilterBadge(_filtroEmocao!, AionTheme.silver),
+                if (_filtroFase != null)
+                  _buildActiveFilterBadge(_filtroFase!, AionTheme.gold),
+              ],
+            ),
+          ),
+        Padding(
+          padding: EdgeInsets.fromLTRB(padH, 24, padH, 8),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                '${_dreams.length} SONHO${_dreams.length != 1 ? 'S' : ''} ENCONTRADO${_dreams.length != 1 ? 'S' : ''}',
-                style: GoogleFonts.ptSerif(
-                  fontSize: 9,
-                  letterSpacing: 3,
-                  color: AionTheme.silver.withOpacity(0.5),
+              Flexible(
+                child: Text(
+                  '${_dreams.length} SONHO${_dreams.length != 1 ? 'S' : ''} ENCONTRADO${_dreams.length != 1 ? 'S' : ''}',
+                  style: GoogleFonts.ptSerif(
+                    fontSize: 9,
+                    letterSpacing: 3,
+                    color: AionTheme.silver.withOpacity(0.5),
+                  ),
                 ),
               ),
             ],
@@ -326,7 +434,7 @@ class _DreamHistoryScreenState extends State<DreamHistoryScreen> {
         ),
         Expanded(
           child: ListView.separated(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+            padding: EdgeInsets.symmetric(horizontal: padH, vertical: 8),
             itemCount: _dreams.length,
             separatorBuilder: (_, __) => const SizedBox(height: 10),
             itemBuilder: (context, index) {

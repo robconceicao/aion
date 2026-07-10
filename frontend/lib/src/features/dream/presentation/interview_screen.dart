@@ -91,6 +91,24 @@ class _InterviewScreenState extends State<InterviewScreen>
     } catch (_) {}
 
     try {
+      // Refresh da sessão antes da análise longa (evita expirar no meio)
+      final session = await ApiService.ensureFreshSession();
+      if (session == null) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Sua sessão expirou. Suas respostas estão preservadas — '
+              'feche e reabra o app, depois toque em Revelar o Significado novamente.',
+              style: GoogleFonts.ptSerif(color: Colors.white),
+            ),
+            backgroundColor: AionTheme.crimson,
+            duration: const Duration(seconds: 10),
+          ),
+        );
+        return;
+      }
+
       final interviewAnswers = List.generate(
         widget.perguntas.length,
         (i) => {
@@ -107,8 +125,13 @@ class _InterviewScreenState extends State<InterviewScreen>
           if (widget.temas.isNotEmpty) 'temas': widget.temas,
           if (widget.residuosDiurnos.isNotEmpty) 'residuos_diurnos': widget.residuosDiurnos,
           'interview_answers': interviewAnswers,
+          // Recorrência é detectada no backend; não depende de toggle do usuário
           'is_recurrent': false,
         },
+        options: Options(
+          receiveTimeout: const Duration(seconds: 180),
+          sendTimeout: const Duration(seconds: 90),
+        ),
       );
 
       final detailedAnalysis = response.data as Map<String, dynamic>;

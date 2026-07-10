@@ -3,7 +3,7 @@ from app.models.dream import (
     DreamCreate, InterviewRequest, InterviewResponse,
     NarrativeRequest, SemanticSearchRequest, SynthesisResult, SynthesisError
 )
-from app.database import get_supabase
+from app.database import get_supabase, get_supabase_service
 from app.services.ai_service import (
     synthesize_dual,
     generate_interview_questions, analyze_recurring_pattern,
@@ -13,59 +13,31 @@ from datetime import datetime
 from typing import Optional
 import uuid
 import asyncio
+import logging
 from app.routers.auth import get_current_user
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 from app.core.recurrence import is_recurrence_triggered, numero_aparicoes
 
 
-async def _background_save_and_recurrence(
-    supabase, dream_in: DreamCreate, synthesis: SynthesisResult,
-    embedding: list | None, user_id: str, user_email: str
-):
+def _build_dream_row(
+    dream_in: DreamCreate,
+    synthesis: SynthesisResult,
+    embedding: list | None,
+    user_id: str,
+    user_email: str,
+    similar_dreams: list | None = None,
+) -> tuple[str, dict]:
     """
-    Roda APÓS a resposta ser enviada ao cliente.
-    Persiste o sonho com os dois formatos de interpretação na mesma operação.
-    Detecta recorrência e enriquece analise_completa se aplicável.
-
-    INVARIANTE: synthesis é sempre um SynthesisResult válido neste ponto —
-    a rota não chama esta função em caso de SynthesisError.
-    Os dois formatos (analise_completa + interpretacao_narrativa) são sempre
-    gravados juntos, garantindo a não-divergência por construção (SPEC §5.3).
+    Monta payload dual (analise_completa + interpretacao_narrativa) na mesma row.
+    INVARIANTE: os dois formatos são sempre gravados juntos (SPEC §5.3).
     """
-    similar_dreams = []
-
-    # Só busca recorrência se há embedding válido
-    if embedding is not None:
-        try:
-            result = supabase.rpc("buscar_sonhos_semanticos", {
-                "p_user_id": user_id,
-                "query_emb": embedding,
-                "threshold": 0.75,
-                "max_results": 5,
-            }).execute()
-            similar_dreams = result.data or []
-
-            if is_recurrence_triggered(len(similar_dreams)):
-                recurrence_text = await analyze_recurring_pattern(
-                    current_dream=dream_in.text,
-                    similar_dreams=similar_dreams,
-                )
-                # Enriquece a síntese com metadado de recorrência (não altera os dois formatos)
-                synthesis.analise_completa.sintese_tecnica = (
-                    synthesis.analise_completa.sintese_tecnica
-                    + f"\n\n[PADRÃO RECORRENTE — {numero_aparicoes(len(similar_dreams))}ª ocorrência]\n{recurrence_text}"
-                )
-        except Exception as e:
-            print(f"[BACKGROUND] Erro recorrencia: {e}")
-
-    # Prepara payload de compatibilidade para clientes legados
-    # (campo 'interpretacao' mantido para não quebrar clients antigos)
+    similar_dreams = similar_dreams or []
     legacy_interpretacao = {
         "narrative": synthesis.interpretacao_narrativa,
         "pergunta_para_reflexao": synthesis.pergunta_reflexao,
-        # Mapeamento dos campos novos para o formato legado esperado pelo Flutter atual
         "essencia": synthesis.analise_completa.sintese_tecnica,
         "simbolos_chave": [
             {"elemento": s.elemento, "significado": s.significado}
@@ -82,18 +54,18 @@ async def _background_save_and_recurrence(
         "pergunta_para_reflexao": synthesis.pergunta_reflexao,
         "intensidade_sombra": 5, "intensidade_heroi": 5, "intensidade_transformacao": 5,
         "is_recorrente": is_recurrence_triggered(len(similar_dreams)),
-        "numero_aparicoes": numero_aparicoes(len(similar_dreams)) if is_recurrence_triggered(len(similar_dreams)) else 0,
+        "numero_aparicoes": (
+            numero_aparicoes(len(similar_dreams))
+            if is_recurrence_triggered(len(similar_dreams)) else 0
+        ),
     }
-
     dream_id = str(uuid.uuid4())
     dream_data = {
         "id": dream_id,
         "relato": dream_in.text,
-        # Novos campos (dual interpretation — SPEC §5.3)
         "analise_completa": synthesis.analise_completa.model_dump(),
         "interpretacao_narrativa": synthesis.interpretacao_narrativa,
         "pergunta_reflexao": synthesis.pergunta_reflexao,
-        # Campo legado preservado para compatibilidade
         "interpretacao": legacy_interpretacao,
         "embedding": embedding,
         "tags_emocao": dream_in.tags_emocao or [],
@@ -104,17 +76,107 @@ async def _background_save_and_recurrence(
         "user_id": user_id,
         "user_email": user_email,
         "created_at": datetime.utcnow().isoformat(),
-        "interpretation_status": "ok",   # Sempre 'ok' aqui — SynthesisError impede chegar a esta função
+        "interpretation_status": "ok",
         "embedding_status": "failed" if embedding is None else "ok",
     }
+    return dream_id, dream_data
+
+
+async def _persist_dream_dual_with_retry(dream_data: dict, max_attempts: int = 3) -> None:
+    """
+    Insert síncrono via service_role + retry + verificação por SELECT.
+    Levanta se todas as tentativas falharem — o caller NÃO devolve HTTP 200.
+    """
+    service = get_supabase_service()
+    dream_id = dream_data["id"]
+    last_err: Exception | None = None
+    delays = (0.5, 1.5)
+
+    for attempt in range(1, max_attempts + 1):
+        try:
+            service.table("dreams").insert(dream_data).execute()
+            check = (
+                service.table("dreams")
+                .select("id")
+                .eq("id", dream_id)
+                .limit(1)
+                .execute()
+            )
+            if check.data:
+                logger.info(
+                    "[PERSIST] OK dream_id=%s attempt=%s embedding=%s",
+                    dream_id, attempt, dream_data.get("embedding_status"),
+                )
+                return
+            last_err = RuntimeError(
+                f"insert retornou sem erro mas SELECT não encontrou id={dream_id}"
+            )
+            logger.error(
+                "[PERSIST][ERROR] verify miss dream_id=%s attempt=%s/%s",
+                dream_id, attempt, max_attempts,
+            )
+        except Exception as e:
+            last_err = e
+            logger.error(
+                "[PERSIST][ERROR] insert falhou dream_id=%s attempt=%s/%s: %s",
+                dream_id, attempt, max_attempts, e,
+                exc_info=True,
+            )
+        if attempt < max_attempts:
+            await asyncio.sleep(delays[attempt - 1])
+
+    raise RuntimeError(
+        f"persist failed after {max_attempts} attempts for dream_id={dream_id}: {last_err}"
+    )
+
+
+async def _background_recurrence_enrich(
+    dream_id: str,
+    dream_in: DreamCreate,
+    synthesis: SynthesisResult,
+    embedding: list | None,
+    user_id: str,
+):
+    """
+    Pós-resposta: detecta recorrência e enriquece analise_completa se aplicável.
+    Falha aqui NÃO desfaz o insert dual já confirmado — só loga ERROR.
+    """
+    if embedding is None:
+        return
     try:
-        supabase.table("dreams").insert(dream_data).execute()
-        print(
-            f"[BACKGROUND] Sonho {dream_id} salvo com dual interpretation "
-            f"(embedding={dream_data['embedding_status']})."
+        service = get_supabase_service()
+        result = service.rpc("buscar_sonhos_semanticos", {
+            "p_user_id": user_id,
+            "query_emb": embedding,
+            "threshold": 0.75,
+            "max_results": 5,
+        }).execute()
+        similar_dreams = result.data or []
+
+        if not is_recurrence_triggered(len(similar_dreams)):
+            return
+
+        recurrence_text = await analyze_recurring_pattern(
+            current_dream=dream_in.text,
+            similar_dreams=similar_dreams,
         )
+        ac = synthesis.analise_completa.model_dump()
+        ac["sintese_tecnica"] = (
+            synthesis.analise_completa.sintese_tecnica
+            + f"\n\n[PADRÃO RECORRENTE — {numero_aparicoes(len(similar_dreams))}ª ocorrência]\n"
+            + recurrence_text
+        )
+        service.table("dreams").update({
+            "analise_completa": ac,
+            "is_recurrent": True,
+            "recurrence_count": len(similar_dreams),
+        }).eq("id", dream_id).execute()
+        logger.info("[BACKGROUND] Recorrência OK dream_id=%s", dream_id)
     except Exception as e:
-        print(f"[BACKGROUND] Erro ao salvar: {str(e)}")
+        logger.error(
+            "[BACKGROUND][ERROR] recorrência falhou dream_id=%s: %s",
+            dream_id, e, exc_info=True,
+        )
 
 
 @router.post("/", response_model=dict)
@@ -127,10 +189,11 @@ async def create_dream(
     Cria uma nova interpretação de sonho com síntese dual (SPEC §5).
 
     A síntese dual roda em paralelo com o embedding.
-    Em caso de SynthesisError (todos os providers falharam), retorna HTTP 503
-    e NÃO persiste nada — o relato não é salvo sem interpretação.
+    Em caso de SynthesisError → HTTP 503 e NADA persiste.
+    Após síntese OK, o insert dual é SÍNCRONO (service_role) com retry+verify.
+    HTTP 200 só é devolvido se a linha existir no banco (inclui `id`).
+    Recorrência roda em background e pode falhar sem invalidar o 200.
     """
-    supabase = get_supabase()
     user_id = current_user.get("sub")
     user_email = current_user.get("email", "anonimo@aion.app")
 
@@ -149,7 +212,7 @@ async def create_dream(
             return_exceptions=False,  # SynthesisError propaga diretamente
         )
     except SynthesisError as e:
-        print(f"[ROUTER] SynthesisError — nenhum dado salvo: {e}")
+        logger.error("[ROUTER][ERROR] SynthesisError — nenhum dado salvo: %s", e)
         raise HTTPException(
             status_code=503,
             detail={
@@ -158,10 +221,8 @@ async def create_dream(
             }
         )
     except Exception as e:
-        # asyncio.gather pode re-levantar SynthesisError ou erros de embedding
-        # Embedding nunca levanta — retorna None. Qualquer outra exceção aqui é inesperada.
         if isinstance(e, SynthesisError):
-            print(f"[ROUTER] SynthesisError (via gather) — nenhum dado salvo: {e}")
+            logger.error("[ROUTER][ERROR] SynthesisError (via gather): %s", e)
             raise HTTPException(
                 status_code=503,
                 detail={
@@ -169,17 +230,43 @@ async def create_dream(
                     "message": "Aion está em silêncio profundo. Tente novamente em instantes.",
                 }
             )
-        print(f"[ROUTER] Erro inesperado em create_dream: {e}")
+        logger.error("[ROUTER][ERROR] Erro inesperado em create_dream: %s", e, exc_info=True)
         raise HTTPException(status_code=500, detail={"error": "internal_error", "message": str(e)})
 
-    # Salva em background — síntese bem-sucedida garantida neste ponto
+    # Persistência dual SÍNCRONA — 200 só com linha confirmada
+    dream_id, dream_data = _build_dream_row(
+        dream_in, synthesis, embedding, user_id, user_email
+    )
+    try:
+        await _persist_dream_dual_with_retry(dream_data)
+    except Exception as e:
+        logger.error(
+            "[ROUTER][ERROR] Persistência dual FALHOU dream_id=%s user_id=%s: %s",
+            dream_id,
+            user_id,
+            e,
+            exc_info=True,
+        )
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "error": "persist_failed",
+                "message": (
+                    "A interpretação foi gerada, mas não foi possível salvá-la. "
+                    "Tente novamente em instantes."
+                ),
+            },
+        )
+
+    # Recorrência (enriquecimento) — best-effort em background
     background_tasks.add_task(
-        _background_save_and_recurrence,
-        supabase, dream_in, synthesis, embedding, user_id, user_email,
+        _background_recurrence_enrich,
+        dream_id, dream_in, synthesis, embedding, user_id,
     )
 
-    # Retorna o resultado dual ao cliente imediatamente
+    # 200: dual + id (linha garantida)
     return {
+        "id": dream_id,
         "analise_completa": synthesis.analise_completa.model_dump(),
         "interpretacao_narrativa": synthesis.interpretacao_narrativa,
         "pergunta_reflexao": synthesis.pergunta_reflexao,

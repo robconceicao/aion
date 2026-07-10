@@ -30,5 +30,7 @@ class Settings(BaseSettings):
 
     class Config:
         env_file = ".env"
+        # Permite vars de teste locais (E2E_USER_*) sem quebrar o boot do app.
+        extra = "ignore"
 
 settings = Settings()

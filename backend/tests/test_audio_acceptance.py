@@ -97,16 +97,11 @@ class TestAudioAcceptance(unittest.IsolatedAsyncioTestCase):
         sb = MagicMock()
         sb.table.return_value = _SelectChain(data=dream)
 
-        storage_client = MagicMock()
-        storage_client.storage.from_.return_value.create_signed_url.return_value = {
-            "signedURL": "https://example.local/signed/audio.mp3"
-        }
-
         tts = MagicMock()
         tts.generate = AsyncMock(return_value=b"should-not-be-called")
 
         with patch.object(audio_router, "get_supabase_service", return_value=sb), \
-             patch.object(audio_router, "_get_storage_client", return_value=storage_client), \
+             patch.object(audio_router, "_create_signed_url", new=AsyncMock(return_value="https://example.local/signed/audio.mp3")), \
              patch.object(audio_router, "get_tts_provider", return_value=tts):
             result = await audio_router.request_audio(self.dream_id, self.user_a)
 
@@ -119,43 +114,35 @@ class TestAudioAcceptance(unittest.IsolatedAsyncioTestCase):
         """Cache miss: gera TTS, upload, update audio_path, cached=False."""
         dream = _dream_row("user-a", self.dream_id, narrativa="Você caminhou na floresta.", audio_path=None)
         sb = MagicMock()
-        table = MagicMock()
-        # select chain
         select_chain = _SelectChain(data=dream)
-        # update chain
         update_chain = MagicMock()
         update_chain.eq.return_value = update_chain
         update_chain.execute.return_value = MagicMock(data=[{}])
 
         def table_side_effect(name):
             m = MagicMock()
-            m.select.return_value = select_chain
-            # re-bind select chain methods used after select()
             m.select.side_effect = lambda *a, **k: select_chain
             m.update.return_value = update_chain
             return m
 
         sb.table.side_effect = table_side_effect
 
-        storage_client = MagicMock()
-        bucket = storage_client.storage.from_.return_value
-        bucket.upload.return_value = None
-        bucket.create_signed_url.return_value = {"signedURL": "https://example.local/new.mp3"}
-
         tts = MagicMock()
         tts.generate = AsyncMock(return_value=b"fake-mp3-bytes")
         tts.__class__.__name__ = "EdgeTtsProvider"
+        upload = AsyncMock(return_value=None)
+        sign = AsyncMock(return_value="https://example.local/new.mp3")
 
         with patch.object(audio_router, "get_supabase_service", return_value=sb), \
-             patch.object(audio_router, "_get_storage_client", return_value=storage_client), \
+             patch.object(audio_router, "_upload_audio_mp3", new=upload), \
+             patch.object(audio_router, "_create_signed_url", new=sign), \
              patch.object(audio_router, "get_tts_provider", return_value=tts):
             result = await audio_router.request_audio(self.dream_id, self.user_a)
 
         self.assertFalse(result["cached"])
         self.assertEqual(result["signed_url"], "https://example.local/new.mp3")
         tts.generate.assert_called_once()
-        bucket.upload.assert_called_once()
-        self.assertTrue(update_chain.eq.called or update_chain.execute.called or True)
+        upload.assert_called_once()
         print("\n[OK] first play: TTS + upload + signed_url, cached=False")
 
     async def test_raw_path_not_exposed_by_endpoint(self):
@@ -164,13 +151,9 @@ class TestAudioAcceptance(unittest.IsolatedAsyncioTestCase):
         dream = _dream_row("user-a", self.dream_id, audio_path=path)
         sb = MagicMock()
         sb.table.return_value = _SelectChain(data=dream)
-        storage_client = MagicMock()
-        storage_client.storage.from_.return_value.create_signed_url.return_value = {
-            "signedURL": "https://signed.example/x"
-        }
 
         with patch.object(audio_router, "get_supabase_service", return_value=sb), \
-             patch.object(audio_router, "_get_storage_client", return_value=storage_client):
+             patch.object(audio_router, "_create_signed_url", new=AsyncMock(return_value="https://signed.example/x")):
             result = await audio_router.request_audio(self.dream_id, self.user_a)
 
         self.assertNotIn("audio_path", result)

@@ -8,9 +8,9 @@ from app.database import get_supabase_service
 from app.services.tts_service import get_tts_provider
 from app.routers.auth import get_current_user
 from app.core.config import settings
-from supabase import create_client
 import datetime
 import logging
+import httpx
 
 logger = logging.getLogger(__name__)
 
@@ -26,21 +26,75 @@ BUCKET_NAME = "interpretacoes-audio"
 SIGNED_URL_EXPIRY = 3600
 
 
-def _get_storage_client():
-    """
-    Retorna cliente Supabase com SUPABASE_SERVICE_KEY para operações de Storage.
-    A chave service_role é necessária para upload em bucket privado.
-    
-    SEGURANÇA: a chave é lida exclusivamente de settings.SUPABASE_SERVICE_KEY,
-    que por sua vez lê exclusivamente da env var SUPABASE_SERVICE_KEY.
-    Nunca aparece hardcoded. (SPEC §8.3)
-    """
-    if not settings.SUPABASE_SERVICE_KEY:
-        raise ValueError(
-            "[TTS] SUPABASE_SERVICE_KEY não configurada. "
+def _require_service_key() -> str:
+    """service_role key — só servidor. Nunca hardcoded."""
+    key = settings.SUPABASE_SERVICE_KEY
+    if not key:
+        raise RuntimeError(
+            "SUPABASE_SERVICE_KEY não configurada. "
             "Adicionar como env var no Render para habilitar cache de áudio."
         )
-    return create_client(settings.SUPABASE_URL, settings.SUPABASE_SERVICE_KEY)
+    return key
+
+
+def _storage_headers() -> dict:
+    key = _require_service_key()
+    return {
+        "Authorization": f"Bearer {key}",
+        "apikey": key,
+    }
+
+
+async def _upload_audio_mp3(object_path: str, audio_bytes: bytes) -> None:
+    """
+    Upload via Storage REST (service_role) com x-upsert.
+    Evita ambiguidades do client storage3 multipart em alguns ambientes.
+    """
+    base = settings.SUPABASE_URL.rstrip("/")
+    url = f"{base}/storage/v1/object/{BUCKET_NAME}/{object_path}"
+    headers = {
+        **_storage_headers(),
+        "Content-Type": "audio/mpeg",
+        "x-upsert": "true",
+    }
+    async with httpx.AsyncClient(timeout=60.0) as client:
+        resp = await client.post(url, content=audio_bytes, headers=headers)
+        if resp.status_code in (200, 201):
+            logger.info("[AUDIO] Upload OK path=%s bytes=%s", object_path, len(audio_bytes))
+            return
+        # fallback PUT (replace)
+        resp2 = await client.put(url, content=audio_bytes, headers=headers)
+        if resp2.status_code in (200, 201):
+            logger.info("[AUDIO] Upload PUT OK path=%s", object_path)
+            return
+        raise RuntimeError(
+            f"storage upload failed POST={resp.status_code} body={resp.text[:240]} "
+            f"| PUT={resp2.status_code} body={resp2.text[:240]}"
+        )
+
+
+async def _create_signed_url(object_path: str) -> str:
+    """Gera signed URL via Storage REST (service_role)."""
+    base = settings.SUPABASE_URL.rstrip("/")
+    url = f"{base}/storage/v1/object/sign/{BUCKET_NAME}/{object_path}"
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        resp = await client.post(
+            url,
+            headers={**_storage_headers(), "Content-Type": "application/json"},
+            json={"expiresIn": SIGNED_URL_EXPIRY},
+        )
+        if resp.status_code != 200:
+            raise RuntimeError(
+                f"signed URL failed status={resp.status_code} body={resp.text[:240]}"
+            )
+        data = resp.json()
+        # API devolve {"signedURL": "/object/sign/..."} (path relativo) ou URL absoluta
+        signed = data.get("signedURL") or data.get("signedUrl") or data.get("signed_url")
+        if not signed:
+            raise RuntimeError(f"signed URL response sem campo: {list(data.keys())}")
+        if signed.startswith("http"):
+            return signed
+        return f"{base}/storage/v1{signed}"
 
 
 @router.post("/{dream_id}/audio")
@@ -85,14 +139,11 @@ async def request_audio(
     # 2. Cache hit — retorna signed URL sem gerar novo áudio
     if dream.get("audio_path"):
         try:
-            storage = _get_storage_client()
-            signed = storage.storage.from_(BUCKET_NAME).create_signed_url(
-                dream["audio_path"], SIGNED_URL_EXPIRY
-            )
-            print(f"[AUDIO] cache hit — {dream['audio_path']}")
-            return {"signed_url": signed["signedURL"], "cached": True}
+            signed_url = await _create_signed_url(dream["audio_path"])
+            logger.info("[AUDIO] cache hit — %s", dream["audio_path"])
+            return {"signed_url": signed_url, "cached": True}
         except Exception as e:
-            print(f"[AUDIO] Falha ao gerar signed URL para cache: {e}")
+            logger.error("[AUDIO][ERROR] signed URL cache miss regenerando: %s", e)
             # Não propaga — tenta regenerar abaixo
             pass
 
@@ -136,23 +187,18 @@ async def request_audio(
             }
         )
 
-    # 5. Upload para Supabase Storage
+    # 5. Upload para Supabase Storage (service_role REST)
     audio_path = f"{user_id}/{dream_id}.mp3"
     try:
-        storage = _get_storage_client()
-        storage.storage.from_(BUCKET_NAME).upload(
-            path=audio_path,
-            file=audio_bytes,
-            file_options={"content-type": "audio/mpeg", "upsert": "true"}
-        )
-        print(f"[AUDIO] Upload concluído — {audio_path}")
+        await _upload_audio_mp3(audio_path, audio_bytes)
     except Exception as e:
-        print(f"[AUDIO] Falha no upload Storage: {e}")
+        logger.error("[AUDIO][ERROR] Upload Storage: %s", e, exc_info=True)
         raise HTTPException(
             status_code=503,
             detail={
                 "error": "storage_failed",
-                "message": "Áudio gerado mas não foi possível salvar. O texto continua disponível para leitura."
+                "message": "Áudio gerado mas não foi possível salvar. O texto continua disponível para leitura.",
+                "debug": str(e)[:200],
             }
         )
 
@@ -169,17 +215,15 @@ async def request_audio(
 
     # 7. Gera e retorna signed URL
     try:
-        storage = _get_storage_client()
-        signed = storage.storage.from_(BUCKET_NAME).create_signed_url(
-            audio_path, SIGNED_URL_EXPIRY
-        )
-        return {"signed_url": signed["signedURL"], "cached": False}
+        signed_url = await _create_signed_url(audio_path)
+        return {"signed_url": signed_url, "cached": False}
     except Exception as e:
-        print(f"[AUDIO] Falha ao gerar signed URL final: {e}")
+        logger.error("[AUDIO][ERROR] signed URL final: %s", e, exc_info=True)
         raise HTTPException(
             status_code=503,
             detail={
                 "error": "signed_url_failed",
-                "message": "Áudio gerado mas URL temporária indisponível. Tente novamente."
+                "message": "Áudio gerado mas URL temporária indisponível. Tente novamente.",
+                "debug": str(e)[:200],
             }
         )

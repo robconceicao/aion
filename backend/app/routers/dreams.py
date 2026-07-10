@@ -3,7 +3,7 @@ from app.models.dream import (
     DreamCreate, InterviewRequest, InterviewResponse,
     NarrativeRequest, SemanticSearchRequest, SynthesisResult, SynthesisError
 )
-from app.database import get_supabase, get_supabase_service
+from app.database import get_supabase_service
 from app.services.ai_service import (
     synthesize_dual,
     generate_interview_questions, analyze_recurring_pattern,
@@ -292,7 +292,8 @@ async def create_dream(
 
 @router.get("/history", response_model=list)
 async def get_user_history(current_user: dict = Depends(get_current_user)):
-    supabase = get_supabase()
+    # service_role: bypass RLS. Ownership = ÚNICA proteção → sempre .eq("user_id", user_id).
+    supabase = get_supabase_service()
     user_id = current_user.get("sub")
     try:
         res = (
@@ -315,10 +316,17 @@ async def get_dream_audio_legacy(dream_id: str, current_user: dict = Depends(get
     Mantido para compatibilidade com clientes antigos.
     O novo endpoint com cache está em POST /interpretacoes/{id}/audio (Fase 2).
     """
-    supabase = get_supabase()
+    # service_role: bypass RLS. Ownership = ÚNICA proteção → .eq("user_id", user_id).
+    supabase = get_supabase_service()
     user_id = current_user.get("sub")
     try:
-        res = supabase.table("dreams").select("interpretacao, interpretacao_narrativa").eq("id", dream_id).eq("user_id", user_id).execute()
+        res = (
+            supabase.table("dreams")
+            .select("interpretacao, interpretacao_narrativa")
+            .eq("id", dream_id)
+            .eq("user_id", user_id)
+            .execute()
+        )
         if not res.data:
             raise HTTPException(status_code=404, detail="Sonho não encontrado")
 
@@ -355,7 +363,8 @@ async def semantic_search(
     user_id = current_user.get("sub")
     try:
         query_embedding = await generate_embedding(request.query)
-        supabase = get_supabase()
+        # service_role + p_user_id no RPC (filtro de ownership na função).
+        supabase = get_supabase_service()
         result = supabase.rpc("buscar_sonhos_semanticos", {
             "p_user_id": user_id,
             "query_emb": query_embedding,
@@ -376,7 +385,8 @@ async def filter_dreams(
     """Filtra sonhos por emoção, fase da jornada ou texto livre."""
     user_id = current_user.get("sub")
     try:
-        supabase = get_supabase()
+        # service_role: bypass RLS. Ownership = ÚNICA proteção → .eq("user_id", user_id).
+        supabase = get_supabase_service()
         q = (supabase.table("dreams").select("*")
              .eq("user_id", user_id)
              .order("created_at", desc=True)

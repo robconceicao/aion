@@ -59,7 +59,7 @@ class TestAudioAcceptance(unittest.IsolatedAsyncioTestCase):
         sb = MagicMock()
         sb.table.return_value = _SelectChain(data=None, raise_on_execute=True)
 
-        with patch.object(audio_router, "get_supabase", return_value=sb):
+        with patch.object(audio_router, "get_supabase_service", return_value=sb):
             with self.assertRaises(HTTPException) as ctx:
                 await audio_router.request_audio(self.dream_id, self.user_b)
 
@@ -78,7 +78,7 @@ class TestAudioAcceptance(unittest.IsolatedAsyncioTestCase):
         failing_tts = MagicMock()
         failing_tts.generate = AsyncMock(side_effect=RuntimeError("edge tts down"))
 
-        with patch.object(audio_router, "get_supabase", return_value=sb), \
+        with patch.object(audio_router, "get_supabase_service", return_value=sb), \
              patch.object(audio_router, "get_tts_provider", return_value=failing_tts):
             with self.assertRaises(HTTPException) as ctx:
                 await audio_router.request_audio(self.dream_id, self.user_a)
@@ -105,7 +105,7 @@ class TestAudioAcceptance(unittest.IsolatedAsyncioTestCase):
         tts = MagicMock()
         tts.generate = AsyncMock(return_value=b"should-not-be-called")
 
-        with patch.object(audio_router, "get_supabase", return_value=sb), \
+        with patch.object(audio_router, "get_supabase_service", return_value=sb), \
              patch.object(audio_router, "_get_storage_client", return_value=storage_client), \
              patch.object(audio_router, "get_tts_provider", return_value=tts):
             result = await audio_router.request_audio(self.dream_id, self.user_a)
@@ -146,7 +146,7 @@ class TestAudioAcceptance(unittest.IsolatedAsyncioTestCase):
         tts.generate = AsyncMock(return_value=b"fake-mp3-bytes")
         tts.__class__.__name__ = "EdgeTtsProvider"
 
-        with patch.object(audio_router, "get_supabase", return_value=sb), \
+        with patch.object(audio_router, "get_supabase_service", return_value=sb), \
              patch.object(audio_router, "_get_storage_client", return_value=storage_client), \
              patch.object(audio_router, "get_tts_provider", return_value=tts):
             result = await audio_router.request_audio(self.dream_id, self.user_a)
@@ -155,14 +155,7 @@ class TestAudioAcceptance(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result["signed_url"], "https://example.local/new.mp3")
         tts.generate.assert_called_once()
         bucket.upload.assert_called_once()
-        # update deve ter sido chamado com audio_path
-        called_update = False
-        for call in sb.table.call_args_list:
-            pass
-        # Verifica update via mock table
-        # sb.table was called; get last table mock's update
         self.assertTrue(update_chain.eq.called or update_chain.execute.called or True)
-        # Mais estrito: inspect update payload via side_effect tracking
         print("\n[OK] first play: TTS + upload + signed_url, cached=False")
 
     async def test_raw_path_not_exposed_by_endpoint(self):
@@ -176,7 +169,7 @@ class TestAudioAcceptance(unittest.IsolatedAsyncioTestCase):
             "signedURL": "https://signed.example/x"
         }
 
-        with patch.object(audio_router, "get_supabase", return_value=sb), \
+        with patch.object(audio_router, "get_supabase_service", return_value=sb), \
              patch.object(audio_router, "_get_storage_client", return_value=storage_client):
             result = await audio_router.request_audio(self.dream_id, self.user_a)
 

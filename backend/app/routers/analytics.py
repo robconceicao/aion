@@ -1,12 +1,14 @@
 from fastapi import APIRouter, Depends
 from app.routers.auth import get_current_admin
-from app.database import get_supabase
+from app.database import get_supabase_service
 
 router = APIRouter()
 
 @router.get("/dashboard")
 async def get_dashboard_summary(admin: dict = Depends(get_current_admin)):
-    supabase = get_supabase()
+    # Admin-only: contagem global (sem filtro user_id — intencional).
+    # Proteção = get_current_admin, não ownership de sonho.
+    supabase = get_supabase_service()
     total_users = 0
     total_dreams = 0
     

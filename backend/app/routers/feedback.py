@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from typing import Optional
 from app.routers.auth import get_current_user
-from app.database import get_supabase
+from app.database import get_supabase_service
 
 router = APIRouter()
 
@@ -17,11 +17,18 @@ async def create_feedback(
     feedback_in: FeedbackCreate,
     current_user: dict = Depends(get_current_user),
 ):
-    supabase = get_supabase()
+    # service_role: bypass RLS. Ownership no sonho = .eq("user_id", user_id).
+    supabase = get_supabase_service()
     user_id = current_user.get("sub")
 
     # Verifica se o sonho pertence ao usuário
-    res = supabase.table("dreams").select("id").eq("id", dream_id).eq("user_id", user_id).execute()
+    res = (
+        supabase.table("dreams")
+        .select("id")
+        .eq("id", dream_id)
+        .eq("user_id", user_id)
+        .execute()
+    )
     if not res.data:
         raise HTTPException(status_code=404, detail="Dream not found")
 

@@ -4,12 +4,15 @@ Router de interpretações — operações sobre interpretações existentes.
 Atualmente: endpoint de áudio on-demand com cache no Supabase Storage.
 """
 from fastapi import APIRouter, Depends, HTTPException
-from app.database import get_supabase
+from app.database import get_supabase_service
 from app.services.tts_service import get_tts_provider
 from app.routers.auth import get_current_user
 from app.core.config import settings
 from supabase import create_client
 import datetime
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -58,7 +61,8 @@ async def request_audio(
     Falha de Storage → HTTP 503 tipado. Idem.
     """
     user_id = current_user.get("sub")
-    supabase = get_supabase()
+    # service_role: bypass RLS. Ownership = ÚNICA proteção → sempre .eq("user_id", user_id).
+    supabase = get_supabase_service()
 
     # 1. Verifica ownership e recupera estado do áudio
     try:
@@ -153,14 +157,15 @@ async def request_audio(
         )
 
     # 6. Persiste audio_path + timestamp no registro do sonho
+    # Ownership no update: .eq("id") E .eq("user_id") — service_role sem RLS.
     try:
         supabase.table("dreams").update({
             "audio_path": audio_path,
             "audio_gerado_em": datetime.datetime.utcnow().isoformat(),
-        }).eq("id", dream_id).execute()
+        }).eq("id", dream_id).eq("user_id", user_id).execute()
     except Exception as e:
         # Não fatal — o áudio foi gerado e uploadado; só o cache ficou sem registro
-        print(f"[AUDIO] Falha ao persistir audio_path (não fatal): {e}")
+        logger.error("[AUDIO][ERROR] Falha ao persistir audio_path dream_id=%s: %s", dream_id, e)
 
     # 7. Gera e retorna signed URL
     try:

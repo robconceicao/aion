@@ -9,7 +9,6 @@ import 'widgets/aion_logo.dart';
 import '../../../core/widgets/cinematic_background.dart';
 import '../../profile/presentation/profile_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../../../core/constants.dart';
 import 'widgets/hero_journey_widget.dart';
 
 class DreamDiaryScreen extends StatefulWidget {

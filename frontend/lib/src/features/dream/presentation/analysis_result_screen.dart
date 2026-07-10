@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme.dart';
 import '../../../core/widgets/cinematic_background.dart';
-import 'widgets/mandala_spinner.dart';
 import 'widgets/hero_journey_widget.dart';
 
 class AnalysisResultScreen extends StatelessWidget {

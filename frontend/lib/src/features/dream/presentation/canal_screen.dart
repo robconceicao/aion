@@ -41,7 +41,6 @@ class CanalScreen extends StatefulWidget {
 class _CanalScreenState extends State<CanalScreen> {
   List<Episode> _episodes = [];
   bool _isLoading = true;
-  String? _error;
 
   @override
   void initState() {
@@ -52,7 +51,6 @@ class _CanalScreenState extends State<CanalScreen> {
   Future<void> _fetchEpisodes() async {
     setState(() {
       _isLoading = true;
-      _error = null;
     });
     try {
       final response = await ApiService.client.get(AionConfig.episodesUrl);
@@ -65,8 +63,7 @@ class _CanalScreenState extends State<CanalScreen> {
       setState(() {
         _episodes = [];
         _isLoading = false;
-        // Se o servidor retornar 404 ou lista vazia, é estado válido (sem episódios ainda)
-        _error = null;
+        // 404 ou falha de rede: trata como lista vazia (sem episódios ainda)
       });
     }
   }

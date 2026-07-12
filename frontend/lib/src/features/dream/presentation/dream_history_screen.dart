@@ -87,6 +87,18 @@ class _DreamHistoryScreenState extends State<DreamHistoryScreen> {
       _error = null;
     });
 
+    // Garante token antes do fetch (evita 403 por request sem Bearer)
+    final session = await ApiService.ensureFreshSession();
+    if (session == null) {
+      if (!mounted) return;
+      setState(() {
+        _error =
+            'Sua sessão expirou (sem token local). Feche e reabra o app e entre novamente.';
+        _isLoading = false;
+      });
+      return;
+    }
+
     try {
       final dio = ApiService.client;
       Response response;
@@ -112,9 +124,14 @@ class _DreamHistoryScreenState extends State<DreamHistoryScreen> {
       }
     } on DioException catch (e) {
       final status = e.response?.statusCode;
+      final detail = e.response?.data is Map
+          ? (e.response!.data['detail']?.toString() ?? '')
+          : '';
       final String msg;
       if (status == 401 || status == 403) {
-        msg = 'Sua sessão expirou (HTTP $status). Feche e reabra o app e tente de novo.';
+        final hint = detail.isNotEmpty ? ' [$detail]' : '';
+        msg =
+            'Sua sessão expirou (HTTP $status$hint). Feche e reabra o app e tente de novo.';
       } else if (e.type == DioExceptionType.receiveTimeout ||
           e.type == DioExceptionType.connectionTimeout) {
         msg = 'O servidor demorou a responder. Toque em Tentar novamente.';

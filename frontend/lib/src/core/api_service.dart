@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'constants.dart';
 
@@ -16,6 +17,8 @@ class ApiService {
   /// Access token ainda serve para autorizar um request (margem de 30s).
   static bool _isAccessTokenUsable(Session? session) {
     if (session == null) return false;
+    final token = session.accessToken;
+    if (token.isEmpty) return false;
     final expiresAt = session.expiresAt;
     if (expiresAt == null) return true;
     return DateTime.fromMillisecondsSinceEpoch(expiresAt * 1000)
@@ -26,7 +29,8 @@ class ApiService {
     try {
       final result = await Supabase.instance.client.auth.refreshSession();
       return result.session;
-    } catch (_) {
+    } catch (e) {
+      debugPrint('[ApiService] refreshSession falhou: $e');
       return null;
     } finally {
       _pendingRefresh = null;
@@ -34,17 +38,18 @@ class ApiService {
   }
 
   /// Atualiza proativamente a sessão Supabase antes de operações longas
-  /// (entrevista / análise de sonho), reduzindo risco de token expirar no meio.
+  /// (entrevista / análise de sonho / histórico), reduzindo risco de token
+  /// expirar no meio.
   ///
   /// Se o refresh falhar por rede/timeout, NÃO trata como sessão expirada
-  /// enquanto o access token atual ainda for utilizável (evita falso positivo
-  /// de "sessão expirou" no Modo Entrevista).
+  /// enquanto o access token atual ainda for utilizável.
   static Future<Session?> ensureFreshSession() async {
     try {
       final current = Supabase.instance.client.auth.currentSession;
       if (current == null) {
         _pendingRefresh ??= _doRefresh();
-        return await _pendingRefresh;
+        final refreshed = await _pendingRefresh;
+        return _isAccessTokenUsable(refreshed) ? refreshed : null;
       }
 
       // Refresh proativo se expira em menos de 5 minutos (ou expiresAt ausente)
@@ -52,18 +57,21 @@ class ApiService {
       final needsRefresh = expiresAt == null ||
           DateTime.fromMillisecondsSinceEpoch(expiresAt * 1000)
               .isBefore(DateTime.now().add(const Duration(minutes: 5)));
-      if (!needsRefresh) return current;
+      if (!needsRefresh) {
+        return _isAccessTokenUsable(current) ? current : null;
+      }
 
       _pendingRefresh ??= _doRefresh();
       final refreshed = await _pendingRefresh;
-      if (refreshed != null) return refreshed;
+      if (_isAccessTokenUsable(refreshed)) return refreshed;
 
       // Refresh falhou: preferir token atual ainda válido a "sessão expirou"
       if (_isAccessTokenUsable(current)) return current;
       final latest = Supabase.instance.client.auth.currentSession;
       if (_isAccessTokenUsable(latest)) return latest;
       return null;
-    } catch (_) {
+    } catch (e) {
+      debugPrint('[ApiService] ensureFreshSession erro: $e');
       final fallback = Supabase.instance.client.auth.currentSession;
       return _isAccessTokenUsable(fallback) ? fallback : null;
     }
@@ -75,13 +83,24 @@ class ApiService {
       // Interceptor de autenticação + retry automático
       _dio.interceptors.add(InterceptorsWrapper(
         onRequest: (options, handler) async {
-          var session = Supabase.instance.client.auth.currentSession;
+          // Sempre tenta ter um token utilizável antes de sair.
+          // Evita o 403 "Not authenticated" do FastAPI HTTPBearer (request sem Bearer).
+          var session = await ensureFreshSession();
           if (session == null) {
-            _pendingRefresh ??= _doRefresh();
-            session = await _pendingRefresh;
+            // Última chance: sessão crua do SDK (mesmo se perto de expirar)
+            session = Supabase.instance.client.auth.currentSession;
+            if (session != null && session.accessToken.isEmpty) {
+              session = null;
+            }
           }
-          if (session != null) {
-            options.headers['Authorization'] = 'Bearer ${session.accessToken}';
+
+          if (session != null && session.accessToken.isNotEmpty) {
+            options.headers['Authorization'] =
+                'Bearer ${session.accessToken}';
+          } else {
+            debugPrint(
+              '[ApiService] Request SEM Bearer: ${options.method} ${options.uri}',
+            );
           }
           return handler.next(options);
         },
@@ -93,10 +112,9 @@ class ApiService {
           // On 401/403 refresh the Supabase token silently and retry once
           if (isAuthError && !isAuthRetry) {
             try {
-              final result =
-                  await Supabase.instance.client.auth.refreshSession();
-              final newSession = result.session;
-              if (newSession != null) {
+              _pendingRefresh ??= _doRefresh();
+              final newSession = await _pendingRefresh;
+              if (newSession != null && newSession.accessToken.isNotEmpty) {
                 final opts = err.requestOptions;
                 opts.headers['Authorization'] =
                     'Bearer ${newSession.accessToken}';

@@ -5,24 +5,38 @@ from app.core.config import settings
 from app.core.jwt_verify import verify_supabase_jwt
 
 router = APIRouter()
-security = HTTPBearer()
+# auto_error=False: sem header não vira 403 genérico do HTTPBearer —
+# devolvemos 401 explícito (missing_token vs invalid_token) para o app diagnosticar.
+security = HTTPBearer(auto_error=False)
 
 
-async def get_current_user(token: HTTPAuthorizationCredentials = Depends(security)):
+def _unauthorized(detail: str) -> HTTPException:
+    return HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail=detail,
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+
+
+async def get_current_user(
+    token: HTTPAuthorizationCredentials | None = Depends(security),
+):
     """
     Verifica o Supabase JWT e devolve o payload do usuário.
 
     Ordem (TD-01):
-      1. Validação local — ES256/RS* via JWKS, ou HS256 via SUPABASE_JWT_SECRET
-      2. Fallback GoTrue GET /auth/v1/user (rede; só se local falhar)
-    """
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
+      1. Header Authorization obrigatório (senão 401 missing_token)
+      2. Validação local — ES256/RS* via JWKS, ou HS256 via SUPABASE_JWT_SECRET
+      3. Fallback GoTrue GET /auth/v1/user (rede; só se local falhar)
 
-    raw = token.credentials
+    Nota: HTTP 403 do FastAPI HTTPBearer (auto_error=True) significava
+    "sem Bearer" — isso confundia com falha de JWT. Agora missing = 401.
+    """
+    if token is None or not (token.credentials or "").strip():
+        print("[AUTH] Request sem Authorization Bearer — missing_token")
+        raise _unauthorized("missing_token")
+
+    raw = token.credentials.strip()
 
     # 1. Validação local (JWKS ES256 ou HS256 legado)
     try:
@@ -60,7 +74,7 @@ async def get_current_user(token: HTTPAuthorizationCredentials = Depends(securit
     except Exception as e:
         print(f"[AUTH] Erro ao consultar a API do Supabase: {e}")
 
-    raise credentials_exception
+    raise _unauthorized("invalid_token")
 
 
 async def get_current_admin(current_user: dict = Depends(get_current_user)):

@@ -156,7 +156,11 @@ class _InterviewScreenState extends State<InterviewScreen>
       final int? status = e.response?.statusCode;
       final String msg;
       if (status == 401 || status == 403) {
-        msg = 'Sua sessão expirou (HTTP $status). Suas respostas estão preservadas — '
+        final detail = e.response?.data is Map
+            ? (e.response!.data['detail']?.toString() ?? '')
+            : '';
+        final hint = detail.isNotEmpty ? ' [$detail]' : '';
+        msg = 'Sua sessão expirou (HTTP $status$hint). Suas respostas estão preservadas — '
             'feche e reabra o app, depois toque em Revelar o Significado novamente.';
       } else if (e.type == DioExceptionType.receiveTimeout ||
           e.type == DioExceptionType.connectionTimeout) {
@@ -338,7 +342,8 @@ class _InterviewScreenState extends State<InterviewScreen>
                 child: Text(
                   question,
                   style: GoogleFonts.cormorantGaramond(
-                    fontSize: 17, height: 1.5, color: AionTheme.ghost,
+                    // Alto contraste no texto de leitura (WCAG-ish sobre darkVoid)
+                    fontSize: 17, height: 1.5, color: const Color(0xFFF5F5F5),
                     fontStyle: FontStyle.italic,
                   ),
                 ),
@@ -355,12 +360,12 @@ class _InterviewScreenState extends State<InterviewScreen>
             child: TextField(
               controller: controller,
               style: GoogleFonts.ptSerif(
-                fontSize: 14, color: AionTheme.ghost, height: 1.6,
+                fontSize: 15, color: const Color(0xFFF5F5F5), height: 1.6,
               ),
               decoration: InputDecoration(
                 hintText: 'Sua resposta...',
                 hintStyle: GoogleFonts.ptSerif(
-                  color: AionTheme.silver.withOpacity(0.3), fontSize: 14,
+                  color: AionTheme.silver.withOpacity(0.55), fontSize: 14,
                 ),
                 contentPadding: const EdgeInsets.all(16),
                 border: InputBorder.none,

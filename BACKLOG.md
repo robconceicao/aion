@@ -33,7 +33,7 @@ Para implementar de verdade:
 **Registrado:** 2026-07-10 (pós E2E dual/áudio)  
 **Prioridade:** **elevada** — afeta experiência real (sessão longa / Modo Entrevista / voz sob latência).  
 Antes: P2 “não bloqueante”. Fallback via GoTrue ainda funciona em condições boas.  
-**Status:** aberto — **não corrigir JWT backend sem decisão explícita**.  
+**Status:** **corrigido no código (2026-07-12)** — validação local via JWKS ES256 em `app/core/jwt_verify.py` + `auth.py`; HS256 legado mantido; GoTrue permanece como fallback. **Requer deploy do backend no Render** para valer em produção.  
 **Mitigação cliente (2026-07-12):** `ensureFreshSession` não trata refresh falho como sessão expirada se o access token atual ainda for utilizável.
 
 **Resumo (uma frase):** o Auth do projeto emite **ES256 (JWKS)**; o backend só tenta **HS256 + JWT secret legado** → erro de `alg` em toda request → fallback GoTrue.

@@ -110,6 +110,25 @@ class _DreamHistoryScreenState extends State<DreamHistoryScreen> {
           _isLoading = false;
         });
       }
+    } on DioException catch (e) {
+      final status = e.response?.statusCode;
+      final String msg;
+      if (status == 401 || status == 403) {
+        msg = 'Sua sessão expirou (HTTP $status). Feche e reabra o app e tente de novo.';
+      } else if (e.type == DioExceptionType.receiveTimeout ||
+          e.type == DioExceptionType.connectionTimeout) {
+        msg = 'O servidor demorou a responder. Toque em Tentar novamente.';
+      } else if (status != null && status >= 500) {
+        msg = 'Erro no servidor ao carregar o diário (HTTP $status). Tente novamente.';
+      } else if (status != null) {
+        msg = 'Não foi possível carregar o diário (HTTP $status).';
+      } else {
+        msg = 'Não foi possível carregar o diário. Verifique a conexão.';
+      }
+      setState(() {
+        _error = msg;
+        _isLoading = false;
+      });
     } catch (e) {
       setState(() {
         _error = 'Não foi possível carregar o diário.';

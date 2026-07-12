@@ -98,7 +98,7 @@ class _InterviewScreenState extends State<InterviewScreen>
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'Sua sessão expirou. Suas respostas estão preservadas — '
+              'Sua sessão expirou (sem token local). Suas respostas estão preservadas — '
               'feche e reabra o app, depois toque em Revelar o Significado novamente.',
               style: GoogleFonts.ptSerif(color: Colors.white),
             ),
@@ -156,11 +156,13 @@ class _InterviewScreenState extends State<InterviewScreen>
       final int? status = e.response?.statusCode;
       final String msg;
       if (status == 401 || status == 403) {
-        msg = 'Sua sessão expirou. Suas respostas estão preservadas — '
+        msg = 'Sua sessão expirou (HTTP $status). Suas respostas estão preservadas — '
             'feche e reabra o app, depois toque em Revelar o Significado novamente.';
       } else if (e.type == DioExceptionType.receiveTimeout ||
           e.type == DioExceptionType.connectionTimeout) {
         msg = 'O servidor demorou a responder. Tente novamente — ele já deve estar acordado.';
+      } else if (status != null) {
+        msg = 'Não foi possível analisar o sonho (HTTP $status). Verifique sua internet e tente novamente.';
       } else {
         msg = 'Não foi possível analisar o sonho. Verifique sua internet e tente novamente.';
       }

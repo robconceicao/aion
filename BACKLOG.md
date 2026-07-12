@@ -28,11 +28,13 @@ Para implementar de verdade:
 
 ## Débito técnico
 
-### TD-01 — Validação JWT local desatualizada (ES256 vs HS256) — P2
+### TD-01 — Validação JWT local desatualizada (ES256 vs HS256) — afeta experiência real
 
 **Registrado:** 2026-07-10 (pós E2E dual/áudio)  
-**Prioridade:** P2 — **não bloqueante**. Fallback via GoTrue funciona.  
-**Status:** aberto — **não corrigir sem decisão explícita**.
+**Prioridade:** **elevada** — afeta experiência real (sessão longa / Modo Entrevista / voz sob latência).  
+Antes: P2 “não bloqueante”. Fallback via GoTrue ainda funciona em condições boas.  
+**Status:** aberto — **não corrigir JWT backend sem decisão explícita**.  
+**Mitigação cliente (2026-07-12):** `ensureFreshSession` não trata refresh falho como sessão expirada se o access token atual ainda for utilizável.
 
 **Resumo (uma frase):** o Auth do projeto emite **ES256 (JWKS)**; o backend só tenta **HS256 + JWT secret legado** → erro de `alg` em toda request → fallback GoTrue.
 
@@ -50,8 +52,8 @@ Local JWT Error: The specified alg value is not allowed.
 
 **Impacto atual:**
 - +1 RTT por request autenticada (`GET /auth/v1/user`).
-- Dependência de GoTrue disponível.
-- Ruído de log; funcionalidade OK (E2E passou com fallback).
+- Dependência de GoTrue disponível; sob timeout/instabilidade → 401 no app.
+- Ruído de log; E2E com token fresco passa, uso real (entrevista longa) mais sensível.
 
 **Opções de correção (quando priorizar):**
 

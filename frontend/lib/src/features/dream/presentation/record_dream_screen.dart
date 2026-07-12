@@ -127,14 +127,41 @@ class _RecordDreamScreenState extends State<RecordDreamScreen> with SingleTicker
           : _transcription ?? '';
         _isTranscribing = false;
       });
+    } on dio_pkg.DioException catch (e) {
+      debugPrint('Transcription error: $e');
+      setState(() => _isTranscribing = false);
+      if (!mounted) return;
+      final status = e.response?.statusCode;
+      final String msg;
+      if (status == 401 || status == 403) {
+        msg = 'Sua sessão expirou (HTTP $status). Feche e reabra o app e tente de novo.';
+      } else if (status == 400) {
+        msg = 'Formato de áudio não suportado (HTTP 400). Tente gravar novamente.';
+      } else if (status == 500) {
+        msg = 'O servidor não conseguiu transcrever (HTTP 500). '
+            'Pode ser o serviço de voz ou a chave de IA — tente mais tarde.';
+      } else if (e.type == dio_pkg.DioExceptionType.receiveTimeout ||
+          e.type == dio_pkg.DioExceptionType.connectionTimeout ||
+          e.type == dio_pkg.DioExceptionType.sendTimeout) {
+        msg = 'O servidor demorou a responder. Tente novamente — ele já deve estar acordado.';
+      } else if (status != null) {
+        msg = 'A tradução vocal falhou (HTTP $status). Verifique a conexão e tente de novo.';
+      } else {
+        msg = 'A tradução vocal falhou. Verifique se o servidor está acessível e sua internet.';
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(msg), duration: const Duration(seconds: 6)),
+      );
     } catch (e) {
       debugPrint('Transcription error: $e');
       setState(() => _isTranscribing = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('A tradução vocal falhou. Verifique se o servidor backend está rodando e acessível.'),
-            duration: Duration(seconds: 5),
+            content: Text(
+              'A tradução vocal falhou. Verifique se o servidor está acessível e sua internet.',
+            ),
+            duration: Duration(seconds: 6),
           ),
         );
       }

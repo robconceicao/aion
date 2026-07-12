@@ -193,7 +193,9 @@ class _InterviewScreenState extends State<InterviewScreen>
     if (_isLoading) {
       return Scaffold(
         backgroundColor: AionTheme.darkVoid,
-        body: const MandalaSpinner(message: 'Aion está interpretando...'),
+        body: const MandalaSpinner(
+          message: 'Aion está interpretando...\nIsso pode levar de 1 a 2 minutos.',
+        ),
       );
     }
 

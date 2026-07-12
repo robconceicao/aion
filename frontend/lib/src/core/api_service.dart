@@ -13,6 +13,15 @@ class ApiService {
 
   static Future<Session?>? _pendingRefresh;
 
+  /// Access token ainda serve para autorizar um request (margem de 30s).
+  static bool _isAccessTokenUsable(Session? session) {
+    if (session == null) return false;
+    final expiresAt = session.expiresAt;
+    if (expiresAt == null) return true;
+    return DateTime.fromMillisecondsSinceEpoch(expiresAt * 1000)
+        .isAfter(DateTime.now().add(const Duration(seconds: 30)));
+  }
+
   static Future<Session?> _doRefresh() async {
     try {
       final result = await Supabase.instance.client.auth.refreshSession();
@@ -26,20 +35,37 @@ class ApiService {
 
   /// Atualiza proativamente a sessão Supabase antes de operações longas
   /// (entrevista / análise de sonho), reduzindo risco de token expirar no meio.
+  ///
+  /// Se o refresh falhar por rede/timeout, NÃO trata como sessão expirada
+  /// enquanto o access token atual ainda for utilizável (evita falso positivo
+  /// de "sessão expirou" no Modo Entrevista).
   static Future<Session?> ensureFreshSession() async {
     try {
       final current = Supabase.instance.client.auth.currentSession;
-      // Se não há sessão ou o token expira em menos de 5 minutos, refresh
-      final expiresAt = current?.expiresAt;
-      final needsRefresh = current == null ||
-          expiresAt == null ||
+      if (current == null) {
+        _pendingRefresh ??= _doRefresh();
+        return await _pendingRefresh;
+      }
+
+      // Refresh proativo se expira em menos de 5 minutos (ou expiresAt ausente)
+      final expiresAt = current.expiresAt;
+      final needsRefresh = expiresAt == null ||
           DateTime.fromMillisecondsSinceEpoch(expiresAt * 1000)
               .isBefore(DateTime.now().add(const Duration(minutes: 5)));
       if (!needsRefresh) return current;
+
       _pendingRefresh ??= _doRefresh();
-      return await _pendingRefresh;
+      final refreshed = await _pendingRefresh;
+      if (refreshed != null) return refreshed;
+
+      // Refresh falhou: preferir token atual ainda válido a "sessão expirou"
+      if (_isAccessTokenUsable(current)) return current;
+      final latest = Supabase.instance.client.auth.currentSession;
+      if (_isAccessTokenUsable(latest)) return latest;
+      return null;
     } catch (_) {
-      return Supabase.instance.client.auth.currentSession;
+      final fallback = Supabase.instance.client.auth.currentSession;
+      return _isAccessTokenUsable(fallback) ? fallback : null;
     }
   }
 

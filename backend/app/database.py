@@ -4,15 +4,29 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-# Anon key — leituras/RPCs sob o modelo atual do backend.
-supabase: Client = create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
-
-# service_role — bypass RLS. Somente servidor. Nunca no Flutter.
+# Lazy clients — evita create_client no import (CI sem SUPABASE_* quebra a
+# coleta de testes que só importam routers e mockam get_supabase_service).
+_supabase: Client | None = None
 _supabase_service: Client | None = None
 
 
-def get_supabase():
-    return supabase
+def get_supabase() -> Client:
+    """Cliente anon (leituras/RPCs). Lazy-init no primeiro uso."""
+    global _supabase
+    if _supabase is not None:
+        return _supabase
+    url = (settings.SUPABASE_URL or "").strip()
+    key = (settings.SUPABASE_KEY or "").strip()
+    if not url or not key:
+        logger.error(
+            "[DB][ERROR] SUPABASE_URL/SUPABASE_KEY ausentes — cliente anon impossível."
+        )
+        raise RuntimeError(
+            "SUPABASE_URL e SUPABASE_KEY não configurados. "
+            "Necessários para o cliente Supabase (anon)."
+        )
+    _supabase = create_client(url, key)
+    return _supabase
 
 
 def get_supabase_service() -> Client:
@@ -24,7 +38,7 @@ def get_supabase_service() -> Client:
     global _supabase_service
     if _supabase_service is not None:
         return _supabase_service
-    if not settings.SUPABASE_SERVICE_KEY:
+    if not (settings.SUPABASE_SERVICE_KEY or "").strip():
         logger.error(
             "[DB][ERROR] SUPABASE_SERVICE_KEY ausente — escritas privilegiadas impossíveis. "
             "Configure no Render (service_role do projeto Supabase)."
@@ -33,10 +47,13 @@ def get_supabase_service() -> Client:
             "SUPABASE_SERVICE_KEY não configurada. "
             "Necessária para persistir sonhos sob RLS restritivo."
         )
-    _supabase_service = create_client(settings.SUPABASE_URL, settings.SUPABASE_SERVICE_KEY)
+    url = (settings.SUPABASE_URL or "").strip()
+    if not url:
+        raise RuntimeError("SUPABASE_URL não configurada.")
+    _supabase_service = create_client(url, settings.SUPABASE_SERVICE_KEY.strip())
     return _supabase_service
 
 
 # Mantendo compatibilidade de nome para facilitar a transição
 async def get_database():
-    return supabase
+    return get_supabase()

@@ -208,7 +208,8 @@ class _RecordDreamScreenState extends State<RecordDreamScreen> with SingleTicker
       final response = await dio.post(
         AionConfig.interviewUrl,
         data: {'text': text},
-        options: dio_pkg.Options(
+        options: ApiService.authOptions(
+          session: session,
           receiveTimeout: const Duration(seconds: 180),
           sendTimeout: const Duration(seconds: 90),
         ),

@@ -128,7 +128,8 @@ class _InterviewScreenState extends State<InterviewScreen>
           // Recorrência é detectada no backend; não depende de toggle do usuário
           'is_recurrent': false,
         },
-        options: Options(
+        options: ApiService.authOptions(
+          session: session,
           receiveTimeout: const Duration(seconds: 180),
           sendTimeout: const Duration(seconds: 90),
         ),

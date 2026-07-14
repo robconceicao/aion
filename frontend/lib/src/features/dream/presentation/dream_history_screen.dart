@@ -66,9 +66,11 @@ class _DreamHistoryScreenState extends State<DreamHistoryScreen> {
     }
     setState(() => _isSearching = true);
     try {
+      final session = await ApiService.ensureFreshSession();
       final response = await ApiService.client.post(
         AionConfig.searchUrl,
         data: {'query': query.trim(), 'threshold': 0.60, 'max_results': 8},
+        options: ApiService.authOptions(session: session),
       );
       final results = List<Map<String, dynamic>>.from(
         (response.data['results'] as List).map((e) => e as Map<String, dynamic>),
@@ -103,6 +105,7 @@ class _DreamHistoryScreenState extends State<DreamHistoryScreen> {
       final dio = ApiService.client;
       Response response;
       
+      final authOpts = ApiService.authOptions(session: session);
       if (_filtroEmocao != null || _filtroFase != null) {
         response = await dio.get(
           AionConfig.filterUrl,
@@ -110,13 +113,14 @@ class _DreamHistoryScreenState extends State<DreamHistoryScreen> {
             if (_filtroEmocao != null) 'emocao': _filtroEmocao,
             if (_filtroFase != null) 'fase': _filtroFase,
           },
+          options: authOpts,
         );
         setState(() {
           _dreams = List<Map<String, dynamic>>.from(response.data['dreams'] ?? []);
           _isLoading = false;
         });
       } else {
-        response = await dio.get(AionConfig.historyUrl);
+        response = await dio.get(AionConfig.historyUrl, options: authOpts);
         setState(() {
           _dreams = List<Map<String, dynamic>>.from(response.data);
           _isLoading = false;

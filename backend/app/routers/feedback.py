@@ -1,15 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
-from typing import Optional
 from app.routers.auth import get_current_user
 from app.database import get_supabase_service
+from app.models.feedback import FeedbackCreate
 
 router = APIRouter()
 
-class FeedbackCreate(BaseModel):
-    rating: int  # 1 to 5
-    comment: Optional[str] = None
-    accurate_archetypes: bool = True
+# Re-export para testes/imports legados (test_feedback_import).
+__all__ = ["router", "FeedbackCreate", "create_feedback"]
+
 
 @router.post("/{dream_id}/feedback")
 async def create_feedback(
@@ -40,6 +38,17 @@ async def create_feedback(
         "comment": feedback_in.comment,
         "accurate_archetypes": feedback_in.accurate_archetypes,
     }
-    supabase.table("feedback").insert(feedback_data).execute()
+    try:
+        supabase.table("feedback").insert(feedback_data).execute()
+    except Exception as e:
+        # Log interno; resposta genérica ao cliente
+        import logging
+        logging.getLogger(__name__).error(
+            "[FEEDBACK][ERROR] insert falhou dream_id=%s: %s", dream_id, e, exc_info=True
+        )
+        raise HTTPException(
+            status_code=500,
+            detail={"error": "feedback_failed", "message": "Não foi possível registrar o feedback."},
+        )
 
     return {"status": "success", "message": "Feedback recorded. The Oracle learns."}

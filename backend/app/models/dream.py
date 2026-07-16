@@ -1,15 +1,21 @@
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, Field, field_validator
 from typing import List, Optional, Dict, Any
 
 
-# ─── MODELS EXISTENTES (sem alteração) ──────────────────────────────────────
+# Limites de input (proteção de custo LLM / DoS)
+DREAM_TEXT_MAX_LEN = 8000
+DREAM_TEXT_MIN_LEN = 5
+SEARCH_QUERY_MAX_LEN = 500
+
+
+# ─── MODELS EXISTENTES ──────────────────────────────────────────────────────
 
 class InterviewAnswerItem(BaseModel):
     pergunta: str
     resposta: str
 
 class DreamCreate(BaseModel):
-    text: str
+    text: str = Field(..., min_length=DREAM_TEXT_MIN_LEN, max_length=DREAM_TEXT_MAX_LEN)
     user_email: Optional[str] = "usuario@aion.app"
     emotion: Optional[str] = None
     tags: Optional[List[str]] = None
@@ -24,22 +30,22 @@ class DreamCreate(BaseModel):
     interview_answers: Optional[List[Dict[str, str]]] = None
 
 class InterviewRequest(BaseModel):
-    text: str
+    text: str = Field(..., min_length=DREAM_TEXT_MIN_LEN, max_length=DREAM_TEXT_MAX_LEN)
 
 class InterviewResponse(BaseModel):
     perguntas: List[str]
 
 class NarrativeRequest(BaseModel):
-    text: str
+    text: str = Field(..., min_length=DREAM_TEXT_MIN_LEN, max_length=DREAM_TEXT_MAX_LEN)
     analysis_context: Optional[Dict[str, Any]] = None
 
 class NarrativeResponse(BaseModel):
     narrative: str
 
 class SemanticSearchRequest(BaseModel):
-    query: str
-    threshold: Optional[float] = 0.65
-    max_results: Optional[int] = 6
+    query: str = Field(..., min_length=1, max_length=SEARCH_QUERY_MAX_LEN)
+    threshold: Optional[float] = Field(default=0.65, ge=0.0, le=1.0)
+    max_results: Optional[int] = Field(default=6, ge=1, le=50)
 
 class DreamHistoryResponse(BaseModel):
     id: str

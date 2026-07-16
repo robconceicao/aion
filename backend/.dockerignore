@@ -1,0 +1,27 @@
+# Secrets — nunca embutir na imagem
+.env
+.env.*
+*.env
+secrets.json
+
+# Python
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Tests e artefatos locais
+tests/
+*.md
+.git/
+.gitignore
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

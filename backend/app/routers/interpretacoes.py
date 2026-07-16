@@ -198,7 +198,6 @@ async def request_audio(
             detail={
                 "error": "storage_failed",
                 "message": "Áudio gerado mas não foi possível salvar. O texto continua disponível para leitura.",
-                "debug": str(e)[:200],
             }
         )
 
@@ -224,6 +223,5 @@ async def request_audio(
             detail={
                 "error": "signed_url_failed",
                 "message": "Áudio gerado mas URL temporária indisponível. Tente novamente.",
-                "debug": str(e)[:200],
             }
         )

@@ -68,29 +68,38 @@ async def get_current_user(
                     "app_metadata": user_data.get("app_metadata", {}),
                     "user_metadata": user_data.get("user_metadata", {}),
                 }
+            # Não logar body completo (pode conter detalhes internos).
             print(f"[AUTH FALLBACK FAILED] Status: {response.status_code}")
-            print(f"[AUTH FALLBACK FAILED] Body: {response.text}")
-            print(f"[AUTH FALLBACK FAILED] URL Called: {base_url}/auth/v1/user")
     except Exception as e:
-        print(f"[AUTH] Erro ao consultar a API do Supabase: {e}")
+        print(f"[AUTH] Erro ao consultar a API do Supabase: {type(e).__name__}")
 
     raise _unauthorized("invalid_token")
 
 
+def _is_admin_flag(value) -> bool:
+    """Aceita bool True ou strings comuns setadas via service_role no Auth."""
+    if value is True:
+        return True
+    if isinstance(value, str) and value.strip().lower() in ("true", "1", "yes"):
+        return True
+    return False
+
+
 async def get_current_admin(current_user: dict = Depends(get_current_user)):
     """
-    Dependency to check if the current user is an admin.
-    """
-    app_metadata = current_user.get("app_metadata", {})
-    user_metadata = current_user.get("user_metadata", {})
+    Admin somente via app_metadata.is_admin (claim não controlável pelo usuário).
 
-    is_admin = (
-        app_metadata.get("is_admin", False)
-        or user_metadata.get("is_admin", False)
-        or current_user.get("is_admin", False)
-        or current_user.get("email") == "admin@aion.app"
-    )
-    if not is_admin:
+    NÃO confiar em user_metadata (editável via updateUser) nem em e-mail hardcoded.
+    Promover admin no SQL Editor do Supabase:
+      UPDATE auth.users
+      SET raw_app_meta_data = raw_app_meta_data || '{"is_admin": true}'::jsonb
+      WHERE email = '...';
+    """
+    app_metadata = current_user.get("app_metadata") or {}
+    if not isinstance(app_metadata, dict):
+        app_metadata = {}
+
+    if not _is_admin_flag(app_metadata.get("is_admin")):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="User does not have admin privileges",

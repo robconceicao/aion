@@ -166,11 +166,12 @@ async def _background_recurrence_enrich(
             + f"\n\n[PADRÃO RECORRENTE — {numero_aparicoes(len(similar_dreams))}ª ocorrência]\n"
             + recurrence_text
         )
+        # service_role: ownership obrigatório mesmo com dream_id gerado no servidor
         service.table("dreams").update({
             "analise_completa": ac,
             "is_recurrent": True,
             "recurrence_count": len(similar_dreams),
-        }).eq("id", dream_id).execute()
+        }).eq("id", dream_id).eq("user_id", user_id).execute()
         logger.info("[BACKGROUND] Recorrência OK dream_id=%s", dream_id)
     except Exception as e:
         logger.error(
@@ -231,7 +232,13 @@ async def create_dream(
                 }
             )
         logger.error("[ROUTER][ERROR] Erro inesperado em create_dream: %s", e, exc_info=True)
-        raise HTTPException(status_code=500, detail={"error": "internal_error", "message": str(e)})
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error": "internal_error",
+                "message": "Erro interno ao processar o sonho. Tente novamente em instantes.",
+            },
+        )
 
     # Persistência dual SÍNCRONA — 200 só com linha confirmada
     dream_id, dream_data = _build_dream_row(
@@ -267,6 +274,8 @@ async def create_dream(
     # 200: dual + id (linha garantida)
     return {
         "id": dream_id,
+        # Alias: clientes que leem dream_id (ex. telas dual/áudio)
+        "dream_id": dream_id,
         "analise_completa": synthesis.analise_completa.model_dump(),
         "interpretacao_narrativa": synthesis.interpretacao_narrativa,
         "pergunta_reflexao": synthesis.pergunta_reflexao,
@@ -306,7 +315,11 @@ async def get_user_history(current_user: dict = Depends(get_current_user)):
         )
         return res.data
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Erro ao buscar histórico: {str(e)}")
+        logger.error("[ROUTER][ERROR] history user_id=%s: %s", user_id, e, exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail={"error": "history_failed", "message": "Erro ao buscar histórico."},
+        )
 
 
 @router.get("/{dream_id}/audio")
@@ -342,16 +355,37 @@ async def get_dream_audio_legacy(dream_id: str, current_user: dict = Depends(get
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(
+            "[ROUTER][ERROR] audio legado dream_id=%s user_id=%s: %s",
+            dream_id, user_id, e, exc_info=True,
+        )
+        raise HTTPException(
+            status_code=500,
+            detail={"error": "audio_failed", "message": "Erro ao gerar áudio."},
+        )
 
 
 @router.post("/interview", response_model=InterviewResponse)
-async def get_interview_questions(request: InterviewRequest):
+async def get_interview_questions(
+    request: InterviewRequest,
+    current_user: dict = Depends(get_current_user),
+):
+    """Gera perguntas da entrevista — requer autenticação (proteção de custo LLM)."""
     try:
         perguntas = await generate_interview_questions(request.text)
         return InterviewResponse(perguntas=perguntas)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(
+            "[ROUTER][ERROR] interview user_id=%s: %s",
+            current_user.get("sub"), e, exc_info=True,
+        )
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error": "interview_failed",
+                "message": "Não foi possível gerar as perguntas. Tente novamente.",
+            },
+        )
 
 
 @router.post("/search")
@@ -373,7 +407,11 @@ async def semantic_search(
         }).execute()
         return {"results": result.data or []}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error("[ROUTER][ERROR] search user_id=%s: %s", user_id, e, exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail={"error": "search_failed", "message": "Erro na busca semântica."},
+        )
 
 
 @router.get("/filter")
@@ -384,6 +422,9 @@ async def filter_dreams(
 ):
     """Filtra sonhos por emoção, fase da jornada ou texto livre."""
     user_id = current_user.get("sub")
+    # Clamp de paginação (evita ranges abusivos)
+    limit = max(1, min(limit or 20, 50))
+    offset = max(0, offset or 0)
     try:
         # service_role: bypass RLS. Ownership = ÚNICA proteção → .eq("user_id", user_id).
         supabase = get_supabase_service()
@@ -397,9 +438,14 @@ async def filter_dreams(
         if fase:
             q = q.eq("interpretacao->fase_jornada->>nome", fase)
         if query:
-            q = q.ilike("relato", f"%{query}%")
+            # Limita tamanho do filtro livre
+            q = q.ilike("relato", f"%{query[:200]}%")
 
         result = q.execute()
         return {"dreams": result.data or []}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error("[ROUTER][ERROR] filter user_id=%s: %s", user_id, e, exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail={"error": "filter_failed", "message": "Erro ao filtrar sonhos."},
+        )

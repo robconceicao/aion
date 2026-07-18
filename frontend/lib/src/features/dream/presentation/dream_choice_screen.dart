@@ -139,7 +139,10 @@ class _DreamChoiceScreenState extends State<DreamChoiceScreen>
                                 context,
                                 MaterialPageRoute(
                                   builder: (_) => DualInterpretationScreen(
-                                    dreamId: (widget.detailedAnalysis['dream_id'] as String?) ?? '',
+                                    // Backend devolve "id"; aceita "dream_id" por compatibilidade.
+                                    dreamId: (widget.detailedAnalysis['id'] as String?)
+                                            ?? (widget.detailedAnalysis['dream_id'] as String?)
+                                            ?? '',
                                     dreamText: widget.dreamText,
                                     narrativeText: widget.narrativeText,
                                     perguntaReflexao: (widget.detailedAnalysis['pergunta_reflexao']
@@ -166,7 +169,9 @@ class _DreamChoiceScreenState extends State<DreamChoiceScreen>
                                 context,
                                 MaterialPageRoute(
                                   builder: (_) => DualInterpretationScreen(
-                                    dreamId: (widget.detailedAnalysis['dream_id'] as String?) ?? '',
+                                    dreamId: (widget.detailedAnalysis['id'] as String?)
+                                            ?? (widget.detailedAnalysis['dream_id'] as String?)
+                                            ?? '',
                                     dreamText: widget.dreamText,
                                     narrativeText: widget.narrativeText,
                                     perguntaReflexao: (widget.detailedAnalysis['pergunta_reflexao']

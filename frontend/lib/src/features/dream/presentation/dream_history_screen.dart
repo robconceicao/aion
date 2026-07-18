@@ -104,7 +104,7 @@ class _DreamHistoryScreenState extends State<DreamHistoryScreen> {
     try {
       final dio = ApiService.client;
       Response response;
-      
+
       final authOpts = ApiService.authOptions(session: session);
       if (_filtroEmocao != null || _filtroFase != null) {
         response = await dio.get(
@@ -115,18 +115,21 @@ class _DreamHistoryScreenState extends State<DreamHistoryScreen> {
           },
           options: authOpts,
         );
+        if (!mounted) return;
         setState(() {
           _dreams = List<Map<String, dynamic>>.from(response.data['dreams'] ?? []);
           _isLoading = false;
         });
       } else {
         response = await dio.get(AionConfig.historyUrl, options: authOpts);
+        if (!mounted) return;
         setState(() {
           _dreams = List<Map<String, dynamic>>.from(response.data);
           _isLoading = false;
         });
       }
     } on DioException catch (e) {
+      if (!mounted) return;
       final status = e.response?.statusCode;
       final detail = e.response?.data is Map
           ? (e.response!.data['detail']?.toString() ?? '')
@@ -151,6 +154,7 @@ class _DreamHistoryScreenState extends State<DreamHistoryScreen> {
         _isLoading = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _error = 'Não foi possível carregar o diário.';
         _isLoading = false;

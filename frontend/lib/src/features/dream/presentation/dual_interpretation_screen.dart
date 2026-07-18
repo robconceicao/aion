@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../../core/aion_qa_helpers.dart';
 import '../../../core/theme.dart';
 import '../../../core/widgets/cinematic_background.dart';
 import 'widgets/hero_journey_widget.dart';
@@ -193,12 +194,7 @@ class _DualInterpretationScreenState extends State<DualInterpretationScreen>
   }
 
   /// Texto falado: só a Leitura Simbólica, sem marcadores **markdown**.
-  String _speechText() {
-    return widget.narrativeText
-        .replaceAll(RegExp(r'\*+'), '')
-        .replaceAll(RegExp(r'\s+'), ' ')
-        .trim();
-  }
+  String _speechText() => AionQaHelpers.sanitizeSpeechText(widget.narrativeText);
 
   // ─── Lógica do player TTS ────────────────────────────────────
 
@@ -328,9 +324,13 @@ class _DualInterpretationScreenState extends State<DualInterpretationScreen>
         backgroundColor: AionTheme.darkVoid,
         elevation: 0,
         leading: IconButton(
+          tooltip: 'Voltar',
           icon: const Icon(Icons.arrow_back_ios, color: AionTheme.gold, size: 18),
           constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () {
+            _tts.stop();
+            Navigator.pop(context);
+          },
         ),
         title: Text(
           'AION',
@@ -524,140 +524,160 @@ class _DualInterpretationScreenState extends State<DualInterpretationScreen>
       label = 'ESCUTAR LEITURA SIMBÓLICA';
     }
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: AionTheme.darkAbyss,
-        border: const Border(bottom: BorderSide(color: AionTheme.shadow)),
-      ),
-      child: Row(
-        children: [
-          // Play / pause
-          Semantics(
-            button: true,
-            label: isPlaying ? 'Pausar narração' : 'Reproduzir narração',
-            child: InkWell(
-              onTap: isLoading ? null : _onPlayPause,
-              customBorder: const CircleBorder(),
-              child: Container(
-                width: 48,
-                height: 48,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: isError
-                        ? AionTheme.crimson.withOpacity(0.5)
-                        : AionTheme.gold.withOpacity(0.6),
-                  ),
-                ),
-                child: isLoading
-                    ? Padding(
-                        padding: const EdgeInsets.all(12),
-                        child: CircularProgressIndicator(
-                          strokeWidth: 1.5,
-                          color: AionTheme.gold.withOpacity(0.6),
-                        ),
-                      )
-                    : Icon(
-                        isPlaying ? Icons.pause : Icons.play_arrow,
-                        size: 24,
-                        color: isError
-                            ? AionTheme.crimson.withOpacity(0.6)
-                            : AionTheme.gold.withOpacity(0.85),
-                      ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 10),
-          // Stop (só quando ativo)
-          if (isActive)
+    final playLabel = isLoading
+        ? 'Preparando narração'
+        : isError
+            ? 'Tentar narração novamente'
+            : isPlaying
+                ? 'Pausar narração da leitura simbólica'
+                : isPaused
+                    ? 'Continuar narração da leitura simbólica'
+                    : 'Reproduzir leitura simbólica';
+
+    return Semantics(
+      container: true,
+      label: 'Controles de áudio da interpretação',
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: AionTheme.darkAbyss,
+          border: const Border(bottom: BorderSide(color: AionTheme.shadow)),
+        ),
+        child: Row(
+          children: [
+            // Play / pause
             Semantics(
               button: true,
-              label: 'Parar narração',
+              enabled: !isLoading,
+              label: playLabel,
               child: InkWell(
-                onTap: _onStop,
+                onTap: isLoading ? null : _onPlayPause,
                 customBorder: const CircleBorder(),
                 child: Container(
-                  width: 44,
-                  height: 44,
+                  width: 48,
+                  height: 48,
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    border: Border.all(color: AionTheme.silver.withOpacity(0.35)),
+                    border: Border.all(
+                      color: isError
+                          ? AionTheme.crimson.withOpacity(0.5)
+                          : AionTheme.gold.withOpacity(0.6),
+                    ),
                   ),
-                  child: Icon(
-                    Icons.stop,
-                    size: 20,
-                    color: AionTheme.silver.withOpacity(0.75),
+                  child: isLoading
+                      ? Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: CircularProgressIndicator(
+                            strokeWidth: 1.5,
+                            color: AionTheme.gold.withOpacity(0.6),
+                          ),
+                        )
+                      : Icon(
+                          isPlaying ? Icons.pause : Icons.play_arrow,
+                          size: 24,
+                          color: isError
+                              ? AionTheme.crimson.withOpacity(0.6)
+                              : AionTheme.gold.withOpacity(0.85),
+                        ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            // Stop (só quando ativo)
+            if (isActive)
+              Semantics(
+                button: true,
+                label: 'Parar narração',
+                child: InkWell(
+                  onTap: _onStop,
+                  customBorder: const CircleBorder(),
+                  child: Container(
+                    width: 44,
+                    height: 44,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: AionTheme.silver.withOpacity(0.35)),
+                    ),
+                    child: Icon(
+                      Icons.stop,
+                      size: 20,
+                      color: AionTheme.silver.withOpacity(0.75),
+                    ),
+                  ),
+                ),
+              ),
+            if (isActive) const SizedBox(width: 10),
+            // Progresso + label (live region anuncia mudanças de estado)
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Semantics(
+                    liveRegion: true,
+                    label: label,
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.ptSerif(
+                        fontSize: 9,
+                        letterSpacing: 1.5,
+                        color: isError
+                            ? AionTheme.crimson.withOpacity(0.7)
+                            : AionTheme.gold.withOpacity(0.7),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(1),
+                    child: LinearProgressIndicator(
+                      value: isLoading
+                          ? null
+                          : isActive
+                              ? _speechProgress.clamp(0.0, 1.0)
+                              : 0.0,
+                      minHeight: 2,
+                      backgroundColor: AionTheme.shadow,
+                      color: isError
+                          ? AionTheme.crimson.withOpacity(0.4)
+                          : AionTheme.gold.withOpacity(0.45),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            // Velocidade da voz
+            Semantics(
+              button: true,
+              label:
+                  'Velocidade da voz ${_speechRates[_rateIndex].label}. Toque para alternar',
+              child: InkWell(
+                onTap: _cycleSpeechRate,
+                child: Container(
+                  constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+                  alignment: Alignment.center,
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: AionTheme.shadow),
+                  ),
+                  child: Text(
+                    _speechRates[_rateIndex].label,
+                    style: GoogleFonts.ptSerif(
+                      fontSize: 11,
+                      letterSpacing: 0.5,
+                      color: AionTheme.gold.withOpacity(0.8),
+                    ),
                   ),
                 ),
               ),
             ),
-          if (isActive) const SizedBox(width: 10),
-          // Progresso + label
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.ptSerif(
-                    fontSize: 9,
-                    letterSpacing: 1.5,
-                    color: isError
-                        ? AionTheme.crimson.withOpacity(0.7)
-                        : AionTheme.gold.withOpacity(0.7),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(1),
-                  child: LinearProgressIndicator(
-                    value: isLoading
-                        ? null
-                        : isActive
-                            ? _speechProgress.clamp(0.0, 1.0)
-                            : 0.0,
-                    minHeight: 2,
-                    backgroundColor: AionTheme.shadow,
-                    color: isError
-                        ? AionTheme.crimson.withOpacity(0.4)
-                        : AionTheme.gold.withOpacity(0.45),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 8),
-          // Velocidade da voz
-          Semantics(
-            button: true,
-            label: 'Velocidade da voz ${_speechRates[_rateIndex].label}',
-            child: InkWell(
-              onTap: _cycleSpeechRate,
-              child: Container(
-                constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
-                alignment: Alignment.center,
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                decoration: BoxDecoration(
-                  border: Border.all(color: AionTheme.shadow),
-                ),
-                child: Text(
-                  _speechRates[_rateIndex].label,
-                  style: GoogleFonts.ptSerif(
-                    fontSize: 11,
-                    letterSpacing: 0.5,
-                    color: AionTheme.gold.withOpacity(0.8),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

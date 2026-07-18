@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:dio/dio.dart';
+import '../../../core/aion_qa_helpers.dart';
 import '../../../core/api_service.dart';
 import '../../../core/theme.dart';
 import '../../../core/constants.dart';
@@ -60,16 +61,22 @@ class _DreamHistoryScreenState extends State<DreamHistoryScreen> {
   }
 
   Future<void> _buscarSemantico(String query) async {
-    if (query.trim().isEmpty) {
+    final normalized = AionQaHelpers.normalizeSearchQuery(query);
+    if (normalized.isEmpty) {
       await _loadHistory();
       return;
     }
+    // Mantém o campo com o texto do usuário, mas envia só o trecho normalizado.
     setState(() => _isSearching = true);
     try {
       final session = await ApiService.ensureFreshSession();
       final response = await ApiService.client.post(
         AionConfig.searchUrl,
-        data: {'query': query.trim(), 'threshold': 0.60, 'max_results': 8},
+        data: {
+          'query': normalized,
+          'threshold': 0.60,
+          'max_results': 8,
+        },
         options: ApiService.authOptions(session: session),
       );
       final results = List<Map<String, dynamic>>.from(
@@ -78,6 +85,18 @@ class _DreamHistoryScreenState extends State<DreamHistoryScreen> {
       if (mounted) setState(() => _dreams = results);
     } catch (e) {
       debugPrint('[HISTORY] Erro busca semântica: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Não foi possível buscar no diário. Tente novamente.',
+              style: GoogleFonts.ptSerif(fontSize: 13, color: AionTheme.ghost),
+            ),
+            backgroundColor: AionTheme.darkAbyss,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
     } finally {
       if (mounted) setState(() => _isSearching = false);
     }
@@ -163,23 +182,28 @@ class _DreamHistoryScreenState extends State<DreamHistoryScreen> {
   }
 
   Widget _buildFilterChip(String label, bool isActive, Color color, VoidCallback onTap) {
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        // Hit target mínimo ~44pt (toque mobile)
-        constraints: const BoxConstraints(minHeight: 44),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: isActive ? color.withOpacity(0.15) : Colors.transparent,
-          border: Border.all(color: isActive ? color.withOpacity(0.6) : AionTheme.shadow),
+    return Semantics(
+      button: true,
+      selected: isActive,
+      label: 'Filtro $label${isActive ? ', selecionado' : ''}',
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          // Hit target mínimo ~44pt (toque mobile)
+          constraints: const BoxConstraints(minHeight: 44),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: isActive ? color.withOpacity(0.15) : Colors.transparent,
+            border: Border.all(color: isActive ? color.withOpacity(0.6) : AionTheme.shadow),
+          ),
+          child: Text(label, style: GoogleFonts.ptSerif(
+            fontSize: 11, letterSpacing: 1,
+            color: isActive ? color : AionTheme.silver.withOpacity(0.7),
+          )),
         ),
-        child: Text(label, style: GoogleFonts.ptSerif(
-          fontSize: 11, letterSpacing: 1,
-          color: isActive ? color : AionTheme.silver.withOpacity(0.7),
-        )),
       ),
     );
   }
@@ -206,6 +230,7 @@ class _DreamHistoryScreenState extends State<DreamHistoryScreen> {
         backgroundColor: AionTheme.darkVoid,
         elevation: 0,
         leading: IconButton(
+          tooltip: 'Voltar',
           icon: const Icon(Icons.arrow_back_ios, color: AionTheme.gold, size: 18),
           constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
           onPressed: () => Navigator.pop(context),
@@ -221,6 +246,7 @@ class _DreamHistoryScreenState extends State<DreamHistoryScreen> {
         centerTitle: true,
         actions: [
           IconButton(
+            tooltip: 'Atualizar diário',
             icon: const Icon(Icons.refresh, color: AionTheme.silver, size: 20),
             constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
             onPressed: _loadHistory,
@@ -346,53 +372,61 @@ class _DreamHistoryScreenState extends State<DreamHistoryScreen> {
             ),
             // Campo limpo: sem histórico, sem sugestões de teclado/OS e sem
             // exemplos no placeholder (evita parecer “palavras sugeridas”).
-            child: TextField(
-              controller: _searchController,
-              style: GoogleFonts.ptSerif(fontSize: 14, color: AionTheme.ghost),
-              autocorrect: false,
-              enableSuggestions: false,
-              enableIMEPersonalizedLearning: false,
-              smartDashesType: SmartDashesType.disabled,
-              smartQuotesType: SmartQuotesType.disabled,
-              textInputAction: TextInputAction.search,
-              keyboardType: TextInputType.text,
-              autofillHints: const <String>[],
-              decoration: InputDecoration(
-                hintText: 'Buscar no diário...',
-                hintStyle: GoogleFonts.ptSerif(
-                    color: AionTheme.silver.withOpacity(0.35), fontSize: 13),
-                prefixIcon: Icon(Icons.search,
-                    color: AionTheme.silver.withOpacity(0.5), size: 20),
-                suffixIcon: _isSearching
-                    ? const Padding(
-                        padding: EdgeInsets.all(12),
-                        child: SizedBox(
-                          width: 16, height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        ))
-                    : _searchController.text.isNotEmpty
-                        ? IconButton(
-                            constraints: const BoxConstraints(
-                              minWidth: 44,
-                              minHeight: 44,
-                            ),
-                            icon: Icon(Icons.close,
-                                size: 18, color: AionTheme.silver.withOpacity(0.5)),
-                            onPressed: () {
-                              _searchController.clear();
-                              _loadHistory();
-                            },
-                          )
-                        : null,
-                border: InputBorder.none,
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+            child: Semantics(
+              textField: true,
+              label: 'Buscar no diário do sonho',
+              hint: 'Digite um termo e pressione buscar',
+              child: TextField(
+                controller: _searchController,
+                style: GoogleFonts.ptSerif(fontSize: 14, color: AionTheme.ghost),
+                autocorrect: false,
+                enableSuggestions: false,
+                enableIMEPersonalizedLearning: false,
+                smartDashesType: SmartDashesType.disabled,
+                smartQuotesType: SmartQuotesType.disabled,
+                textInputAction: TextInputAction.search,
+                keyboardType: TextInputType.text,
+                autofillHints: const <String>[],
+                decoration: InputDecoration(
+                  // Label acessível via Semantics wrapper; hint visual limpo.
+                  hintText: 'Buscar no diário...',
+                  hintStyle: GoogleFonts.ptSerif(
+                      color: AionTheme.silver.withOpacity(0.45), fontSize: 13),
+                  prefixIcon: Icon(Icons.search,
+                      color: AionTheme.silver.withOpacity(0.5), size: 20,
+                      semanticLabel: 'Ícone de busca'),
+                  suffixIcon: _isSearching
+                      ? const Padding(
+                          padding: EdgeInsets.all(12),
+                          child: SizedBox(
+                            width: 16, height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ))
+                      : _searchController.text.isNotEmpty
+                          ? IconButton(
+                              tooltip: 'Limpar busca',
+                              constraints: const BoxConstraints(
+                                minWidth: 44,
+                                minHeight: 44,
+                              ),
+                              icon: Icon(Icons.close,
+                                  size: 18, color: AionTheme.silver.withOpacity(0.5)),
+                              onPressed: () {
+                                _searchController.clear();
+                                _loadHistory();
+                              },
+                            )
+                          : null,
+                  border: InputBorder.none,
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                ),
+                onSubmitted: _buscarSemantico,
+                onChanged: (v) {
+                  setState(() {});
+                  if (v.isEmpty) _loadHistory();
+                },
               ),
-              onSubmitted: _buscarSemantico,
-              onChanged: (v) {
-                setState(() {});
-                if (v.isEmpty) _loadHistory();
-              },
             ),
           ),
         ),
@@ -497,19 +531,45 @@ class _DreamHistoryScreenState extends State<DreamHistoryScreen> {
           ),
         ),
         Expanded(
-          child: ListView.separated(
-            padding: EdgeInsets.symmetric(horizontal: padH, vertical: 8),
-            itemCount: _dreams.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 10),
-            itemBuilder: (context, index) {
-              final dream = _dreams[index];
-              return _DreamHistoryCard(
-                dream: dream,
-                date: _formatDate(dream['created_at']),
-                onTap: () => _openDream(dream),
-              );
-            },
-          ),
+          child: _dreams.isEmpty
+              ? Center(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(horizontal: padH),
+                    child: Semantics(
+                      liveRegion: true,
+                      child: Text(
+                        hasActiveQuery
+                            ? 'Nenhum sonho encontrado para esta busca ou filtro.'
+                            : 'O diário ainda está em branco.',
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.ptSerif(
+                          fontSize: 14,
+                          color: AionTheme.silver.withOpacity(0.55),
+                          fontStyle: FontStyle.italic,
+                          height: 1.6,
+                        ),
+                      ),
+                    ),
+                  ),
+                )
+              : ListView.separated(
+                  padding: EdgeInsets.symmetric(horizontal: padH, vertical: 8),
+                  itemCount: _dreams.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 10),
+                  itemBuilder: (context, index) {
+                    final dream = _dreams[index];
+                    return Semantics(
+                      button: true,
+                      label:
+                          'Sonho de ${_formatDate(dream['created_at'])}. Toque para abrir interpretação.',
+                      child: _DreamHistoryCard(
+                        dream: dream,
+                        date: _formatDate(dream['created_at']),
+                        onTap: () => _openDream(dream),
+                      ),
+                    );
+                  },
+                ),
         ),
       ],
     );

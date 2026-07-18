@@ -173,23 +173,28 @@ class _CanalScreenState extends State<CanalScreen> {
   }
 
   Widget _navBtn(String label, bool isActive, VoidCallback onTap) {
-    return InkWell(
-      onTap: onTap,
-      child: Container(
-        constraints: const BoxConstraints(minHeight: 44),
-        alignment: Alignment.center,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        decoration: BoxDecoration(
-          color: isActive ? AionTheme.gold : Colors.transparent,
-          border: Border.all(color: isActive ? AionTheme.gold : AionTheme.veil),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: isActive ? AionTheme.darkVoid : AionTheme.silver,
-            fontSize: 10,
-            letterSpacing: 1.5,
-            fontFamily: 'Georgia',
+    return Semantics(
+      button: true,
+      selected: isActive,
+      label: label,
+      child: InkWell(
+        onTap: onTap,
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 44),
+          alignment: Alignment.center,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            color: isActive ? AionTheme.gold : Colors.transparent,
+            border: Border.all(color: isActive ? AionTheme.gold : AionTheme.veil),
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              color: isActive ? AionTheme.darkVoid : AionTheme.silver,
+              fontSize: 10,
+              letterSpacing: 1.5,
+              fontFamily: 'Georgia',
+            ),
           ),
         ),
       ),

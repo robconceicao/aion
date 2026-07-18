@@ -209,23 +209,28 @@ class _ArchetypesScreenState extends State<ArchetypesScreen> {
   }
 
   Widget _navBtn(String label, bool isActive, VoidCallback onTap) {
-    return InkWell(
-      onTap: onTap,
-      child: Container(
-        constraints: const BoxConstraints(minHeight: 44),
-        alignment: Alignment.center,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        decoration: BoxDecoration(
-          color: isActive ? AionTheme.gold : Colors.transparent,
-          border: Border.all(color: isActive ? AionTheme.gold : AionTheme.veil),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: isActive ? AionTheme.darkVoid : AionTheme.silver,
-            fontSize: 10,
-            letterSpacing: 1.5,
-            fontFamily: 'Georgia',
+    return Semantics(
+      button: true,
+      selected: isActive,
+      label: label,
+      child: InkWell(
+        onTap: onTap,
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 44),
+          alignment: Alignment.center,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            color: isActive ? AionTheme.gold : Colors.transparent,
+            border: Border.all(color: isActive ? AionTheme.gold : AionTheme.veil),
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              color: isActive ? AionTheme.darkVoid : AionTheme.silver,
+              fontSize: 10,
+              letterSpacing: 1.5,
+              fontFamily: 'Georgia',
+            ),
           ),
         ),
       ),
@@ -265,42 +270,46 @@ class _ArchetypesScreenState extends State<ArchetypesScreen> {
   }
 
   Widget _buildCard(_Archetype a) {
-    return InkWell(
-      onTap: () => setState(() => _selected = a),
-      child: Container(
-        decoration: BoxDecoration(
-          color: AionTheme.deep,
-          border: Border(
-            top: BorderSide(color: a.accent, width: 2),
-            left: BorderSide(color: AionTheme.shadow),
-            right: BorderSide(color: AionTheme.shadow),
-            bottom: BorderSide(color: AionTheme.shadow),
+    return Semantics(
+      button: true,
+      label: 'Arquétipo ${a.name}. ${a.description}',
+      child: InkWell(
+        onTap: () => setState(() => _selected = a),
+        child: Container(
+          decoration: BoxDecoration(
+            color: AionTheme.deep,
+            border: Border(
+              top: BorderSide(color: a.accent, width: 2),
+              left: BorderSide(color: AionTheme.shadow),
+              right: BorderSide(color: AionTheme.shadow),
+              bottom: BorderSide(color: AionTheme.shadow),
+            ),
           ),
-        ),
-        padding: const EdgeInsets.all(22),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              a.symbol,
-              style: TextStyle(
-                fontSize: 28,
-                color: a.accent,
-                fontFamily: 'Georgia',
+          padding: const EdgeInsets.all(22),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                a.symbol,
+                style: TextStyle(
+                  fontSize: 28,
+                  color: a.accent,
+                  fontFamily: 'Georgia',
+                ),
               ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              a.name,
-              style: TextStyle(
-                fontSize: 15,
-                color: a.accent,
-                fontFamily: 'Georgia',
-                letterSpacing: 1,
+              const SizedBox(height: 12),
+              Text(
+                a.name,
+                style: TextStyle(
+                  fontSize: 15,
+                  color: a.accent,
+                  fontFamily: 'Georgia',
+                  letterSpacing: 1,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

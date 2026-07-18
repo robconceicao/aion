@@ -209,7 +209,10 @@ class _DreamDiaryScreenState extends State<DreamDiaryScreen> {
 
   Widget _buildBtn(BuildContext context, String text,
       {required bool isPrimary}) {
-    return ElevatedButton(
+    return Semantics(
+      button: true,
+      label: text,
+      child: ElevatedButton(
       onPressed: () async {
         if (text == 'REGISTRAR SONHO') {
           final transcription = await Navigator.push<String>(
@@ -258,6 +261,7 @@ class _DreamDiaryScreenState extends State<DreamDiaryScreen> {
         ),
       ),
       child: Text(text),
+    ),
     );
   }
 }

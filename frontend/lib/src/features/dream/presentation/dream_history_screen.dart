@@ -165,15 +165,19 @@ class _DreamHistoryScreenState extends State<DreamHistoryScreen> {
   Widget _buildFilterChip(String label, bool isActive, Color color, VoidCallback onTap) {
     return GestureDetector(
       onTap: onTap,
+      behavior: HitTestBehavior.opaque,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        // Hit target mínimo ~44pt (toque mobile)
+        constraints: const BoxConstraints(minHeight: 44),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        alignment: Alignment.center,
         decoration: BoxDecoration(
           color: isActive ? color.withOpacity(0.15) : Colors.transparent,
           border: Border.all(color: isActive ? color.withOpacity(0.6) : AionTheme.shadow),
         ),
         child: Text(label, style: GoogleFonts.ptSerif(
-          fontSize: 10, letterSpacing: 1,
+          fontSize: 11, letterSpacing: 1,
           color: isActive ? color : AionTheme.silver.withOpacity(0.7),
         )),
       ),
@@ -203,20 +207,22 @@ class _DreamHistoryScreenState extends State<DreamHistoryScreen> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios, color: AionTheme.gold, size: 18),
+          constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
           'DIÁRIO DO SONHO',
           style: GoogleFonts.ptSerif(
             fontSize: 10,
-            letterSpacing: 4,
+            letterSpacing: 3,
             color: AionTheme.gold,
           ),
         ),
         centerTitle: true,
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh, color: AionTheme.silver, size: 18),
+            icon: const Icon(Icons.refresh, color: AionTheme.silver, size: 20),
+            constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
             onPressed: _loadHistory,
           ),
         ],
@@ -338,15 +344,25 @@ class _DreamHistoryScreenState extends State<DreamHistoryScreen> {
               color: AionTheme.darkAbyss,
               border: Border.all(color: AionTheme.shadow),
             ),
+            // Campo limpo: sem histórico, sem sugestões de teclado/OS e sem
+            // exemplos no placeholder (evita parecer “palavras sugeridas”).
             child: TextField(
               controller: _searchController,
               style: GoogleFonts.ptSerif(fontSize: 14, color: AionTheme.ghost),
+              autocorrect: false,
+              enableSuggestions: false,
+              enableIMEPersonalizedLearning: false,
+              smartDashesType: SmartDashesType.disabled,
+              smartQuotesType: SmartQuotesType.disabled,
+              textInputAction: TextInputAction.search,
+              keyboardType: TextInputType.text,
+              autofillHints: const <String>[],
               decoration: InputDecoration(
-                hintText: 'Busque por significado... (ex: "perda", "voo")',
+                hintText: 'Buscar no diário...',
                 hintStyle: GoogleFonts.ptSerif(
                     color: AionTheme.silver.withOpacity(0.35), fontSize: 13),
                 prefixIcon: Icon(Icons.search,
-                    color: AionTheme.silver.withOpacity(0.5), size: 18),
+                    color: AionTheme.silver.withOpacity(0.5), size: 20),
                 suffixIcon: _isSearching
                     ? const Padding(
                         padding: EdgeInsets.all(12),
@@ -356,8 +372,12 @@ class _DreamHistoryScreenState extends State<DreamHistoryScreen> {
                         ))
                     : _searchController.text.isNotEmpty
                         ? IconButton(
+                            constraints: const BoxConstraints(
+                              minWidth: 44,
+                              minHeight: 44,
+                            ),
                             icon: Icon(Icons.close,
-                                size: 16, color: AionTheme.silver.withOpacity(0.5)),
+                                size: 18, color: AionTheme.silver.withOpacity(0.5)),
                             onPressed: () {
                               _searchController.clear();
                               _loadHistory();
@@ -366,7 +386,7 @@ class _DreamHistoryScreenState extends State<DreamHistoryScreen> {
                         : null,
                 border: InputBorder.none,
                 contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
               ),
               onSubmitted: _buscarSemantico,
               onChanged: (v) {

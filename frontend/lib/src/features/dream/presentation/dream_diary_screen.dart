@@ -248,7 +248,8 @@ class _DreamDiaryScreenState extends State<DreamDiaryScreen> {
         side: BorderSide(
           color: isPrimary ? AionTheme.gold : AionTheme.veil,
         ),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        minimumSize: const Size(44, 44),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         shape: const RoundedRectangleBorder(),
         elevation: 0,
         textStyle: const TextStyle(

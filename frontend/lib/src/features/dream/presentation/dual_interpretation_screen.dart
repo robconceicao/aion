@@ -1,14 +1,14 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter_tts/flutter_tts.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:audioplayers/audioplayers.dart';
 import '../../../core/theme.dart';
-import '../../../core/api_service.dart';
 import '../../../core/widgets/cinematic_background.dart';
 import 'widgets/hero_journey_widget.dart';
 
 /// Tela de interpretação dual — exibe os dois formatos em abas (SPEC §7.1).
 ///
-/// Aba 0 "Interpretação": narrativa acessível + player TTS.
+/// Aba 0 "Interpretação": narrativa acessível + TTS nativo (Leitura Simbólica).
 /// Aba 1 "Análise Completa": seções técnicas estruturadas (JSONB).
 ///
 /// [isLegacy]: true quando analise_completa está vazio (sonhos anteriores à
@@ -40,17 +40,26 @@ class DualInterpretationScreen extends StatefulWidget {
   State<DualInterpretationScreen> createState() => _DualInterpretationScreenState();
 }
 
-// ─── Estados do player de áudio ────────────────────────────────
+// ─── Estados do player TTS ─────────────────────────────────────
 enum _AudioState { idle, loading, playing, paused, error }
+
+/// Taxas de fala (flutter_tts: tipicamente 0.0–1.0; iOS/Android diferem).
+const List<({String label, double rate})> _speechRates = [
+  (label: '0.8×', rate: 0.38),
+  (label: '1×', rate: 0.48),
+  (label: '1.2×', rate: 0.58),
+];
 
 class _DualInterpretationScreenState extends State<DualInterpretationScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  final AudioPlayer _audioPlayer = AudioPlayer();
+  final FlutterTts _tts = FlutterTts();
 
   _AudioState _audioState = _AudioState.idle;
-  Duration _duration = Duration.zero;
-  Duration _position = Duration.zero;
+  bool _ttsReady = false;
+  int _rateIndex = 1; // 1× padrão
+  /// Progresso 0–1 da fala (quando o engine reporta offset de caracteres).
+  double _speechProgress = 0.0;
 
   @override
   void initState() {
@@ -60,74 +69,253 @@ class _DualInterpretationScreenState extends State<DualInterpretationScreen>
       vsync: this,
       initialIndex: widget.initialTab,
     );
+    _initTts();
+  }
 
-    _audioPlayer.onDurationChanged.listen((d) {
-      if (mounted) setState(() => _duration = d);
-    });
-    _audioPlayer.onPositionChanged.listen((p) {
-      if (mounted) setState(() => _position = p);
-    });
-    _audioPlayer.onPlayerComplete.listen((_) {
-      if (mounted) setState(() {
-        _audioState = _AudioState.idle;
-        _position = Duration.zero;
+  Future<void> _initTts() async {
+    try {
+      _tts.setStartHandler(() {
+        if (mounted) {
+          setState(() {
+            _audioState = _AudioState.playing;
+            _speechProgress = 0.0;
+          });
+        }
       });
-    });
+      _tts.setCompletionHandler(() {
+        if (mounted) {
+          setState(() {
+            _audioState = _AudioState.idle;
+            _speechProgress = 0.0;
+          });
+        }
+      });
+      _tts.setCancelHandler(() {
+        if (mounted) {
+          setState(() {
+            _audioState = _AudioState.idle;
+            _speechProgress = 0.0;
+          });
+        }
+      });
+      _tts.setPauseHandler(() {
+        if (mounted) setState(() => _audioState = _AudioState.paused);
+      });
+      _tts.setContinueHandler(() {
+        if (mounted) setState(() => _audioState = _AudioState.playing);
+      });
+      _tts.setErrorHandler((msg) {
+        debugPrint('[TTS] error: $msg');
+        if (mounted) {
+          setState(() {
+            _audioState = _AudioState.error;
+            _speechProgress = 0.0;
+          });
+        }
+      });
+      _tts.setProgressHandler((text, start, end, word) {
+        if (!mounted || text.isEmpty) return;
+        final p = (end / text.length).clamp(0.0, 1.0);
+        setState(() => _speechProgress = p);
+      });
+
+      // Preferência pt-BR; fallback pt / en se o device não tiver.
+      final langOk = await _setPreferredLanguage();
+      await _tts.setSpeechRate(_speechRates[_rateIndex].rate);
+      await _tts.setPitch(1.0);
+      await _tts.setVolume(1.0);
+
+      // iOS / Web: await speak completion for cleaner state transitions.
+      if (!kIsWeb) {
+        await _tts.awaitSpeakCompletion(true);
+      }
+
+      if (mounted) {
+        setState(() {
+          _ttsReady = langOk;
+          if (!langOk) _audioState = _AudioState.error;
+        });
+      }
+    } catch (e) {
+      debugPrint('[TTS] init failed: $e');
+      if (mounted) {
+        setState(() {
+          _ttsReady = false;
+          _audioState = _AudioState.error;
+        });
+      }
+    }
+  }
+
+  Future<bool> _setPreferredLanguage() async {
+    try {
+      final langs = await _tts.getLanguages;
+      final list = langs is List
+          ? langs.map((e) => e.toString()).toList()
+          : <String>[];
+
+      String? pick;
+      // Preferência: pt-BR → qualquer pt → fallback nulo (set direto abaixo).
+      for (final l in list) {
+        final n = l.toLowerCase().replaceAll('_', '-');
+        if (n == 'pt-br' || n.startsWith('pt-br')) {
+          pick = l;
+          break;
+        }
+      }
+      if (pick == null) {
+        for (final l in list) {
+          final n = l.toLowerCase().replaceAll('_', '-');
+          if (n == 'pt' || n.startsWith('pt-') || n.startsWith('pt_')) {
+            pick = l;
+            break;
+          }
+        }
+      }
+
+      final r = await _tts.setLanguage(pick ?? 'pt-BR');
+      return r == 1 || r == true || list.isEmpty;
+    } catch (_) {
+      try {
+        await _tts.setLanguage('pt-BR');
+        return true;
+      } catch (_) {
+        return false;
+      }
+    }
   }
 
   @override
   void dispose() {
     _tabController.dispose();
-    _audioPlayer.dispose();
+    _tts.stop();
     super.dispose();
   }
 
-  // ─── Lógica do player ────────────────────────────────────────
+  /// Texto falado: só a Leitura Simbólica, sem marcadores **markdown**.
+  String _speechText() {
+    return widget.narrativeText
+        .replaceAll(RegExp(r'\*+'), '')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
+  }
+
+  // ─── Lógica do player TTS ────────────────────────────────────
 
   Future<void> _onPlayPause() async {
     if (_audioState == _AudioState.loading) return;
 
+    final text = _speechText();
+    if (text.isEmpty) {
+      _showTtsMessage(
+        'Não há texto de leitura simbólica para narrar neste sonho.',
+      );
+      setState(() => _audioState = _AudioState.error);
+      return;
+    }
+
     if (_audioState == _AudioState.playing) {
-      await _audioPlayer.pause();
-      setState(() => _audioState = _AudioState.paused);
+      // pause() nem sempre existe em todos os engines; stop é garantido.
+      try {
+        await _tts.pause();
+        if (mounted) setState(() => _audioState = _AudioState.paused);
+      } catch (_) {
+        await _tts.stop();
+        if (mounted) {
+          setState(() {
+            _audioState = _AudioState.idle;
+            _speechProgress = 0.0;
+          });
+        }
+      }
       return;
     }
 
     if (_audioState == _AudioState.paused) {
-      await _audioPlayer.resume();
-      setState(() => _audioState = _AudioState.playing);
+      try {
+        // resume via speak again from start if continue unsupported
+        final result = await _tts.speak(text);
+        if (result == 1 || result == true) {
+          if (mounted) setState(() => _audioState = _AudioState.playing);
+        } else {
+          throw Exception('speak resumed with result=$result');
+        }
+      } catch (e) {
+        debugPrint('[TTS] resume/speak failed: $e');
+        if (mounted) {
+          setState(() => _audioState = _AudioState.error);
+          _showTtsMessage(
+            'Não foi possível retomar a narração. Tente novamente.',
+          );
+        }
+      }
       return;
     }
 
-    // idle ou error — requisita áudio ao backend
-    setState(() => _audioState = _AudioState.loading);
+    // idle ou error — inicia narração local
+    setState(() {
+      _audioState = _AudioState.loading;
+      _speechProgress = 0.0;
+    });
+
     try {
-      final signedUrl = await ApiService.requestAudio(widget.dreamId);
-      await _audioPlayer.play(UrlSource(signedUrl));
-      if (mounted) setState(() => _audioState = _AudioState.playing);
+      if (!_ttsReady) {
+        await _initTts();
+      }
+      await _tts.setSpeechRate(_speechRates[_rateIndex].rate);
+      final result = await _tts.speak(text);
+      if (result == 1 || result == true) {
+        if (mounted && _audioState == _AudioState.loading) {
+          // setStartHandler deve promover a playing; fallback:
+          setState(() => _audioState = _AudioState.playing);
+        }
+      } else {
+        throw Exception('TTS speak returned $result');
+      }
     } catch (e) {
-      debugPrint('[PLAYER] Falha ao carregar áudio: $e');
+      debugPrint('[TTS] Falha ao narrar: $e');
       if (mounted) {
         setState(() => _audioState = _AudioState.error);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Áudio indisponível no momento — leia o texto abaixo.',
-              style: GoogleFonts.ptSerif(fontSize: 13, color: AionTheme.ghost),
-            ),
-            backgroundColor: AionTheme.darkAbyss,
-            behavior: SnackBarBehavior.floating,
-            duration: const Duration(seconds: 4),
-          ),
+        _showTtsMessage(
+          'Narração indisponível neste dispositivo — leia o texto abaixo.',
         );
       }
     }
   }
 
-  String _formatDuration(Duration d) {
-    final m = d.inMinutes.remainder(60).toString().padLeft(2, '0');
-    final s = d.inSeconds.remainder(60).toString().padLeft(2, '0');
-    return '$m:$s';
+  Future<void> _onStop() async {
+    await _tts.stop();
+    if (mounted) {
+      setState(() {
+        _audioState = _AudioState.idle;
+        _speechProgress = 0.0;
+      });
+    }
+  }
+
+  Future<void> _cycleSpeechRate() async {
+    final next = (_rateIndex + 1) % _speechRates.length;
+    setState(() => _rateIndex = next);
+    try {
+      await _tts.setSpeechRate(_speechRates[next].rate);
+    } catch (e) {
+      debugPrint('[TTS] setSpeechRate failed: $e');
+    }
+  }
+
+  void _showTtsMessage(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          message,
+          style: GoogleFonts.ptSerif(fontSize: 13, color: AionTheme.ghost),
+        ),
+        backgroundColor: AionTheme.darkAbyss,
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 4),
+      ),
+    );
   }
 
   // ─── Build principal ─────────────────────────────────────────
@@ -141,6 +329,7 @@ class _DualInterpretationScreenState extends State<DualInterpretationScreen>
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios, color: AionTheme.gold, size: 18),
+          constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
@@ -156,8 +345,9 @@ class _DualInterpretationScreenState extends State<DualInterpretationScreen>
           unselectedLabelColor: AionTheme.silver.withOpacity(0.5),
           indicatorColor: AionTheme.gold,
           indicatorWeight: 1,
-          labelStyle: GoogleFonts.ptSerif(fontSize: 9, letterSpacing: 2),
-          unselectedLabelStyle: GoogleFonts.ptSerif(fontSize: 9, letterSpacing: 2),
+          labelStyle: GoogleFonts.ptSerif(fontSize: 9, letterSpacing: 1.5),
+          unselectedLabelStyle: GoogleFonts.ptSerif(fontSize: 9, letterSpacing: 1.5),
+          labelPadding: const EdgeInsets.symmetric(horizontal: 8),
           tabs: const [
             Tab(text: 'INTERPRETAÇÃO'),
             Tab(text: 'ANÁLISE COMPLETA'),
@@ -187,13 +377,20 @@ class _DualInterpretationScreenState extends State<DualInterpretationScreen>
 
   Widget _buildNarrativeTab() {
     final paragraphs = _parseNarrative(widget.narrativeText);
+    final width = MediaQuery.sizeOf(context).width;
+    final padH = (width * 0.05).clamp(16.0, 24.0);
+    final titleSize = (width * 0.085).clamp(26.0, 34.0);
+    final bodySize = (width * 0.045).clamp(16.0, 18.0);
+
     return CustomScrollView(
       slivers: [
-        SliverToBoxAdapter(child: _buildPlayerBar()),
+        if (widget.narrativeText.trim().isNotEmpty)
+          // Player TTS só na leitura simbólica (escopo da task).
+          SliverToBoxAdapter(child: _buildPlayerBar()),
         SliverToBoxAdapter(child: _buildEthicalWarning()),
         SliverToBoxAdapter(
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+            padding: EdgeInsets.fromLTRB(padH, 24, padH, 0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -204,14 +401,14 @@ class _DualInterpretationScreenState extends State<DualInterpretationScreen>
                 const SizedBox(height: 10),
                 Text('Voz do Arquétipo',
                     style: GoogleFonts.cormorantGaramond(
-                      fontSize: 34, height: 1.2, color: AionTheme.ghost,
+                      fontSize: titleSize, height: 1.2, color: AionTheme.ghost,
                       fontWeight: FontWeight.w300, fontStyle: FontStyle.italic,
                     )),
                 const SizedBox(height: 24),
                 _buildDivider(),
                 const SizedBox(height: 20),
                 Container(
-                  padding: const EdgeInsets.fromLTRB(20, 14, 20, 14),
+                  padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
                   decoration: BoxDecoration(
                     border: Border(
                       left: BorderSide(color: AionTheme.gold.withOpacity(0.35), width: 2),
@@ -231,25 +428,41 @@ class _DualInterpretationScreenState extends State<DualInterpretationScreen>
             ),
           ),
         ),
-        SliverPadding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          sliver: SliverList(
-            delegate: SliverChildBuilderDelegate(
-              (context, i) => _buildParagraph(paragraphs[i]),
-              childCount: paragraphs.length,
+        if (paragraphs.isEmpty)
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: padH, vertical: 24),
+              child: Text(
+                'A leitura simbólica ainda não está disponível para este sonho.',
+                style: GoogleFonts.ptSerif(
+                  fontSize: 14,
+                  color: AionTheme.silver.withOpacity(0.6),
+                  fontStyle: FontStyle.italic,
+                  height: 1.6,
+                ),
+              ),
+            ),
+          )
+        else
+          SliverPadding(
+            padding: EdgeInsets.symmetric(horizontal: padH),
+            sliver: SliverList(
+              delegate: SliverChildBuilderDelegate(
+                (context, i) => _buildParagraph(paragraphs[i], fontSize: bodySize),
+                childCount: paragraphs.length,
+              ),
             ),
           ),
-        ),
         if (widget.perguntaReflexao.isNotEmpty)
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
+              padding: EdgeInsets.symmetric(horizontal: padH),
               child: _buildQuestionBlock(widget.perguntaReflexao),
             ),
           ),
         SliverToBoxAdapter(
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(24, 40, 24, 64),
+            padding: EdgeInsets.fromLTRB(padH, 40, padH, 64),
             child: Column(
               children: [
                 _buildDivider(),
@@ -273,8 +486,9 @@ class _DualInterpretationScreenState extends State<DualInterpretationScreen>
                 OutlinedButton(
                   onPressed: () => Navigator.pop(context),
                   style: OutlinedButton.styleFrom(
+                    minimumSize: const Size(44, 44),
                     side: const BorderSide(color: AionTheme.gold),
-                    padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
+                    padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
                     shape: const RoundedRectangleBorder(),
                   ),
                   child: Text('VOLTAR AO DIÁRIO',
@@ -293,50 +507,94 @@ class _DualInterpretationScreenState extends State<DualInterpretationScreen>
   Widget _buildPlayerBar() {
     final isLoading = _audioState == _AudioState.loading;
     final isPlaying = _audioState == _AudioState.playing;
-    final progress = _duration.inMilliseconds > 0
-        ? _position.inMilliseconds / _duration.inMilliseconds
-        : 0.0;
+    final isPaused = _audioState == _AudioState.paused;
+    final isError = _audioState == _AudioState.error;
+    final isActive = isPlaying || isPaused;
+
+    final String label;
+    if (isLoading) {
+      label = 'PREPARANDO VOZ...';
+    } else if (isError) {
+      label = 'VOZ INDISPONÍVEL';
+    } else if (isPlaying) {
+      label = 'NARRANDO LEITURA SIMBÓLICA';
+    } else if (isPaused) {
+      label = 'PAUSADO — TOQUE PARA CONTINUAR';
+    } else {
+      label = 'ESCUTAR LEITURA SIMBÓLICA';
+    }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         color: AionTheme.darkAbyss,
         border: const Border(bottom: BorderSide(color: AionTheme.shadow)),
       ),
       child: Row(
         children: [
-          // Botão play/pause/loading
-          GestureDetector(
-            onTap: _onPlayPause,
-            child: Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: _audioState == _AudioState.error
-                      ? AionTheme.crimson.withOpacity(0.5)
-                      : AionTheme.gold.withOpacity(0.6),
+          // Play / pause
+          Semantics(
+            button: true,
+            label: isPlaying ? 'Pausar narração' : 'Reproduzir narração',
+            child: InkWell(
+              onTap: isLoading ? null : _onPlayPause,
+              customBorder: const CircleBorder(),
+              child: Container(
+                width: 48,
+                height: 48,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: isError
+                        ? AionTheme.crimson.withOpacity(0.5)
+                        : AionTheme.gold.withOpacity(0.6),
+                  ),
                 ),
-              ),
-              child: isLoading
-                  ? Padding(
-                      padding: const EdgeInsets.all(10),
-                      child: CircularProgressIndicator(
-                        strokeWidth: 1.5,
-                        color: AionTheme.gold.withOpacity(0.6),
+                child: isLoading
+                    ? Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: CircularProgressIndicator(
+                          strokeWidth: 1.5,
+                          color: AionTheme.gold.withOpacity(0.6),
+                        ),
+                      )
+                    : Icon(
+                        isPlaying ? Icons.pause : Icons.play_arrow,
+                        size: 24,
+                        color: isError
+                            ? AionTheme.crimson.withOpacity(0.6)
+                            : AionTheme.gold.withOpacity(0.85),
                       ),
-                    )
-                  : Icon(
-                      isPlaying ? Icons.pause : Icons.play_arrow,
-                      size: 20,
-                      color: _audioState == _AudioState.error
-                          ? AionTheme.crimson.withOpacity(0.6)
-                          : AionTheme.gold.withOpacity(0.7),
-                    ),
+              ),
             ),
           ),
-          const SizedBox(width: 14),
+          const SizedBox(width: 10),
+          // Stop (só quando ativo)
+          if (isActive)
+            Semantics(
+              button: true,
+              label: 'Parar narração',
+              child: InkWell(
+                onTap: _onStop,
+                customBorder: const CircleBorder(),
+                child: Container(
+                  width: 44,
+                  height: 44,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(color: AionTheme.silver.withOpacity(0.35)),
+                  ),
+                  child: Icon(
+                    Icons.stop,
+                    size: 20,
+                    color: AionTheme.silver.withOpacity(0.75),
+                  ),
+                ),
+              ),
+            ),
+          if (isActive) const SizedBox(width: 10),
           // Progresso + label
           Expanded(
             child: Column(
@@ -344,34 +602,59 @@ class _DualInterpretationScreenState extends State<DualInterpretationScreen>
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  isLoading
-                      ? 'PREPARANDO ÁUDIO...'
-                      : _audioState == _AudioState.error
-                          ? 'ÁUDIO INDISPONÍVEL'
-                          : isPlaying || _audioState == _AudioState.paused
-                              ? '${_formatDuration(_position)} / ${_formatDuration(_duration)}'
-                              : 'ESCUTAR INTERPRETAÇÃO',
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: GoogleFonts.ptSerif(
                     fontSize: 9,
-                    letterSpacing: 2,
-                    color: _audioState == _AudioState.error
-                        ? AionTheme.crimson.withOpacity(0.6)
-                        : AionTheme.gold.withOpacity(0.6),
+                    letterSpacing: 1.5,
+                    color: isError
+                        ? AionTheme.crimson.withOpacity(0.7)
+                        : AionTheme.gold.withOpacity(0.7),
                   ),
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 8),
                 ClipRRect(
                   borderRadius: BorderRadius.circular(1),
                   child: LinearProgressIndicator(
-                    value: isLoading ? null : progress.clamp(0.0, 1.0),
+                    value: isLoading
+                        ? null
+                        : isActive
+                            ? _speechProgress.clamp(0.0, 1.0)
+                            : 0.0,
                     minHeight: 2,
                     backgroundColor: AionTheme.shadow,
-                    color: _audioState == _AudioState.error
+                    color: isError
                         ? AionTheme.crimson.withOpacity(0.4)
                         : AionTheme.gold.withOpacity(0.45),
                   ),
                 ),
               ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          // Velocidade da voz
+          Semantics(
+            button: true,
+            label: 'Velocidade da voz ${_speechRates[_rateIndex].label}',
+            child: InkWell(
+              onTap: _cycleSpeechRate,
+              child: Container(
+                constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+                alignment: Alignment.center,
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                decoration: BoxDecoration(
+                  border: Border.all(color: AionTheme.shadow),
+                ),
+                child: Text(
+                  _speechRates[_rateIndex].label,
+                  style: GoogleFonts.ptSerif(
+                    fontSize: 11,
+                    letterSpacing: 0.5,
+                    color: AionTheme.gold.withOpacity(0.8),
+                  ),
+                ),
+              ),
             ),
           ),
         ],
@@ -385,8 +668,9 @@ class _DualInterpretationScreenState extends State<DualInterpretationScreen>
     if (widget.isLegacy) {
       return _buildLegacyNotice();
     }
+    final padH = (MediaQuery.sizeOf(context).width * 0.05).clamp(14.0, 20.0);
     return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+      padding: EdgeInsets.symmetric(horizontal: padH, vertical: 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -407,8 +691,9 @@ class _DualInterpretationScreenState extends State<DualInterpretationScreen>
           OutlinedButton(
             onPressed: () => Navigator.pop(context),
             style: OutlinedButton.styleFrom(
+              minimumSize: const Size(44, 44),
               side: const BorderSide(color: AionTheme.gold),
-              padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
               shape: const RoundedRectangleBorder(),
             ),
             child: Text('VOLTAR AO DIÁRIO',
@@ -593,9 +878,10 @@ class _DualInterpretationScreenState extends State<DualInterpretationScreen>
   // ─── Widgets auxiliares compartilhados ───────────────────────
 
   Widget _buildEthicalWarning() {
+    final padH = (MediaQuery.sizeOf(context).width * 0.05).clamp(14.0, 20.0);
     return Container(
-      margin: const EdgeInsets.fromLTRB(20, 12, 20, 0),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      margin: EdgeInsets.fromLTRB(padH, 12, padH, 0),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
         color: AionTheme.tealBg,
         border: Border.all(color: AionTheme.tealBd),
@@ -626,13 +912,13 @@ class _DualInterpretationScreenState extends State<DualInterpretationScreen>
     );
   }
 
-  Widget _buildParagraph(String text) {
+  Widget _buildParagraph(String text, {double fontSize = 18}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 22),
       child: RichText(
         text: TextSpan(
           style: GoogleFonts.cormorantGaramond(
-            fontSize: 18, height: 1.85,
+            fontSize: fontSize, height: 1.85,
             color: AionTheme.ghost.withOpacity(0.88), fontWeight: FontWeight.w300,
           ),
           children: _buildRichSpans(text),
@@ -672,9 +958,10 @@ class _DualInterpretationScreenState extends State<DualInterpretationScreen>
 
   Widget _buildQuestionBlock(String text) {
     final cleanText = text.startsWith('"') ? text : '"$text"';
+    final qSize = (MediaQuery.sizeOf(context).width * 0.042).clamp(14.0, 17.0);
     return Container(
       margin: const EdgeInsets.only(top: 16, bottom: 40),
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 28),
       decoration: BoxDecoration(
         color: AionTheme.darkDeep,
         border: Border.all(color: AionTheme.gold.withOpacity(0.28)),
@@ -682,13 +969,13 @@ class _DualInterpretationScreenState extends State<DualInterpretationScreen>
       child: Column(
         children: [
           Text('PERGUNTA PARA REFLEXÃO',
-              style: GoogleFonts.ptSerif(fontSize: 9, letterSpacing: 4, color: AionTheme.gold)),
+              style: GoogleFonts.ptSerif(fontSize: 9, letterSpacing: 3, color: AionTheme.gold)),
           const SizedBox(height: 16),
           Text(
             cleanText,
             textAlign: TextAlign.center,
             style: GoogleFonts.ptSerif(
-              fontSize: 17, color: AionTheme.dawn, fontStyle: FontStyle.italic, height: 1.9,
+              fontSize: qSize, color: AionTheme.dawn, fontStyle: FontStyle.italic, height: 1.9,
             ),
           ),
         ],

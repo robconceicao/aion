@@ -76,15 +76,20 @@ class _CanalScreenState extends State<CanalScreen> {
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 820),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 32),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildNav(),
-                  Expanded(child: _buildBody()),
-                ],
-              ),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final padH = (constraints.maxWidth * 0.05).clamp(12.0, 20.0);
+                return Padding(
+                  padding: EdgeInsets.symmetric(horizontal: padH, vertical: 24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildNav(),
+                      Expanded(child: _buildBody()),
+                    ],
+                  ),
+                );
+              },
             ),
           ),
         ),
@@ -94,65 +99,75 @@ class _CanalScreenState extends State<CanalScreen> {
 
   // ── Barra de navegação ────────────────────────────────────────────────
   Widget _buildNav() {
+    final narrow = MediaQuery.sizeOf(context).width < 420;
+    final title = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'M I T O  &  P S I Q U E',
+          style: TextStyle(
+            fontSize: 9,
+            letterSpacing: 5,
+            color: AionTheme.gold,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'O Canal',
+          style: TextStyle(
+            fontSize: narrow ? 18 : 22,
+            letterSpacing: 1.5,
+            fontFamily: 'Georgia',
+            color: Colors.white,
+          ),
+        ),
+      ],
+    );
+    final nav = Wrap(
+      spacing: 6,
+      runSpacing: 8,
+      children: [
+        _navBtn('INÍCIO', false, () => Navigator.pop(context)),
+        _navBtn('+ SONHO', false, () {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (_) => const RecordDreamScreen(),
+            ),
+          );
+        }),
+        _navBtn('ARQUÉTIPOS', false, () {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (_) => const ArchetypesScreen(),
+            ),
+          );
+        }),
+        _navBtn('CANAL', true, () {}),
+      ],
+    );
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
-                Text(
-                  'M I T O  &  P S I Q U E',
-                  style: TextStyle(
-                    fontSize: 9,
-                    letterSpacing: 5,
-                    color: AionTheme.gold,
-                  ),
-                ),
-                SizedBox(height: 8),
-                Text(
-                  'O Canal',
-                  style: TextStyle(
-                    fontSize: 22,
-                    letterSpacing: 2,
-                    fontFamily: 'Georgia',
-                    color: Colors.white,
-                  ),
-                ),
-              ],
-            ),
-            Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              children: [
-                _navBtn('INÍCIO', false, () => Navigator.pop(context)),
-                _navBtn('+ SONHO', false, () {
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const RecordDreamScreen(),
-                    ),
-                  );
-                }),
-                _navBtn('ARQUÉTIPOS', false, () {
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const ArchetypesScreen(),
-                    ),
-                  );
-                }),
-                _navBtn('CANAL', true, () {}),
-              ],
-            ),
-          ],
-        ),
-        const SizedBox(height: 28),
+        if (narrow) ...[
+          title,
+          const SizedBox(height: 16),
+          nav,
+        ] else
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Flexible(child: title),
+              const SizedBox(width: 12),
+              nav,
+            ],
+          ),
+        const SizedBox(height: 20),
         Container(height: 1, color: AionTheme.veil),
-        const SizedBox(height: 28),
+        const SizedBox(height: 20),
       ],
     );
   }
@@ -161,7 +176,9 @@ class _CanalScreenState extends State<CanalScreen> {
     return InkWell(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+        constraints: const BoxConstraints(minHeight: 44),
+        alignment: Alignment.center,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
           color: isActive ? AionTheme.gold : Colors.transparent,
           border: Border.all(color: isActive ? AionTheme.gold : AionTheme.veil),
@@ -171,7 +188,7 @@ class _CanalScreenState extends State<CanalScreen> {
           style: TextStyle(
             color: isActive ? AionTheme.darkVoid : AionTheme.silver,
             fontSize: 10,
-            letterSpacing: 2,
+            letterSpacing: 1.5,
             fontFamily: 'Georgia',
           ),
         ),

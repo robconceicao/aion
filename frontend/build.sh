@@ -31,15 +31,24 @@ export NO_PROXY=localhost,127.0.0.1
 
 # 3. Supabase defines (obrigatório — sem isso a web fica em tela branca)
 #    Prioridade:
-#      1) Env vars SUPABASE_URL + SUPABASE_ANON_KEY (Vercel / CI)
+#      1) Env vars (Vercel / CI)
+#         - SUPABASE_URL
+#         - SUPABASE_ANON_KEY (preferido) ou SUPABASE_KEY (legado no projeto Vercel)
 #      2) --dart-define-from-file=dart_define.json (local)
 DEFINE_ARGS=()
 
-if [ -n "${SUPABASE_URL:-}" ] && [ -n "${SUPABASE_ANON_KEY:-}" ]; then
-  echo "Usando SUPABASE_* das variáveis de ambiente (CI/Vercel)."
-  # Não imprime valores (secrets).
+# Preferir ANON_KEY; aceitar SUPABASE_KEY como fallback (já existe no Vercel).
+SUPABASE_ANON_EFFECTIVE="${SUPABASE_ANON_KEY:-${SUPABASE_KEY:-}}"
+
+if [ -n "${SUPABASE_URL:-}" ] && [ -n "${SUPABASE_ANON_EFFECTIVE}" ]; then
+  if [ -n "${SUPABASE_ANON_KEY:-}" ]; then
+    echo "Usando SUPABASE_URL + SUPABASE_ANON_KEY do ambiente (CI/Vercel)."
+  else
+    echo "Usando SUPABASE_URL + SUPABASE_KEY (legado) do ambiente — mapeado para ANON_KEY no build."
+  fi
+  # Não imprime valores (secrets). Flutter espera o nome SUPABASE_ANON_KEY.
   DEFINE_ARGS+=(--dart-define="SUPABASE_URL=${SUPABASE_URL}")
-  DEFINE_ARGS+=(--dart-define="SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}")
+  DEFINE_ARGS+=(--dart-define="SUPABASE_ANON_KEY=${SUPABASE_ANON_EFFECTIVE}")
 elif [ -f "$REPO_ROOT/dart_define.json" ]; then
   echo "Usando dart_define.json na raiz do repositório."
   DEFINE_ARGS+=(--dart-define-from-file="$REPO_ROOT/dart_define.json")
@@ -47,10 +56,10 @@ elif [ -f "$PROJECT_ROOT/dart_define.json" ]; then
   echo "Usando dart_define.json em frontend/."
   DEFINE_ARGS+=(--dart-define-from-file="$PROJECT_ROOT/dart_define.json")
 else
-  echo "ERROR: SUPABASE_URL e SUPABASE_ANON_KEY não configurados."
+  echo "ERROR: SUPABASE_URL e chave anon não configurados."
   echo "No Vercel: Project Settings → Environment Variables → adicione:"
   echo "  SUPABASE_URL"
-  echo "  SUPABASE_ANON_KEY"
+  echo "  SUPABASE_ANON_KEY  (ou SUPABASE_KEY com a anon key pública)"
   echo "Local: copie dart_define.example.json → dart_define.json e preencha."
   exit 1
 fi

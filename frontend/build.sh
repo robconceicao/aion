@@ -1,10 +1,12 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 
 echo "=== INICIANDO BUILD DIRETO (AION) ==="
 
 # Configurações de Caminho
+# No Vercel: buildCommand faz `cd frontend && bash build.sh` → PWD = frontend/
 PROJECT_ROOT=$PWD
+REPO_ROOT="$(cd "$PROJECT_ROOT/.." && pwd)"
 FLUTTER_SDK=$PROJECT_ROOT/flutter
 FLUTTER_BIN=$FLUTTER_SDK/bin/flutter
 
@@ -27,14 +29,39 @@ $FLUTTER_BIN --version
 export FLUTTER_ALLOW_HTTP=true
 export NO_PROXY=localhost,127.0.0.1
 
+# 3. Supabase defines (obrigatório — sem isso a web fica em tela branca)
+#    Prioridade:
+#      1) Env vars SUPABASE_URL + SUPABASE_ANON_KEY (Vercel / CI)
+#      2) --dart-define-from-file=dart_define.json (local)
+DEFINE_ARGS=()
+
+if [ -n "${SUPABASE_URL:-}" ] && [ -n "${SUPABASE_ANON_KEY:-}" ]; then
+  echo "Usando SUPABASE_* das variáveis de ambiente (CI/Vercel)."
+  # Não imprime valores (secrets).
+  DEFINE_ARGS+=(--dart-define="SUPABASE_URL=${SUPABASE_URL}")
+  DEFINE_ARGS+=(--dart-define="SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}")
+elif [ -f "$REPO_ROOT/dart_define.json" ]; then
+  echo "Usando dart_define.json na raiz do repositório."
+  DEFINE_ARGS+=(--dart-define-from-file="$REPO_ROOT/dart_define.json")
+elif [ -f "$PROJECT_ROOT/dart_define.json" ]; then
+  echo "Usando dart_define.json em frontend/."
+  DEFINE_ARGS+=(--dart-define-from-file="$PROJECT_ROOT/dart_define.json")
+else
+  echo "ERROR: SUPABASE_URL e SUPABASE_ANON_KEY não configurados."
+  echo "No Vercel: Project Settings → Environment Variables → adicione:"
+  echo "  SUPABASE_URL"
+  echo "  SUPABASE_ANON_KEY"
+  echo "Local: copie dart_define.example.json → dart_define.json e preencha."
+  exit 1
+fi
+
 echo "Limpando caches..."
 $FLUTTER_BIN clean || true
 
 echo "Instalando dependências..."
 $FLUTTER_BIN pub get
 
-echo "Iniciando compilação WEB..."
-$FLUTTER_BIN build web --release --base-href / --no-source-maps
+echo "Iniciando compilação WEB (com dart-defines do Supabase)..."
+$FLUTTER_BIN build web --release --base-href / --no-source-maps "${DEFINE_ARGS[@]}"
 
 echo "=== BUILD FINALIZADO COM SUCESSO! ==="
-

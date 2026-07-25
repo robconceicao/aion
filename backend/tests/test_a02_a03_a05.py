@@ -3,7 +3,7 @@ Testes mockados para A-02, A-03, A-05 -- suite offline.
 
 COBERTURA:
   Teste 1 (cascata): Prova que call_claude tenta os 3 modelos Claude + Gemini
-    + DeepSeek antes de levantar RuntimeError, e que analyze_dream captura essa
+    + xAI antes de levantar RuntimeError, e que analyze_dream captura essa
     excecao e devolve um dict com _error:True sem vazar para o caller.
 
 IMPORTANTE:
@@ -24,7 +24,7 @@ import app.services.ai_service as ai_svc
 class TestCascata(unittest.IsolatedAsyncioTestCase):
 
     async def test_call_claude_levanta_runtime_error_quando_todos_falham(self):
-        """call_claude tenta os 3 Claude + Gemini + DeepSeek; levanta RuntimeError se todos falham."""
+        """call_claude tenta os 3 Claude + Gemini + xAI; levanta RuntimeError se todos falham."""
         fake_client = MagicMock()
         fake_client.messages = MagicMock()
         fake_client.messages.create = AsyncMock(
@@ -35,8 +35,8 @@ class TestCascata(unittest.IsolatedAsyncioTestCase):
             ai_svc, "call_gemini", new=AsyncMock(side_effect=RuntimeError("gemini down"))
         ), patch.object(
             ai_svc,
-            "call_deepseek",
-            new=AsyncMock(side_effect=RuntimeError("deepseek down")),
+            "call_xai",
+            new=AsyncMock(side_effect=RuntimeError("xai down")),
         ):
             with self.assertRaises(RuntimeError) as ctx:
                 await ai_svc.call_claude("sys", "user")

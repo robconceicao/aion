@@ -162,9 +162,9 @@ class TestNoPersistOnSynthesisFailure(unittest.IsolatedAsyncioTestCase):
              patch.object(dreams_router, "generate_embedding", new=AsyncMock(return_value=None)), \
              patch.object(ai_svc, "async_client", MagicMock()) as mock_client, \
              patch.object(ai_svc.settings, "GEMINI_API_KEY", "fake-local"), \
-             patch.object(ai_svc.settings, "DEEPSEEK_API_KEY", "fake-local"), \
+             patch.object(ai_svc.settings, "XAI_API_KEY", "fake-local"), \
              patch.object(ai_svc, "call_gemini", new=AsyncMock(side_effect=RuntimeError("gemini down"))), \
-             patch.object(ai_svc, "call_deepseek", new=AsyncMock(side_effect=RuntimeError("deepseek down"))):
+             patch.object(ai_svc, "call_xai", new=AsyncMock(side_effect=RuntimeError("xai down"))):
             mock_client.messages.create = AsyncMock(side_effect=RuntimeError("claude down"))
 
             with self.assertRaises(HTTPException) as ctx:

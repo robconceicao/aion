@@ -15,7 +15,7 @@
 | Frontend | Flutter (Dart) — Web/Mobile |
 | Backend | Python 3.11 + FastAPI |
 | Banco de Dados | Supabase (PostgreSQL) |
-| IA — Análise de Sonhos | Anthropic Claude (claude-sonnet-4-6 e fallbacks) |
+| IA — Análise de Sonhos | Anthropic Claude (claude-sonnet-5 e fallbacks) |
 | IA — Transcrição de Voz | Google Gemini (gemini-2.0-flash) |
 | Deploy Frontend | Vercel (Firebase Hosting também configurado) |
 | Deploy Backend | Render.com |

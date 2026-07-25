@@ -55,7 +55,7 @@ aion/
 │   │   │   ├── feedback.py      # POST /feedback/
 │   │   │   └── analytics.py     # GET /admin/...
 │   │   └── services/
-│   │       ├── ai_service.py    # Toda a lógica de IA (Claude/Gemini/DeepSeek)
+│   │       ├── ai_service.py    # Toda a lógica de IA (Claude/Gemini/xAI)
 │   │       └── voice_service.py # Transcrição de áudio via Gemini
 │   ├── requirements.txt
 │   ├── Dockerfile
@@ -158,12 +158,12 @@ AuthScreen → OnboardingScreen (1ª vez) → DreamDiaryScreen (dashboard)
 ```python
 # Ordem de tentativa para análise de sonhos:
 AI_MODELS = [
-    "claude-sonnet-4-6",          # primário
+    "claude-sonnet-5",            # primário
     "claude-haiku-4-5-20251001",  # fallback 1
     "claude-3-5-sonnet-20241022", # fallback 2
 ]
 # Se todos falharem → call_gemini() com gemini-2.5-flash
-# Se Gemini falhar → call_deepseek()
+# Se Gemini falhar → call_xai() (Grok)
 ```
 
 **Regra:** nunca remover um modelo da lista sem confirmar disponibilidade do próximo.
@@ -228,7 +228,7 @@ DATABASE_NAME=aion_db
 JWT_SECRET=...
 GEMINI_API_KEY=...          # Transcrição de voz + embeddings + fallback
 ANTHROPIC_API_KEY=...       # Análise principal de sonhos
-DEEPSEEK_API_KEY=...        # Fallback final
+XAI_API_KEY=...             # Fallback final (Grok)
 SUPABASE_URL=...
 SUPABASE_KEY=...
 SUPABASE_JWT_SECRET=...

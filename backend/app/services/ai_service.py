@@ -15,7 +15,7 @@ if settings.GEMINI_API_KEY:
 
 # Lista de modelos por prioridade (Versões 2026)
 AI_MODELS = [
-    "claude-sonnet-4-6",
+    "claude-sonnet-5",
     "claude-haiku-4-5-20251001",
     "claude-3-5-sonnet-20241022",
 ]
@@ -47,7 +47,7 @@ async def generate_embedding(text: str) -> list | None:
 # ─── HELPERS DE IA ────────────────────────────────────────────
 
 async def call_claude(system_prompt: str, user_content: str, max_tokens=3500):
-    """Cascata completa: 3 modelos Claude -> Gemini -> DeepSeek (A-05).
+    """Cascata completa: 3 modelos Claude -> Gemini -> xAI (A-05).
     Levanta RuntimeError se todos os provedores falharem."""
 
     if async_client:
@@ -65,17 +65,17 @@ async def call_claude(system_prompt: str, user_content: str, max_tokens=3500):
                 continue  # A-05: tenta sempre o proximo modelo, qualquer que seja o erro
         # todos os Claude falharam — cai para Gemini
 
-    # Fallback 1: Gemini (antes do DeepSeek — A-05: ordem Claude->Gemini->DeepSeek)
+    # Fallback 1: Gemini (antes do xAI — A-05: ordem Claude->Gemini->xAI)
     try:
         return await call_gemini(system_prompt, user_content)
     except Exception as e:
         print(f"[AI_SERVICE] Gemini falhou ({type(e).__name__}): {e}")
 
-    # Fallback 2: DeepSeek
+    # Fallback 2: xAI (Grok)
     try:
-        return await call_deepseek(system_prompt, user_content)
+        return await call_xai(system_prompt, user_content)
     except Exception as e:
-        print(f"[AI_SERVICE] DeepSeek falhou ({type(e).__name__}): {e}")
+        print(f"[AI_SERVICE] xAI falhou ({type(e).__name__}): {e}")
 
     raise RuntimeError("[AI_SERVICE] Todos os provedores de IA falharam.")
 
@@ -93,19 +93,19 @@ async def call_gemini(system_prompt: str, user_content: str):
         raise e
 
 
-async def call_deepseek(system_prompt: str, user_content: str, max_tokens=3500):
-    """Chama o DeepSeek diretamente. Nao tem fallback interno — a orquestracao
+async def call_xai(system_prompt: str, user_content: str, max_tokens=3500):
+    """Chama o xAI (Grok) diretamente. Nao tem fallback interno — a orquestracao
     de fallback e responsabilidade de call_claude (A-05)."""
-    if not settings.DEEPSEEK_API_KEY:
-        raise ValueError("[AI_SERVICE] DEEPSEEK_API_KEY ausente.")
+    if not settings.XAI_API_KEY:
+        raise ValueError("[AI_SERVICE] XAI_API_KEY ausente.")
     try:
-        url = "https://api.deepseek.com/chat/completions"
+        url = "https://api.x.ai/v1/chat/completions"
         headers = {
-            "Authorization": f"Bearer {settings.DEEPSEEK_API_KEY}",
+            "Authorization": f"Bearer {settings.XAI_API_KEY}",
             "Content-Type": "application/json"
         }
         payload = {
-            "model": "deepseek-chat",
+            "model": "grok-4",
             "messages": [
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_content}
@@ -119,7 +119,7 @@ async def call_deepseek(system_prompt: str, user_content: str, max_tokens=3500):
             res.raise_for_status()
             return res.json()["choices"][0]["message"]["content"]
     except Exception as e:
-        print(f"[AI_SERVICE] Erro no DeepSeek: {e}")
+        print(f"[AI_SERVICE] Erro no xAI: {e}")
         raise
 
 
@@ -222,7 +222,7 @@ async def synthesize_dual(dream_text: str, **kwargs) -> SynthesisResult:
     Síntese dual única: gera analise_completa + interpretacao_narrativa + pergunta_reflexao
     em UMA ÚNICA chamada ao LLM, garantindo não-divergência por construção (SPEC §5).
 
-    Cascata: Claude -> Gemini -> DeepSeek (todos usam o mesmo SYNTHESIS_PROMPT e schema).
+    Cascata: Claude -> Gemini -> xAI (todos usam o mesmo SYNTHESIS_PROMPT e schema).
 
     Em caso de falha de todos os provedores OU JSON malformado após esgotamento da cascata:
     levanta SynthesisError — nada é persistido no banco.
@@ -269,16 +269,16 @@ async def synthesize_dual(dream_text: str, **kwargs) -> SynthesisResult:
             print(f"[SYNTHESIS] Gemini falhou ({type(e).__name__}): {e}")
             last_error = e
 
-    # Fallback 2: DeepSeek
-    if settings.DEEPSEEK_API_KEY:
+    # Fallback 2: xAI (Grok)
+    if settings.XAI_API_KEY:
         try:
-            raw = await call_deepseek("", prompt, max_tokens=5000)
+            raw = await call_xai("", prompt, max_tokens=5000)
             data = _parse_ai_json(raw)
             result = SynthesisResult.model_validate(data)
-            print("[SYNTHESIS] Sucesso via DeepSeek.")
+            print("[SYNTHESIS] Sucesso via xAI.")
             return result
         except Exception as e:
-            print(f"[SYNTHESIS] DeepSeek falhou ({type(e).__name__}): {e}")
+            print(f"[SYNTHESIS] xAI falhou ({type(e).__name__}): {e}")
             last_error = e
 
     # Todos os provedores falharam — erro tipado, nada persiste

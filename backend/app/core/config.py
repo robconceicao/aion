@@ -28,6 +28,20 @@ class Settings(BaseSettings):
     # Ver app/services/tts_service.py para detalhes de cada implementação.
     TTS_PROVIDER: str = os.getenv("TTS_PROVIDER", "edge")
 
+    # ElevenLabs — narração premium sob demanda (coexiste com Edge TTS).
+    # NUNCA hardcoded. Provisionada manualmente como env var no Render.
+    ELEVENLABS_API_KEY: str = os.getenv("ELEVENLABS_API_KEY", "")
+    ELEVENLABS_VOICE_ID: str = os.getenv("ELEVENLABS_VOICE_ID", "")
+    ELEVENLABS_MODEL_ID: str = os.getenv("ELEVENLABS_MODEL_ID", "eleven_multilingual_v2")
+    ELEVENLABS_STABILITY: float = float(os.getenv("ELEVENLABS_STABILITY", "0.60"))
+    ELEVENLABS_SIMILARITY_BOOST: float = float(os.getenv("ELEVENLABS_SIMILARITY_BOOST", "0.75"))
+    ELEVENLABS_STYLE: float = float(os.getenv("ELEVENLABS_STYLE", "0.10"))
+    ELEVENLABS_SPEED: float = float(os.getenv("ELEVENLABS_SPEED", "0.92"))
+    ELEVENLABS_OUTPUT_FORMAT: str = os.getenv("ELEVENLABS_OUTPUT_FORMAT", "mp3_44100_128")
+
+    # Guarda de custo — gerações reais (cache miss) por usuário por dia.
+    ELEVENLABS_DAILY_LIMIT_PER_USER: int = int(os.getenv("ELEVENLABS_DAILY_LIMIT_PER_USER", "20"))
+
     class Config:
         env_file = ".env"
         # Permite vars de teste locais (E2E_USER_*) sem quebrar o boot do app.

@@ -17,6 +17,8 @@ gunicorn==21.2.0
 uvicorn[standard]==0.24.0
 google-generativeai==0.7.2
 edge-tts==7.2.8
+# leitura de duração do MP3 gerado pela ElevenLabs (lê só o header, sem decodificar áudio)
+mutagen>=1.47,<2
 
 # dev/CI
 pytest>=7.4,<9

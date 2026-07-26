@@ -12,6 +12,9 @@ env/
 .env.*
 secrets.json
 
+# Saída do script de calibração de voz (MP3s de dev, não versionar)
+scripts/calibracao_out/
+
 # IDEs
 .vscode/
 .idea/

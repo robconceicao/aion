@@ -33,9 +33,13 @@ class Settings(BaseSettings):
     ELEVENLABS_API_KEY: str = os.getenv("ELEVENLABS_API_KEY", "")
     ELEVENLABS_VOICE_ID: str = os.getenv("ELEVENLABS_VOICE_ID", "")
     ELEVENLABS_MODEL_ID: str = os.getenv("ELEVENLABS_MODEL_ID", "eleven_multilingual_v2")
-    ELEVENLABS_STABILITY: float = float(os.getenv("ELEVENLABS_STABILITY", "0.60"))
+    # Preset "mais_estavel", escolhido por escuta na calibração de 2026-07-26:
+    # prioriza consistência em narração longa sobre expressividade.
+    # Ver docs/voice-design.md. Alterar qualquer valor abaixo invalida o cache
+    # de narração existente (fazem parte do hash da cache_key) — intencional.
+    ELEVENLABS_STABILITY: float = float(os.getenv("ELEVENLABS_STABILITY", "0.80"))
     ELEVENLABS_SIMILARITY_BOOST: float = float(os.getenv("ELEVENLABS_SIMILARITY_BOOST", "0.75"))
-    ELEVENLABS_STYLE: float = float(os.getenv("ELEVENLABS_STYLE", "0.10"))
+    ELEVENLABS_STYLE: float = float(os.getenv("ELEVENLABS_STYLE", "0.05"))
     ELEVENLABS_SPEED: float = float(os.getenv("ELEVENLABS_SPEED", "0.92"))
     ELEVENLABS_OUTPUT_FORMAT: str = os.getenv("ELEVENLABS_OUTPUT_FORMAT", "mp3_44100_128")
 

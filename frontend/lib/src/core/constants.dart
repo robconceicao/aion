@@ -16,4 +16,10 @@ class AionConfig {
   /// Endpoint de áudio on-demand com cache (Fase 2 — SPEC §6.2).
   /// POST para este URL gera ou recupera o áudio da interpretação narrativa.
   static String audioUrl(String dreamId) => '$apiBaseUrl/interpretacoes/$dreamId/audio';
+
+  /// Narração premium (ElevenLabs), sob demanda e com cache.
+  /// Coexiste com audioUrl (Edge TTS) — não o substitui.
+  /// Retorna { signed_url, duracao_segundos, cached }.
+  static String narracaoUrl(String dreamId) =>
+      '$apiBaseUrl/interpretacoes/$dreamId/narracao';
 }

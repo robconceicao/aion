@@ -1,15 +1,18 @@
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'dart:async';
+
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_tts/flutter_tts.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/aion_qa_helpers.dart';
+import '../../../core/api_service.dart';
 import '../../../core/theme.dart';
 import '../../../core/widgets/cinematic_background.dart';
 import 'widgets/hero_journey_widget.dart';
 
 /// Tela de interpretação dual — exibe os dois formatos em abas (SPEC §7.1).
 ///
-/// Aba 0 "Interpretação": narrativa acessível + TTS nativo (Leitura Simbólica).
+/// Aba 0 "Interpretação": narrativa acessível + narração premium da Leitura
+/// Simbólica (MP3 gerado no backend, entregue por URL assinada).
 /// Aba 1 "Análise Completa": seções técnicas estruturadas (JSONB).
 ///
 /// [isLegacy]: true quando analise_completa está vazio (sonhos anteriores à
@@ -41,26 +44,33 @@ class DualInterpretationScreen extends StatefulWidget {
   State<DualInterpretationScreen> createState() => _DualInterpretationScreenState();
 }
 
-// ─── Estados do player TTS ─────────────────────────────────────
+// ─── Estados do player de narração ─────────────────────────────
 enum _AudioState { idle, loading, playing, paused, error }
 
-/// Taxas de fala (flutter_tts: tipicamente 0.0–1.0; iOS/Android diferem).
+/// Taxas de reprodução do MP3 narrado (audioplayers: 1.0 = velocidade original).
 const List<({String label, double rate})> _speechRates = [
-  (label: '0.8×', rate: 0.38),
-  (label: '1×', rate: 0.48),
-  (label: '1.2×', rate: 0.58),
+  (label: '0.8×', rate: 0.8),
+  (label: '1×', rate: 1.0),
+  (label: '1.2×', rate: 1.2),
 ];
 
 class _DualInterpretationScreenState extends State<DualInterpretationScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  final FlutterTts _tts = FlutterTts();
+
+  /// Narração premium (ElevenLabs) servida pelo backend como MP3 assinado.
+  /// O app não conhece o provedor de voz — só consome a URL do Aion.
+  final AudioPlayer _player = AudioPlayer();
 
   _AudioState _audioState = _AudioState.idle;
-  bool _ttsReady = false;
   int _rateIndex = 1; // 1× padrão
-  /// Progresso 0–1 da fala (quando o engine reporta offset de caracteres).
+  /// Progresso 0–1 da reprodução.
   double _speechProgress = 0.0;
+
+  /// URL assinada já obtida — evita novo POST ao pausar/retomar.
+  String? _signedUrl;
+  Duration _duracao = Duration.zero;
+  final List<StreamSubscription> _subs = [];
 
   @override
   void initState() {
@@ -70,139 +80,59 @@ class _DualInterpretationScreenState extends State<DualInterpretationScreen>
       vsync: this,
       initialIndex: widget.initialTab,
     );
-    _initTts();
+    _initPlayer();
   }
 
-  Future<void> _initTts() async {
-    try {
-      _tts.setStartHandler(() {
-        if (mounted) {
-          setState(() {
-            _audioState = _AudioState.playing;
-            _speechProgress = 0.0;
-          });
-        }
+  void _initPlayer() {
+    _subs.add(_player.onDurationChanged.listen((d) {
+      if (mounted) setState(() => _duracao = d);
+    }));
+    _subs.add(_player.onPositionChanged.listen((p) {
+      if (!mounted || _duracao.inMilliseconds <= 0) return;
+      setState(() {
+        _speechProgress =
+            (p.inMilliseconds / _duracao.inMilliseconds).clamp(0.0, 1.0);
       });
-      _tts.setCompletionHandler(() {
-        if (mounted) {
-          setState(() {
-            _audioState = _AudioState.idle;
-            _speechProgress = 0.0;
-          });
-        }
+    }));
+    _subs.add(_player.onPlayerComplete.listen((_) {
+      if (!mounted) return;
+      setState(() {
+        _audioState = _AudioState.idle;
+        _speechProgress = 0.0;
       });
-      _tts.setCancelHandler(() {
-        if (mounted) {
-          setState(() {
-            _audioState = _AudioState.idle;
-            _speechProgress = 0.0;
-          });
-        }
-      });
-      _tts.setPauseHandler(() {
-        if (mounted) setState(() => _audioState = _AudioState.paused);
-      });
-      _tts.setContinueHandler(() {
-        if (mounted) setState(() => _audioState = _AudioState.playing);
-      });
-      _tts.setErrorHandler((msg) {
-        debugPrint('[TTS] error: $msg');
-        if (mounted) {
-          setState(() {
-            _audioState = _AudioState.error;
-            _speechProgress = 0.0;
-          });
-        }
-      });
-      _tts.setProgressHandler((text, start, end, word) {
-        if (!mounted || text.isEmpty) return;
-        final p = (end / text.length).clamp(0.0, 1.0);
-        setState(() => _speechProgress = p);
-      });
-
-      // Preferência pt-BR; fallback pt / en se o device não tiver.
-      final langOk = await _setPreferredLanguage();
-      await _tts.setSpeechRate(_speechRates[_rateIndex].rate);
-      await _tts.setPitch(1.0);
-      await _tts.setVolume(1.0);
-
-      // iOS / Web: await speak completion for cleaner state transitions.
-      if (!kIsWeb) {
-        await _tts.awaitSpeakCompletion(true);
+    }));
+    _subs.add(_player.onPlayerStateChanged.listen((s) {
+      if (!mounted) return;
+      // Interrupção externa (chamada telefônica, outro app tomando o foco
+      // de áudio): o player pausa sozinho e a UI precisa refletir isso.
+      if (s == PlayerState.paused && _audioState == _AudioState.playing) {
+        setState(() => _audioState = _AudioState.paused);
       }
-
-      if (mounted) {
-        setState(() {
-          _ttsReady = langOk;
-          if (!langOk) _audioState = _AudioState.error;
-        });
-      }
-    } catch (e) {
-      debugPrint('[TTS] init failed: $e');
-      if (mounted) {
-        setState(() {
-          _ttsReady = false;
-          _audioState = _AudioState.error;
-        });
-      }
-    }
+    }));
   }
 
-  Future<bool> _setPreferredLanguage() async {
-    try {
-      final langs = await _tts.getLanguages;
-      final list = langs is List
-          ? langs.map((e) => e.toString()).toList()
-          : <String>[];
-
-      String? pick;
-      // Preferência: pt-BR → qualquer pt → fallback nulo (set direto abaixo).
-      for (final l in list) {
-        final n = l.toLowerCase().replaceAll('_', '-');
-        if (n == 'pt-br' || n.startsWith('pt-br')) {
-          pick = l;
-          break;
-        }
-      }
-      if (pick == null) {
-        for (final l in list) {
-          final n = l.toLowerCase().replaceAll('_', '-');
-          if (n == 'pt' || n.startsWith('pt-') || n.startsWith('pt_')) {
-            pick = l;
-            break;
-          }
-        }
-      }
-
-      final r = await _tts.setLanguage(pick ?? 'pt-BR');
-      return r == 1 || r == true || list.isEmpty;
-    } catch (_) {
-      try {
-        await _tts.setLanguage('pt-BR');
-        return true;
-      } catch (_) {
-        return false;
-      }
-    }
-  }
 
   @override
   void dispose() {
     _tabController.dispose();
-    _tts.stop();
+    // Narração não continua em segundo plano — para ao sair da tela.
+    for (final s in _subs) {
+      s.cancel();
+    }
+    _player.dispose();
     super.dispose();
   }
 
-  /// Texto falado: só a Leitura Simbólica, sem marcadores **markdown**.
+  /// Texto da Leitura Simbólica. A sanitização para voz é feita no backend;
+  /// aqui só verificamos se há conteúdo a narrar.
   String _speechText() => AionQaHelpers.sanitizeSpeechText(widget.narrativeText);
 
-  // ─── Lógica do player TTS ────────────────────────────────────
+  // ─── Lógica do player de narração ────────────────────────────
 
   Future<void> _onPlayPause() async {
     if (_audioState == _AudioState.loading) return;
 
-    final text = _speechText();
-    if (text.isEmpty) {
+    if (_speechText().isEmpty) {
       _showTtsMessage(
         'Não há texto de leitura simbólica para narrar neste sonho.',
       );
@@ -211,76 +141,59 @@ class _DualInterpretationScreenState extends State<DualInterpretationScreen>
     }
 
     if (_audioState == _AudioState.playing) {
-      // pause() nem sempre existe em todos os engines; stop é garantido.
-      try {
-        await _tts.pause();
-        if (mounted) setState(() => _audioState = _AudioState.paused);
-      } catch (_) {
-        await _tts.stop();
-        if (mounted) {
-          setState(() {
-            _audioState = _AudioState.idle;
-            _speechProgress = 0.0;
-          });
-        }
-      }
+      await _player.pause();
+      if (mounted) setState(() => _audioState = _AudioState.paused);
       return;
     }
 
     if (_audioState == _AudioState.paused) {
       try {
-        // resume via speak again from start if continue unsupported
-        final result = await _tts.speak(text);
-        if (result == 1 || result == true) {
-          if (mounted) setState(() => _audioState = _AudioState.playing);
-        } else {
-          throw Exception('speak resumed with result=$result');
-        }
+        await _player.resume();
+        if (mounted) setState(() => _audioState = _AudioState.playing);
       } catch (e) {
-        debugPrint('[TTS] resume/speak failed: $e');
+        debugPrint('[NARRACAO] resume falhou: $e');
         if (mounted) {
           setState(() => _audioState = _AudioState.error);
-          _showTtsMessage(
-            'Não foi possível retomar a narração. Tente novamente.',
-          );
+          _showTtsMessage('Não foi possível retomar a narração. Tente novamente.');
         }
       }
       return;
     }
 
-    // idle ou error — inicia narração local
+    // idle ou error — pede a narração ao backend (ou usa a URL já obtida).
     setState(() {
       _audioState = _AudioState.loading;
       _speechProgress = 0.0;
     });
 
     try {
-      if (!_ttsReady) {
-        await _initTts();
-      }
-      await _tts.setSpeechRate(_speechRates[_rateIndex].rate);
-      final result = await _tts.speak(text);
-      if (result == 1 || result == true) {
-        if (mounted && _audioState == _AudioState.loading) {
-          // setStartHandler deve promover a playing; fallback:
-          setState(() => _audioState = _AudioState.playing);
-        }
-      } else {
-        throw Exception('TTS speak returned $result');
-      }
+      final url = _signedUrl ??
+          (await ApiService.requestNarracao(widget.dreamId)).signedUrl;
+      if (!mounted) return;
+      _signedUrl = url;
+
+      await _player.play(UrlSource(url));
+      await _player.setPlaybackRate(_speechRates[_rateIndex].rate);
+      if (mounted) setState(() => _audioState = _AudioState.playing);
+    } on NarracaoException catch (e) {
+      // Mensagem já vem legível do ApiService — sem jargão de API.
+      if (!mounted) return;
+      setState(() => _audioState = _AudioState.error);
+      _showTtsMessage(e.message);
     } catch (e) {
-      debugPrint('[TTS] Falha ao narrar: $e');
-      if (mounted) {
-        setState(() => _audioState = _AudioState.error);
-        _showTtsMessage(
-          'Narração indisponível neste dispositivo — leia o texto abaixo.',
-        );
-      }
+      debugPrint('[NARRACAO] Falha ao reproduzir: $e');
+      if (!mounted) return;
+      setState(() => _audioState = _AudioState.error);
+      // URL assinada expira em 1h; descartar força novo pedido (vem do cache).
+      _signedUrl = null;
+      _showTtsMessage(
+        'Não foi possível reproduzir a narração — leia o texto abaixo.',
+      );
     }
   }
 
   Future<void> _onStop() async {
-    await _tts.stop();
+    await _player.stop();
     if (mounted) {
       setState(() {
         _audioState = _AudioState.idle;
@@ -293,9 +206,9 @@ class _DualInterpretationScreenState extends State<DualInterpretationScreen>
     final next = (_rateIndex + 1) % _speechRates.length;
     setState(() => _rateIndex = next);
     try {
-      await _tts.setSpeechRate(_speechRates[next].rate);
+      await _player.setPlaybackRate(_speechRates[next].rate);
     } catch (e) {
-      debugPrint('[TTS] setSpeechRate failed: $e');
+      debugPrint('[NARRACAO] setPlaybackRate falhou: $e');
     }
   }
 
@@ -328,7 +241,7 @@ class _DualInterpretationScreenState extends State<DualInterpretationScreen>
           icon: const Icon(Icons.arrow_back_ios, color: AionTheme.gold, size: 18),
           constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
           onPressed: () {
-            _tts.stop();
+            _player.stop();
             Navigator.pop(context);
           },
         ),

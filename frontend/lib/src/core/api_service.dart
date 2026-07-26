@@ -247,4 +247,102 @@ class ApiService {
     }
     return signedUrl;
   }
+
+  /// Solicita a narração premium (ElevenLabs) de uma interpretação.
+  ///
+  /// POST /interpretacoes/{dreamId}/narracao
+  /// Retorna { signedUrl, duracaoSegundos, cached }.
+  ///
+  /// Lança [NarracaoException] com mensagem já legível ao usuário — o chamador
+  /// exibe `e.message` direto, sem precisar interpretar código de API.
+  static Future<NarracaoResult> requestNarracao(String dreamId) async {
+    try {
+      final response = await client.post(AionConfig.narracaoUrl(dreamId));
+      final data = response.data as Map<String, dynamic>;
+      final signedUrl = data['signed_url'] as String?;
+      if (signedUrl == null || signedUrl.isEmpty) {
+        throw const NarracaoException(
+          'A narração não pôde ser carregada. Tente novamente.',
+        );
+      }
+      return NarracaoResult(
+        signedUrl: signedUrl,
+        duracaoSegundos: (data['duracao_segundos'] as num?)?.toDouble(),
+        cached: data['cached'] == true,
+      );
+    } on DioException catch (e) {
+      throw NarracaoException(_narracaoMessage(e));
+    }
+  }
+
+  /// Traduz a falha em mensagem para o usuário final.
+  /// O backend devolve `detail.error` tipado; nunca expor esse código na UI.
+  static String _narracaoMessage(DioException e) {
+    final status = e.response?.statusCode;
+    final data = e.response?.data;
+    final code = (data is Map && data['detail'] is Map)
+        ? (data['detail']['error']?.toString() ?? '')
+        : '';
+
+    if (status == 429 || code == 'daily_limit_exceeded') {
+      return 'Você atingiu o limite de narrações por hoje. '
+          'O limite se renova amanhã — o texto continua disponível para leitura.';
+    }
+    if (status == 403) {
+      return 'Esta interpretação não pertence à sua conta.';
+    }
+    if (status == 404) {
+      return code == 'no_narrative'
+          ? 'Este sonho não tem narrativa disponível para ouvir.'
+          : 'Interpretação não encontrada.';
+    }
+    if (status == 401) {
+      return 'Sua sessão expirou. Feche e reabra o app para ouvir a narração.';
+    }
+    switch (code) {
+      case 'elevenlabs_rate_limited':
+        return 'O serviço de narração está sobrecarregado agora. '
+            'Tente de novo em alguns instantes.';
+      case 'elevenlabs_timeout':
+        return 'A narração demorou demais para ficar pronta. Tente novamente.';
+      case 'elevenlabs_invalid_request':
+        return 'Não foi possível narrar este texto.';
+      case 'elevenlabs_auth_failed':
+      case 'elevenlabs_failed':
+        return 'A narração está indisponível no momento. '
+            'O texto continua disponível para leitura.';
+      case 'storage_failed':
+      case 'signed_url_failed':
+        return 'A narração foi criada mas não pôde ser carregada. Tente novamente.';
+    }
+    if (e.type == DioExceptionType.receiveTimeout ||
+        e.type == DioExceptionType.connectionTimeout ||
+        e.type == DioExceptionType.sendTimeout) {
+      return 'O servidor demorou a responder. Tente novamente.';
+    }
+    return 'Não foi possível carregar a narração. '
+        'Verifique sua internet e tente novamente.';
+  }
+}
+
+/// Resultado de uma solicitação de narração.
+class NarracaoResult {
+  final String signedUrl;
+  final double? duracaoSegundos;
+  final bool cached;
+
+  const NarracaoResult({
+    required this.signedUrl,
+    this.duracaoSegundos,
+    required this.cached,
+  });
+}
+
+/// Erro de narração com mensagem pronta para exibição ao usuário.
+class NarracaoException implements Exception {
+  final String message;
+  const NarracaoException(this.message);
+
+  @override
+  String toString() => message;
 }

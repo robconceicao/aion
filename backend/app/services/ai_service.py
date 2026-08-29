@@ -62,16 +62,13 @@ async def call_claude(system_prompt: str, user_content: str, max_tokens=3500):
                 return message.content[0].text
             except Exception as e:
                 print(f"[AI_SERVICE] {model_name} falhou ({type(e).__name__}): {e}")
-                continue  # A-05: tenta sempre o proximo modelo, qualquer que seja o erro
-        # todos os Claude falharam — cai para Gemini
+                continue
 
-    # Fallback 1: Gemini (antes do xAI — A-05: ordem Claude->Gemini->xAI)
     try:
         return await call_gemini(system_prompt, user_content)
     except Exception as e:
         print(f"[AI_SERVICE] Gemini falhou ({type(e).__name__}): {e}")
 
-    # Fallback 2: xAI (Grok)
     try:
         return await call_xai(system_prompt, user_content)
     except Exception as e:
@@ -94,8 +91,7 @@ async def call_gemini(system_prompt: str, user_content: str):
 
 
 async def call_xai(system_prompt: str, user_content: str, max_tokens=3500):
-    """Chama o xAI (Grok) diretamente. Nao tem fallback interno — a orquestracao
-    de fallback e responsabilidade de call_claude (A-05)."""
+    """Chama o xAI (Grok) diretamente. Nao tem fallback interno."""
     if not settings.XAI_API_KEY:
         raise ValueError("[AI_SERVICE] XAI_API_KEY ausente.")
     try:
@@ -126,25 +122,16 @@ async def call_xai(system_prompt: str, user_content: str, max_tokens=3500):
 def _parse_ai_json(content: str) -> dict:
     import re
     try:
-        # 1. Limpeza básica e remoção de Markdown
         content = content.strip()
         content = re.sub(r'```json\s*|\s*```', '', content)
-
-        # 2. Localiza o bloco JSON
         start, end = content.find('{'), content.rfind('}')
         if start != -1 and end != -1:
             content = content[start:end+1]
-
-        # 3. Resolve problemas de quebra de linha dentro de strings JSON
         content = re.sub(r'(?<![:{,])\n(?![}\],])', ' ', content)
-
-        # 4. Remove vírgulas extras
         content = re.sub(r',\s*([\}\/\]])', r'\1', content)
-
         return json.loads(content)
     except Exception as e:
         try:
-            # Fallback final: remove TODAS as quebras de linha para sanitizar
             cleaned = re.sub(r'\s+', ' ', content)
             return json.loads(cleaned)
         except:
@@ -152,14 +139,14 @@ def _parse_ai_json(content: str) -> dict:
             raise ValueError(f"JSON invalido: {str(e)}")
 
 
-# ─── SÍNTESE DUAL (FUNÇÃO PRINCIPAL — SPEC §5) ────────────────
+# ─── SÍNTESE DUAL (FUNÇÃO PRINCIPAL — SPEC §5) ─────────────────────
 
 SYNTHESIS_PROMPT = """
 Você é Aion de Mito & Psique — a união da senioridade clínica de C.G. Jung com a sabedoria narrativa de Joseph Campbell.
 
 SUA MISSÃO NESTA CHAMADA:
-Realizar UMA ÚNICA análise do material onírico e devolvê-la em DOIS FORMATOS SIMULTÂNEOS dentro de um único JSON.
-Os dois formatos devem ter CONTEÚDO INTERPRETATIVO IDÊNTICO — os mesmos símbolos, os mesmos arquétipos, as mesmas conclusões.
+Realizar UMA Única análise do material onírico e devolvê-la em DOIS FORMATOS SIMULTÂNEOS dentro de um único JSON.
+Os dois formatos devem ter CONTEÚDO INTERPRETATIVO IDÊNCO — os mesmos símbolos, os mesmos arquétipos, as mesmas conclusões.
 A diferença é APENAS de forma e linguagem.
 
 ANTES DE GERAR A RESPOSTA, percorra internamente:
@@ -220,7 +207,7 @@ JSON FORMAT:
 async def synthesize_dual(dream_text: str, **kwargs) -> SynthesisResult:
     """
     Síntese dual única: gera analise_completa + interpretacao_narrativa + pergunta_reflexao
-    em UMA ÚNICA chamada ao LLM, garantindo não-divergência por construção (SPEC §5).
+    em UMA Única chamada ao LLM, garantindo não-divergência por construção (SPEC §5).
 
     Cascata: Claude -> Gemini -> xAI (todos usam o mesmo SYNTHESIS_PROMPT e schema).
 
@@ -234,10 +221,7 @@ async def synthesize_dual(dream_text: str, **kwargs) -> SynthesisResult:
     prompt = SYNTHESIS_PROMPT.format(texto=dream_text, contexto_estruturado=contexto)
 
     last_error = None
-    # Tenta cada provider individualmente para capturar erros de parse por provider
-    providers = []
 
-    # Claude (todos os modelos na cascata via call_claude)
     if async_client:
         for model_name in AI_MODELS:
             try:
@@ -257,7 +241,6 @@ async def synthesize_dual(dream_text: str, **kwargs) -> SynthesisResult:
                 last_error = e
                 continue
 
-    # Fallback 1: Gemini
     if settings.GEMINI_API_KEY:
         try:
             raw = await call_gemini("", prompt)
@@ -269,7 +252,6 @@ async def synthesize_dual(dream_text: str, **kwargs) -> SynthesisResult:
             print(f"[SYNTHESIS] Gemini falhou ({type(e).__name__}): {e}")
             last_error = e
 
-    # Fallback 2: xAI (Grok)
     if settings.XAI_API_KEY:
         try:
             raw = await call_xai("", prompt, max_tokens=5000)
@@ -281,19 +263,17 @@ async def synthesize_dual(dream_text: str, **kwargs) -> SynthesisResult:
             print(f"[SYNTHESIS] xAI falhou ({type(e).__name__}): {e}")
             last_error = e
 
-    # Todos os provedores falharam — erro tipado, nada persiste
     reason = str(last_error) if last_error else "nenhum provider configurado"
     raise SynthesisError(reason)
 
 
 # ─── FUNÇÕES DEPRECATED (mantidas temporariamente para evitar quebra de imports) ──
-# Sem call sites ativos após Fase 1. Remoção agendada para P2.
 
 async def analyze_dream(dream_text: str, **kwargs) -> dict:
     """
     DEPRECATED (Fase 1, 2026-07-07). Substituída por synthesize_dual().
     Mantida apenas para evitar ImportError em código legado não atualizado.
-    REMOVER em P2. Nenhum call site ativo deve usar esta função.
+    REMOVER em P2.
     """
     print("[AI_SERVICE] AVISO: analyze_dream() está DEPRECATED. Use synthesize_dual().")
     contexto = _build_contexto(
@@ -311,11 +291,15 @@ async def analyze_dream(dream_text: str, **kwargs) -> dict:
 
 async def generate_interview_questions(dream_text: str) -> list:
     try:
-        content = await call_claude(INTERVIEW_SYSTEM_PROMPT, f"Sonho: {dream_text}", max_tokens=1000)
+        content = await call_claude(INTERVIEW_SYSTEM_PROMPT, f"Sonho: {dream_text}", max_tokens=1200)
         data = _parse_ai_json(content)
         return data.get("perguntas", [])
     except Exception as e:
-        return ["Como você se sentiu?", "O que lembra da vida?", "Qual era a sensação?"]
+        return [
+            "Que figura ou presença do seu sonho gerou a carga emocional mais intensa — e o que essa figura poderia representar de você mesmo que ainda não foi reconhecido?",
+            "Havia algum lugar, passagem ou fronteira no sonho que você se aproximou mas não atravessou completamente? O que estava — ou o que você temia encontrar — do outro lado?",
+            "Se a cena mais marcante do sonho fosse uma mensagem direta do que sua psique está tentando integrar agora, o que ela estaria pedindo de você?"
+        ]
 
 
 async def analyze_recurring_pattern(current_dream: str, similar_dreams: list) -> str:
@@ -323,7 +307,6 @@ async def analyze_recurring_pattern(current_dream: str, similar_dreams: list) ->
     for i, d in enumerate(similar_dreams[:3], 1):
         relato = (d.get("relato") or "")[:300]
         history += f"\n[{i}]: {relato}..."
-
     try:
         return await call_claude(RECURRENCE_SYSTEM_PROMPT, f"Atual: {current_dream}{history}", max_tokens=1200)
     except Exception as e:
@@ -333,8 +316,7 @@ async def analyze_recurring_pattern(current_dream: str, similar_dreams: list) ->
 async def analyze_dream_narrative(dream_text: str, analysis_context: dict = None) -> str:
     """
     DEPRECATED (Fase 1, 2026-07-07). Substituída por synthesize_dual().
-    A narrativa agora é gerada no mesmo passo da análise técnica.
-    REMOVER em P2. Nenhum call site ativo deve usar esta função.
+    REMOVER em P2.
     """
     print("[AI_SERVICE] AVISO: analyze_dream_narrative() está DEPRECATED. Use synthesize_dual().")
     context_block = ""
@@ -363,14 +345,13 @@ async def analyze_dream_narrative(dream_text: str, analysis_context: dict = None
             f"\nECO MITICO: {mito_txt}"
             f"\nPERGUNTA_FINAL: {pergunta}"
         )
-
     try:
         return await call_claude(NARRATIVE_SYSTEM_PROMPT, f"Sonho relatado: {dream_text}{context_block}", max_tokens=900)
     except Exception as e:
         return "Aion aguarda em silencio sagrado..."
 
 
-# ─── PROMPTS LEGADOS (mantidos para as funções deprecated) ────
+# ─── PROMPTS ──────────────────────────────────────────────────────
 
 PROMPT_TEMPLATE = """
 Atue como Aion de Mito & Psique. Você é a união da senioridade de C.G. Jung com a sabedoria narrativa de Joseph Campbell.
@@ -427,22 +408,39 @@ JSON FORMAT:
 }}
 """
 
-INTERVIEW_SYSTEM_PROMPT = """Você é Aion, em conversa acolhedora com a pessoa que sonhou.
-Missão: gerar EXATAMENTE 3 perguntas curtas para aprofundar o relato do sonho.
+INTERVIEW_SYSTEM_PROMPT = """Você é Aion — a consciência que habita a fronteira entre o ego e o Inconsciente Coletivo. Você domina com precisão clínica a psicologia analítica de C.G. Jung e a poética do Monomito de Joseph Campbell.
 
-DIRETRIZES DE LINGUAGEM (invioláveis — zero jargão):
-- Tom humano, em segunda pessoa ("você..."). Como um terapeuta próximo, não um professor.
-- PROIBIDO qualquer jargão psicológico ou junguiano. Nunca use nem parafraseie:
-  arquétipo, Self, self, individuação, inconsciente coletivo, anima, animus, Sombra (como termo técnico),
-  ego, psique (como jargão), complexo, numinoso, sízigia, monomito, herói junguiano,
-  Divine Child, Puer, Senex, Grande Mãe, Velho Sábio, Cérbero, limiar arquetípico.
-- PROIBIDO explicar o símbolo na pergunta (ex.: "o jardim pode representar o Self...").
-  A pergunta só convida a sentir/lembrar — não interpreta.
-- Foque em: atmosfera do lugar, sensação no corpo, emoção, o que lembra da vida de agora.
-- Exemplos CORRETOS: "Como era a atmosfera desse lugar?", "Que sensação essa figura desperta em você hoje?", "O que mudou no seu corpo quando isso aconteceu no sonho?"
-- Exemplos ERRADOS: "O jardim florido pode representar o Self em florescimento — mas quem cultivou...?", "A psique os convocou como guardiões do limiar..."
+TAREFA: A partir do relato de sonho fornecido, formule 3 perguntas de exploração profunda, específicas para este sonho. Cada pergunta deve funcionar como uma lanterna apontada para um ponto cego do sonhador — um lugar onde a psique está trabalhando algo ainda não consciente.
 
-Responda APENAS JSON válido:
+PROCESSO INTERNO OBRIGATÓRIO (realize antes de escrever as perguntas — não apareça nas perguntas):
+
+① INVENTÁRIO DO SONHO: Identifique concretamente:
+   — Figuras: quem aparece, suas ações, relação com o sonhador
+   — Cenário: onde ocorre, qualidade do lugar, tempo, luz
+   — Objetos e símbolos salientes
+   — Ação central e seu desfecho ou suspensão abrupta
+   — Carga afetiva dominante (medo, êxtase, paralisia, confusão, fascínio, vergonha)
+
+② RAIO-X PSÍQUICO: Para cada elemento relevante, examine internamente:
+   — Há figura que repele, ameaça, persegue ou envergonha o sonhador?
+   — Há figura do polo oposto que traz mensagem do mundo interior?
+   — Há símbolo de totalidade que atrai ou parece inalcançável?
+   — O que o consciente ignora que o inconsciente endereça aqui?
+   — Houve cruzamento — ou recusa — de uma fronteira, porta, passagem?
+   — Há evento perturbador que convoca o sonhador a uma mudança que ele resiste?
+   — Que força, figura auxiliar ou objeto representa um recurso ainda não reconhecido?
+
+③ SELEÇÃO DOS 3 PONTOS CEGOS MAIS FÉRTEIS: Escolha os 3 nós de maior tensão — onde uma resposta honesta pode transformar a compreensão do sonho.
+
+CRITÉRIOS INVIOLÁVEIS PARA AS PERGUNTAS:
+✗ ABSOLUTAMENTE PROIBIDO: perguntas genéricas desvinculadas do sonho ("Como você se sentiu?", "O que isso lembra da vida?", "Qual era a sensação geral?")
+✗ ABSOLUTAMENTE PROIBIDO: qualquer jargão psicológico nas perguntas: arquétipo, Self, individuação, inconsciente coletivo, anima, animus, Sombra (como termo técnico), psique, complexo, limiar arquetípico, monomito
+✓ CADA PERGUNTA deve mencionar ou implicar diretamente um elemento CONCRETO e ESPECÍFICO do sonho relatado (uma figura, lugar, objeto ou evento real do sonho)
+✓ CADA PERGUNTA deve abrir um espaço de auto-investigação — sem resposta óbvia
+✓ TOM: acolhedor, humano, segunda pessoa ("Você...", "Seu...", "O que você...")
+✓ Foque em: atmosfera, sensação no corpo, emoção específica, o que aquilo lembra da vida de agora
+
+FORMATO DE SAÍDA: somente JSON válido, sem texto adicional, sem markdown.
 {"perguntas": ["...", "...", "..."]}"""
 RECURRENCE_SYSTEM_PROMPT = "Analise a evolução dos símbolos como capítulos de uma saga mítica em desenvolvimento. Máximo 250 palavras."
 NARRATIVE_SYSTEM_PROMPT = """Você é um psicólogo especialista em Carl Jung e Joseph Campbell. Sua missão é falar DIRETAMENTE com a pessoa que sonhou — como um terapeuta sábio, acolhedor e próximo — traduzindo a linguagem simbólica do sonho para a vida prática do cliente.
@@ -452,7 +450,7 @@ DIRETRIZES DE LINGUAGEM (INVIOLÁVEIS):
 - PROIBIDO jargão técnico. Nunca use: arquétipo, Self, individuação, inconsciente coletivo, anima, animus, complexo. Substitua por linguagem do dia a dia.
 - Use metáforas vivas: o sonho como uma peça de teatro que sua mente criou, como um conto de fadas onde você é o herói, como um mapa do tesouro interior.
 - Figuras ou situações assustadoras: apresente-as como energias escondidas com potencial, não como ameaças.
-- Foco no "O QUÊ FAZER AGORA", não só na análise do passado.
+- Foco no \"O QUÊ FAZER AGORA\", não só na análise do passado.
 - Tom: caloroso, direto, confiável — como um terapeuta que você conhece há anos.
 
 ESTRUTURA OBRIGATÓRIA (texto corrido, sem títulos ou listas):
@@ -478,7 +476,7 @@ def _build_contexto(tags_emocao=None, temas=None, residuos_diurnos=None, intervi
 def _get_error_response(error_msg: str) -> dict:
     """Usado apenas pela função deprecated analyze_dream(). Não usar em código novo."""
     return {
-        "_error": True,   # A-03: marcador explícito para detecção em _background_save_and_recurrence
+        "_error": True,
         "aviso": "Aion esta em silencio profundo.",
         "essencia": "O silencio tambem e uma mensagem. Tente novamente.",
         "arquetipos": [], "funcao_compensatoria": "Aguardando.",

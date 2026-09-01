@@ -68,6 +68,33 @@ class TadeuLicense {
       );
 }
 
+class UsageResult {
+  final int used;
+  final int? limit;
+  final int? remaining;
+  final String? unit;
+  final bool duplicated;
+
+  const UsageResult({
+    required this.used,
+    required this.limit,
+    required this.remaining,
+    required this.unit,
+    required this.duplicated,
+  });
+}
+
+class UsageLimitException implements Exception {
+  final String feature;
+  final int used;
+  final int? limit;
+
+  const UsageLimitException(this.feature, this.used, this.limit);
+
+  @override
+  String toString() => 'Limite mensal atingido para $feature ($used/${limit ?? '-'})';
+}
+
 class TadeuLicenseService {
   static const _storage = FlutterSecureStorage();
   static const _refreshTokenKey = 'aion_tadeu_refresh_token';
@@ -119,6 +146,27 @@ class TadeuLicenseService {
     await _storage.delete(key: _cacheKey);
   }
 
+  static Future<String> _accessToken() async {
+    if (client.auth.currentSession == null) await restoreSession();
+    var session = client.auth.currentSession;
+    if (session == null) throw StateError('TADEU_AUTH_REQUIRED');
+
+    final expiresAt = session.expiresAt;
+    if (expiresAt != null &&
+        DateTime.fromMillisecondsSinceEpoch(expiresAt * 1000)
+            .isBefore(DateTime.now().add(const Duration(minutes: 1)))) {
+      final refreshed = await client.auth.refreshSession();
+      session = refreshed.session;
+      final refreshToken = session?.refreshToken;
+      if (refreshToken != null) {
+        await _storage.write(key: _refreshTokenKey, value: refreshToken);
+      }
+    }
+    final token = session?.accessToken;
+    if (token == null || token.isEmpty) throw StateError('TADEU_AUTH_REQUIRED');
+    return token;
+  }
+
   static Future<TadeuLicense?> _readCache() async {
     final raw = await _storage.read(key: _cacheKey);
     if (raw == null) return null;
@@ -134,9 +182,7 @@ class TadeuLicenseService {
 
   static Future<TadeuLicense> fetchLicense() async {
     if (!isConfigured) throw StateError('Licenciamento Tadeu Apps não configurado.');
-    if (client.auth.currentSession == null) await restoreSession();
-    final token = client.auth.currentSession?.accessToken;
-    if (token == null) throw StateError('TADEU_AUTH_REQUIRED');
+    final token = await _accessToken();
 
     try {
       final response = await Dio().get<Map<String, dynamic>>(
@@ -164,6 +210,49 @@ class TadeuLicenseService {
       final cached = await _readCache();
       if (cached != null) return cached;
       rethrow;
+    }
+  }
+
+  static Future<UsageResult> consumeUsage({
+    required String feature,
+    int amount = 1,
+    String? idempotencyKey,
+  }) async {
+    final token = await _accessToken();
+    try {
+      final response = await Dio().post<Map<String, dynamic>>(
+        '$tadeuAppsUrl/api/apps/$_appSlug/usage',
+        data: {
+          'feature': feature,
+          'amount': amount,
+          if (idempotencyKey != null) 'idempotencyKey': idempotencyKey,
+        },
+        options: Options(
+          headers: {'Authorization': 'Bearer $token'},
+          validateStatus: (status) => status != null && status >= 200 && status < 500,
+        ),
+      );
+      final data = response.data ?? const <String, dynamic>{};
+      final used = (data['used'] as num?)?.toInt() ?? 0;
+      final limit = (data['limit'] as num?)?.toInt();
+      if (response.statusCode == 429 || data['allowed'] == false) {
+        throw UsageLimitException(feature, used, limit);
+      }
+      if (response.statusCode == 401 || response.statusCode == 403) {
+        throw StateError('TADEU_LICENSE_DENIED');
+      }
+      if (response.statusCode == null || response.statusCode! >= 400) {
+        throw StateError('TADEU_USAGE_FAILED');
+      }
+      return UsageResult(
+        used: used,
+        limit: limit,
+        remaining: (data['remaining'] as num?)?.toInt(),
+        unit: data['unit'] as String?,
+        duplicated: data['duplicated'] == true,
+      );
+    } on DioException catch (_) {
+      throw StateError('TADEU_USAGE_FAILED');
     }
   }
 }

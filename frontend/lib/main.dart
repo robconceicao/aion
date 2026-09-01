@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'src/core/api_service.dart';
 import 'src/core/supabase_config.dart';
+import 'src/core/tadeu_license_interceptor.dart';
 import 'src/core/theme.dart';
 import 'src/features/onboarding/presentation/onboarding_screen.dart';
 import 'src/features/auth/presentation/auth_screen.dart';
@@ -23,6 +25,8 @@ void main() async {
       autoRefreshToken: true,
     ),
   );
+
+  TadeuLicenseInterceptor.attachTo(ApiService.client);
 
   await Hive.initFlutter();
   await Hive.openBox('dreams');

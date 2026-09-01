@@ -30,7 +30,7 @@ class _AuthScreenState extends State<AuthScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final session = Supabase.instance.client.auth.currentSession;
       if (session != null && mounted) {
-        Navigator.pushReplacementNamed(context, '/home');
+        Navigator.pushReplacementNamed(context, '/license');
       }
     });
   }
@@ -38,7 +38,7 @@ class _AuthScreenState extends State<AuthScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     return Scaffold(
       backgroundColor: AionTheme.darkVoid,
       body: CinematicBackground(
@@ -53,8 +53,6 @@ class _AuthScreenState extends State<AuthScreen> {
                   children: [
                     const AionPulseLogo(size: 180),
                     const SizedBox(height: 16),
-                    
-                    // HEADER PADRÃO
                     Text(
                       'MITO & PSIQUE',
                       style: GoogleFonts.ptSerif(
@@ -84,8 +82,6 @@ class _AuthScreenState extends State<AuthScreen> {
                       ),
                     ),
                     const SizedBox(height: 48),
-                    
-                    // Login/Register Toggle
                     Container(
                       decoration: const BoxDecoration(
                         border: Border(bottom: BorderSide(color: AionTheme.veil, width: 1)),
@@ -98,28 +94,15 @@ class _AuthScreenState extends State<AuthScreen> {
                       ),
                     ),
                     const SizedBox(height: 32),
-
                     if (!_isLogin) ...[
-                      _buildInput(
-                        controller: _nameController,
-                        hint: 'NOME COMPLETO',
-                      ),
+                      _buildInput(controller: _nameController, hint: 'NOME COMPLETO'),
                       const SizedBox(height: 16),
                       _buildGenderDropdown(),
                       const SizedBox(height: 16),
                     ],
-
-                    _buildInput(
-                      controller: _emailController,
-                      hint: 'E-MAIL',
-                    ),
+                    _buildInput(controller: _emailController, hint: 'E-MAIL'),
                     const SizedBox(height: 16),
-                    _buildInput(
-                      controller: _passwordController,
-                      hint: 'SENHA',
-                      isPassword: true,
-                    ),
-                    
+                    _buildInput(controller: _passwordController, hint: 'SENHA', isPassword: true),
                     if (_isLogin)
                       Align(
                         alignment: Alignment.centerRight,
@@ -131,9 +114,7 @@ class _AuthScreenState extends State<AuthScreen> {
                           ),
                         ),
                       ),
-                    
                     const SizedBox(height: 32),
-
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
@@ -144,14 +125,12 @@ class _AuthScreenState extends State<AuthScreen> {
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: const RoundedRectangleBorder(),
                         ),
-                        child: _isLoading 
+                        child: _isLoading
                             ? const SizedBox(height: 16, width: 16, child: CircularProgressIndicator(color: AionTheme.darkVoid, strokeWidth: 2))
                             : Text(_isLogin ? 'ENTRAR' : 'CADASTRAR'),
                       ),
                     ),
-                    
                     const SizedBox(height: 24),
-                    
                     const Row(
                       children: [
                         Expanded(child: Divider(color: AionTheme.veil)),
@@ -162,9 +141,7 @@ class _AuthScreenState extends State<AuthScreen> {
                         Expanded(child: Divider(color: AionTheme.veil)),
                       ],
                     ),
-                    
                     const SizedBox(height: 24),
-                    
                     SizedBox(
                       width: double.infinity,
                       child: OutlinedButton.icon(
@@ -306,14 +283,12 @@ class _AuthScreenState extends State<AuthScreen> {
 
     try {
       if (_isLogin) {
-        // Fluxo de Login
         await Supabase.instance.client.auth.signInWithPassword(
           email: email,
           password: password,
         );
-        if (mounted) Navigator.pushReplacementNamed(context, '/home'); // Vai direto para o diário
+        if (mounted) Navigator.pushReplacementNamed(context, '/license');
       } else {
-        // Fluxo de Cadastro
         if (name.isEmpty) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Por favor, preencha seu Nome Completo.')),
@@ -328,7 +303,7 @@ class _AuthScreenState extends State<AuthScreen> {
           setState(() => _isLoading = false);
           return;
         }
-        
+
         await Supabase.instance.client.auth.signUp(
           email: email,
           password: password,
@@ -338,7 +313,6 @@ class _AuthScreenState extends State<AuthScreen> {
           },
         );
         if (mounted) {
-          // Após cadastro, envia para a tela de Onboarding para a saudação
           Navigator.pushReplacementNamed(context, '/onboarding');
         }
       }
@@ -364,7 +338,6 @@ class _AuthScreenState extends State<AuthScreen> {
       await Supabase.instance.client.auth.signInWithOAuth(
         OAuthProvider.google,
       );
-      // O Supabase importará nome, email e foto do usuário Google automaticamente.
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

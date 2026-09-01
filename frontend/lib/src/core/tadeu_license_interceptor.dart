@@ -49,6 +49,13 @@ class TadeuLicenseInterceptor extends Interceptor {
       }
       options.headers['X-Tadeu-Feature'] = required;
 
+      // Mantém a mesma chave se o Dio repetir a mesma RequestOptions.
+      // Isso impede débito duplicado em retries de rede.
+      options.headers.putIfAbsent(
+        'X-Tadeu-Idempotency-Key',
+        () => '$required:${DateTime.now().microsecondsSinceEpoch}:${options.path.hashCode}',
+      );
+
       return handler.next(options);
     } catch (error) {
       if (error is DioException) return handler.reject(error, true);

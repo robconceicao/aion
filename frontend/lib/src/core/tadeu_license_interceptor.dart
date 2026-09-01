@@ -41,6 +41,14 @@ class TadeuLicenseInterceptor extends Interceptor {
         );
       }
 
+      // O backend do AION registra o consumo somente depois de a operação
+      // terminar com sucesso. Assim falhas de IA/voz não gastam a cota.
+      final token = TadeuLicenseService.client.auth.currentSession?.accessToken;
+      if (token != null && token.isNotEmpty) {
+        options.headers['X-Tadeu-Token'] = token;
+      }
+      options.headers['X-Tadeu-Feature'] = required;
+
       return handler.next(options);
     } catch (error) {
       if (error is DioException) return handler.reject(error, true);
@@ -66,7 +74,7 @@ class TadeuLicenseInterceptor extends Interceptor {
     final path = options.uri.path.toLowerCase();
     final method = options.method.toUpperCase();
 
-    if (method == 'POST' && path.contains('/voice/transcribe')) {
+    if (method == 'POST' && path.endsWith('/voice/transcribe')) {
       return 'voice_transcriptions_monthly';
     }
     if (method == 'POST' && path.contains('/interpretacoes/') && path.endsWith('/narracao')) {
@@ -75,7 +83,10 @@ class TadeuLicenseInterceptor extends Interceptor {
     if (method == 'POST' && path.contains('/interpretacoes/') && path.endsWith('/audio')) {
       return 'edge_tts_audio';
     }
-    if (method == 'POST' && (path.contains('/interview') || path.contains('/dreams') || path.contains('/synth'))) {
+
+    // Apenas a síntese final conta como análise. A entrevista preparatória
+    // (/dreams/interview) não consome a cota mensal.
+    if (method == 'POST' && (path.endsWith('/dreams') || path.endsWith('/dreams/'))) {
       return 'ai_analyses_monthly';
     }
     return null;

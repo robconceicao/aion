@@ -106,8 +106,14 @@ class TadeuLicenseService {
     'TADEU_APPS_URL',
     defaultValue: 'https://tadeu-apps-core-test2.vercel.app',
   );
-  static const tadeuSupabaseUrl = String.fromEnvironment('TADEU_APPS_SUPABASE_URL');
-  static const tadeuSupabaseAnonKey = String.fromEnvironment('TADEU_APPS_SUPABASE_ANON_KEY');
+  static const tadeuSupabaseUrl = String.fromEnvironment(
+    'TADEU_APPS_SUPABASE_URL',
+    defaultValue: 'https://chpcviinqqdjfsczvrvf.supabase.co',
+  );
+  static const tadeuSupabaseAnonKey = String.fromEnvironment(
+    'TADEU_APPS_SUPABASE_ANON_KEY',
+    defaultValue: 'sb_publishable_HGw-TdmBFPq4Lg8VvO_AOA_LygQWV01',
+  );
 
   static bool get isConfigured =>
       tadeuAppsUrl.isNotEmpty && tadeuSupabaseUrl.isNotEmpty && tadeuSupabaseAnonKey.isNotEmpty;

@@ -1,6 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Header
 from app.routers.auth import get_current_user
 from app.services.voice_service import transcribe_audio
+from app.services.tadeu_metering import check_tadeu_quota, consume_tadeu_usage
 import logging
 import os
 import tempfile
@@ -20,10 +21,18 @@ CHUNK_SIZE = 1024 * 1024  # 1 MB
 async def transcribe_voice(
     file: UploadFile = File(...),
     current_user: dict = Depends(get_current_user),
+    x_tadeu_token: str | None = Header(default=None, alias="X-Tadeu-Token"),
+    x_tadeu_idempotency_key: str | None = Header(
+        default=None,
+        alias="X-Tadeu-Idempotency-Key",
+    ),
 ):
     """
     Receives an audio file, transcribes it using Gemini, and returns the text.
     The file is stored temporarily and deleted after processing.
+
+    A cota Tadeu Apps é consultada antes da chamada externa e consumida somente
+    depois de uma transcrição válida, evitando desconto em falhas do provedor.
     """
     filename = file.filename or "audio.m4a"
     extension = os.path.splitext(filename)[1].lower()
@@ -56,6 +65,11 @@ async def transcribe_voice(
         if total == 0:
             raise HTTPException(status_code=400, detail="Empty audio file")
 
+        await check_tadeu_quota(
+            token=x_tadeu_token,
+            feature="voice_transcriptions_monthly",
+        )
+
         transcription = await transcribe_audio(temp_path)
 
         if not transcription:
@@ -66,6 +80,13 @@ async def transcribe_voice(
                     "message": "Não foi possível transcrever o áudio. Tente novamente.",
                 },
             )
+
+        await consume_tadeu_usage(
+            token=x_tadeu_token,
+            feature="voice_transcriptions_monthly",
+            amount=1,
+            idempotency_key=x_tadeu_idempotency_key,
+        )
 
         return {"text": transcription}
 

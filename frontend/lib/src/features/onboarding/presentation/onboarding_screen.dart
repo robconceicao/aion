@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme.dart';
-import '../../dream/presentation/dream_diary_screen.dart';
 import '../../dream/presentation/widgets/aion_logo.dart';
 import '../../../core/widgets/cinematic_background.dart';
 import '../../dream/presentation/notification_service.dart';
@@ -17,8 +16,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   int _currentStep = 1;
   final int _totalSteps = 2;
   final _nameController = TextEditingController();
-  
-  // Simulação do dado que virá do Supabase
+
   final String _userGender = 'Prefiro não informar';
 
   void _nextStep() {
@@ -29,24 +27,19 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     }
   }
 
-  // Permissão é opcional — se negada, o fluxo continua normalmente.
   Future<void> _finishOnboarding() async {
     await AionNotificationService.requestAndSchedule(
       const TimeOfDay(hour: 8, minute: 0),
     );
     if (!mounted) return;
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (context) => const DreamDiaryScreen()),
-    );
+    Navigator.pushReplacementNamed(context, '/license');
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final String nome = _nameController.text.trim();
-    
-    // Lógica da Saudação
+
     String bemVindoStr = 'Boas-vindas';
     if (_userGender == 'feminino' || _userGender == 'Feminino') {
       bemVindoStr = 'Bem-vinda';
@@ -76,8 +69,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                                 const SizedBox(height: 60),
                                 const AionPulseLogo(size: 180),
                                 const SizedBox(height: 16),
-                                
-                                // HEADER PADRÃO
                                 Text(
                                   'MITO & PSIQUE',
                                   style: GoogleFonts.ptSerif(
@@ -107,8 +98,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                                   ),
                                 ),
                                 const SizedBox(height: 24),
-                                
-                                // BEM-VINDO DINÂMICO
                                 if (_currentStep == 2)
                                   Text(
                                     '$bemVindoStr, $nome',
@@ -120,10 +109,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                                     ),
                                     textAlign: TextAlign.center,
                                   ),
-                                  
                                 const SizedBox(height: 32),
-                                
-                                // Progress Bar
                                 Row(
                                   children: List.generate(_totalSteps, (index) {
                                     final isActive = index < _currentStep;
@@ -146,10 +132,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                                 ),
                                 const Spacer(),
                                 const SizedBox(height: 32),
-                                
                                 if (_currentStep == 1) _buildStepOne(theme),
                                 if (_currentStep == 2) _buildStepTwo(theme),
-                                
                                 const SizedBox(height: 32),
                                 const Spacer(),
                                 SizedBox(
@@ -234,7 +218,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   Widget _buildStepTwo(ThemeData theme) {
-    // Lógica da Pergunta Pronta
     String titulo = 'Tudo pronto para começar?';
     if (_userGender == 'feminino' || _userGender == 'Feminino') {
       titulo = 'Pronta para começar?';

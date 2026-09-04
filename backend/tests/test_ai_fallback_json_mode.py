@@ -103,7 +103,7 @@ class TestGeminiJsonMode(unittest.IsolatedAsyncioTestCase):
     async def _capturar_config(self, **kwargs):
         captured = {}
 
-        async def _generate(prompt, generation_config=None):
+        async def _generate(prompt, generation_config=None, request_options=None):
             captured["generation_config"] = generation_config
             return MagicMock(text="{}")
 

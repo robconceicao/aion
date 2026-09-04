@@ -1,4 +1,5 @@
 import json
+import os
 import anthropic
 import google.generativeai as genai
 import httpx
@@ -19,6 +20,17 @@ AI_MODELS = [
     "claude-haiku-4-5-20251001",
     "claude-3-5-sonnet-20241022",
 ]
+
+# Teto por TENTATIVA de provider (não da cascata inteira).
+#
+# Sem isto, o SDK da Anthropic usa o default de 600s: três modelos em série
+# podiam pendurar a request por até 30 minutos, enquanto o cliente Flutter já
+# tinha desistido em 180s (receiveTimeout em api_service.dart) — trabalho pago
+# e jogado fora, com a conexão do Render ocupada.
+#
+# 120s dá folga sobre a síntese real medida (~80-100s) sem transformar uma
+# tentativa lenta em espera indefinida.
+AI_TIMEOUT_SECONDS = float(os.getenv("AI_TIMEOUT_SECONDS", "120"))
 
 # ─── EMBEDDINGS (VIA REMOTE API - 768 DIM) ────────────────────
 
@@ -57,7 +69,8 @@ async def call_claude(system_prompt: str, user_content: str, max_tokens=3500):
                     model=model_name,
                     max_tokens=max_tokens,
                     system=system_prompt,
-                    messages=[{"role": "user", "content": user_content}]
+                    messages=[{"role": "user", "content": user_content}],
+                    timeout=AI_TIMEOUT_SECONDS,
                 )
                 return message.content[0].text
             except Exception as e:
@@ -104,7 +117,9 @@ async def call_gemini(system_prompt: str, user_content: str, json_mode: bool | N
         if _wants_json(system_prompt, user_content, json_mode):
             generation_config = {"response_mime_type": "application/json"}
         response = await model.generate_content_async(
-            full_prompt, generation_config=generation_config
+            full_prompt,
+            generation_config=generation_config,
+            request_options={"timeout": AI_TIMEOUT_SECONDS},
         )
         return response.text
     except Exception as e:
@@ -138,7 +153,7 @@ async def call_xai(system_prompt: str, user_content: str, max_tokens=3500,
             ),
         }
         async with httpx.AsyncClient() as client:
-            res = await client.post(url, headers=headers, json=payload, timeout=60.0)
+            res = await client.post(url, headers=headers, json=payload, timeout=AI_TIMEOUT_SECONDS)
             res.raise_for_status()
             return res.json()["choices"][0]["message"]["content"]
     except Exception as e:
@@ -256,7 +271,8 @@ async def synthesize_dual(dream_text: str, **kwargs) -> SynthesisResult:
                     model=model_name,
                     max_tokens=5000,
                     system="",
-                    messages=[{"role": "user", "content": prompt}]
+                    messages=[{"role": "user", "content": prompt}],
+                    timeout=AI_TIMEOUT_SECONDS,
                 )
                 raw = message.content[0].text
                 data = _parse_ai_json(raw)

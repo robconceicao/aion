@@ -226,12 +226,12 @@ class _InterviewScreenState extends State<InterviewScreen>
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(Icons.arrow_back, size: 14,
-                              color: AionTheme.silver.withOpacity(0.5)),
+                              color: AionTheme.silver),
                           const SizedBox(width: 8),
                           Text('VOLTAR',
                               style: GoogleFonts.ptSerif(
                                 fontSize: 9, letterSpacing: 3,
-                                color: AionTheme.silver.withOpacity(0.5),
+                                color: AionTheme.silver,
                               )),
                         ],
                       ),
@@ -255,7 +255,7 @@ class _InterviewScreenState extends State<InterviewScreen>
                     Text(
                       'Responda com o que vier à mente. Não há respostas certas.',
                       style: GoogleFonts.ptSerif(
-                        fontSize: 13, color: AionTheme.silver.withOpacity(0.6),
+                        fontSize: 13, color: AionTheme.silver,
                         height: 1.6,
                       ),
                     ),
@@ -366,7 +366,7 @@ class _InterviewScreenState extends State<InterviewScreen>
               decoration: InputDecoration(
                 hintText: 'Sua resposta...',
                 hintStyle: GoogleFonts.ptSerif(
-                  color: AionTheme.silver.withOpacity(0.55), fontSize: 14,
+                  color: AionTheme.silver, fontSize: 14,
                 ),
                 contentPadding: const EdgeInsets.all(16),
                 border: InputBorder.none,

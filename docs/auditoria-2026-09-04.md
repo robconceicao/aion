@@ -227,7 +227,7 @@ Os testes novos cobrem exatamente onde o CI estava cego: rota do Canal, posse no
 | Item | Por quê |
 |---|---|
 | P1-4 (`setState`/`mounted`), P1-5 (`client_missing_token`), P1-6 (`ALLOWED_ORIGINS`), P1-12 (contraste) | Priorização acordada: os 4 primeiros P1 primeiro. Todos têm correção definida e são de baixo risco. |
-| P1-8 (licenciamento fail-open) | **Decisão de produto, não técnica.** Ligar `TADEU_LICENSE_ENFORCED` bloqueia todo cliente sem token — inclusive o APK de 05/08 no aparelho. Precisa de plano de transição. |
+| P1-8 (licenciamento fail-open) | **Decidido em 04/09/2026: manter desligado por ora.** Ligar `TADEU_LICENSE_ENFORCED` bloquearia todo cliente sem token, inclusive o APK de 05/08 no aparelho. Reavaliar quando houver um build distribuído com o interceptor de licença — ver §9.5. |
 | P1-9 (RLS em migration) | Requer acesso ao painel do projeto Supabase real, que está em outra conta. |
 | P1-10 (jargão determinístico) | Depende de decisão sobre o comportamento em caso de reprovação (§6, item 3). |
 | P1-11 (retry multiplica custo de IA) | Achado tardio; merece tratamento próprio, não um remendo. |
@@ -394,6 +394,10 @@ Executar com o APK novo, **após** os merges e os secrets. Anotar o que divergir
 2. **Revisar e mergear o PR #4** — os endpoints destrutivos agora têm 12 testes de posse.
 3. **Estreitar o pin do `supabase`** em `requirements.txt`. A faixa `>=2.11.0,<3` foi o que permitiu o P0-1.
 4. **Renomear o erro fabricado para `client_missing_token`** (P1-5) — uma linha que fecha o TD-01 de vez.
-5. **Decidir sobre `TADEU_LICENSE_ENFORCED`** (P1-8) — hoje o licenciamento não é aplicado.
+5. **`TADEU_LICENSE_ENFORCED` — decidido: fica desligado por ora** (P1-8).
+
+   Consequência aceita conscientemente: **o licenciamento não está sendo aplicado**. Sem o header `X-Tadeu-Token`, o backend registra um warning e libera a operação (`tadeu_metering.py:22-31`) — qualquer cliente contorna a cota simplesmente omitindo o header. Não é uma falha a corrigir agora; é uma janela de transição escolhida, para não quebrar os APKs já distribuídos que não têm o interceptor de licença.
+
+   **Condição para reavaliar:** quando houver um build distribuído contendo `TadeuLicenseInterceptor` (hoje só existe em `main`, não no aparelho de QA). Ao ligar, ligar primeiro em ambiente de teste — e antes disso resolver o P1-7, senão o backend valida contra `tadeu-apps-core-test2.vercel.app`.
 6. **Versionar as políticas RLS** como `006_rls_dreams_episodes.sql` (P1-9).
 7. **Atualizar o `CLAUDE.md`** (§2.5) — quatro afirmações desatualizadas, uma delas contradizendo o próprio documento.

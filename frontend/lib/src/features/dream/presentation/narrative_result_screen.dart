@@ -122,7 +122,7 @@ class _NarrativeResultScreenState extends State<NarrativeResultScreen>
                               border: Border.all(color: AionTheme.tealBd),
                             ),
                             child: Text(
-                              '⚠ Esta análise é uma reflexão simbólica baseada em Jung e Campbell — não substitui acompanhamento psicológico profissional.',
+                              '⚠ Não existe uma única interpretação para um sonho — ela depende das perguntas feitas e de quem interpreta. O que você lê a seguir é uma leitura possível entre muitas, construída a partir do que você relatou e das suas respostas, usando como referência as ideias de C. G. Jung e Joseph Campbell. Isso não substitui acompanhamento psicológico profissional: para um entendimento mais profundo, buscar um psicólogo é o caminho mais indicado.',
                               style: GoogleFonts.ptSerif(
                                 fontSize: 12,
                                 color: AionTheme.tealText,

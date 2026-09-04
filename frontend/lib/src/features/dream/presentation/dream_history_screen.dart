@@ -566,6 +566,7 @@ class _DreamHistoryScreenState extends State<DreamHistoryScreen> {
                         dream: dream,
                         date: _formatDate(dream['created_at']),
                         onTap: () => _openDream(dream),
+                        onDelete: () => _confirmDeleteDream(dream),
                       ),
                     );
                   },
@@ -628,17 +629,90 @@ class _DreamHistoryScreenState extends State<DreamHistoryScreen> {
       ),
     );
   }
+
+  Future<void> _confirmDeleteDream(Map<String, dynamic> dream) async {
+    final dreamId = dream['id'] as String?;
+    if (dreamId == null || dreamId.isEmpty) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: AionTheme.darkAbyss,
+        shape: RoundedRectangleBorder(
+          side: BorderSide(color: AionTheme.shadow),
+          borderRadius: BorderRadius.circular(4),
+        ),
+        title: Text(
+          'Excluir este sonho?',
+          style: GoogleFonts.ptSerif(color: AionTheme.dawn, fontSize: 16),
+        ),
+        content: Text(
+          'Essa ação não pode ser desfeita. O relato e a leitura simbólica deste sonho serão apagados permanentemente.',
+          style: GoogleFonts.ptSerif(color: AionTheme.silver, fontSize: 13, height: 1.6),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: Text('Cancelar', style: GoogleFonts.ptSerif(color: AionTheme.silver)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: Text('Excluir', style: GoogleFonts.ptSerif(color: AionTheme.crimson)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+    await _deleteDream(dreamId);
+  }
+
+  Future<void> _deleteDream(String dreamId) async {
+    // Remoção otimista com rollback em caso de falha.
+    final index = _dreams.indexWhere((d) => d['id'] == dreamId);
+    if (index == -1) return;
+    final removed = _dreams[index];
+    setState(() => _dreams.removeAt(index));
+
+    try {
+      await ApiService.client.delete(AionConfig.deleteDreamUrl(dreamId));
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Sonho excluído.', style: GoogleFonts.ptSerif(color: AionTheme.ghost)),
+          backgroundColor: AionTheme.darkAbyss,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } catch (e) {
+      debugPrint('[HISTORY] Erro ao excluir sonho: $e');
+      if (!mounted) return;
+      setState(() => _dreams.insert(index, removed));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Não foi possível excluir o sonho. Tente novamente.',
+            style: GoogleFonts.ptSerif(color: AionTheme.ghost),
+          ),
+          backgroundColor: AionTheme.crimson,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
 }
 
 class _DreamHistoryCard extends StatefulWidget {
   final Map<String, dynamic> dream;
   final String date;
   final VoidCallback onTap;
+  final VoidCallback onDelete;
 
   const _DreamHistoryCard({
     required this.dream,
     required this.date,
     required this.onTap,
+    required this.onDelete,
   });
 
   @override
@@ -703,6 +777,22 @@ class _DreamHistoryCardState extends State<_DreamHistoryCard> {
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
+                  Semantics(
+                    button: true,
+                    label: 'Excluir este sonho',
+                    child: IconButton(
+                      tooltip: 'Excluir sonho',
+                      constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                      padding: EdgeInsets.zero,
+                      visualDensity: VisualDensity.compact,
+                      icon: Icon(
+                        Icons.delete_outline,
+                        size: 16,
+                        color: AionTheme.silver.withOpacity(0.4),
+                      ),
+                      onPressed: widget.onDelete,
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 10),

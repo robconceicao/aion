@@ -13,6 +13,12 @@ class AionConfig {
   static const String filterUrl    = '$apiBaseUrl/dreams/filter';
   static const String narrativeUrl = '$apiBaseUrl/dreams/narrative';
 
+  /// Exclusão de um sonho específico (LGPD art. 18, VI — direito de eliminação).
+  static String deleteDreamUrl(String dreamId) => '$apiBaseUrl/dreams/$dreamId';
+
+  /// Exclusão da conta e de todos os dados do usuário (LGPD art. 18, VI).
+  static const String deleteAccountUrl = '$apiBaseUrl/auth/account';
+
   /// Endpoint de áudio on-demand com cache (Fase 2 — SPEC §6.2).
   /// POST para este URL gera ou recupera o áudio da interpretação narrativa.
   static String audioUrl(String dreamId) => '$apiBaseUrl/interpretacoes/$dreamId/audio';

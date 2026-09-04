@@ -3,6 +3,10 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import JWTError
 from app.core.config import settings
 from app.core.jwt_verify import verify_supabase_jwt
+from app.database import get_supabase_service
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 # auto_error=False: sem header não vira 403 genérico do HTTPBearer —
@@ -110,3 +114,44 @@ async def get_current_admin(current_user: dict = Depends(get_current_user)):
 @router.get("/me")
 async def read_users_me(current_user: dict = Depends(get_current_user)):
     return current_user
+
+
+@router.delete("/account")
+async def delete_account(current_user: dict = Depends(get_current_user)):
+    """
+    Exclui a conta do usuário autenticado e todos os seus dados (LGPD art. 18, VI —
+    eliminação dos dados pessoais tratados com consentimento).
+
+    Ordem: apaga os sonhos (Supabase) primeiro; só então remove o usuário do
+    Auth do Supabase. Se a remoção do Auth falhar após os sonhos já terem sido
+    apagados, o usuário é avisado para tentar de novo — os dados de sonho já
+    não existem mais de qualquer forma.
+    """
+    user_id = current_user.get("sub")
+    if not user_id:
+        raise HTTPException(status_code=400, detail="Usuário inválido.")
+
+    service = get_supabase_service()
+
+    try:
+        service.table("dreams").delete().eq("user_id", user_id).execute()
+    except Exception as e:
+        logger.error("[AUTH][ERROR] falha ao excluir sonhos user_id=%s: %s", user_id, e, exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail={"error": "delete_failed", "message": "Erro ao excluir os dados do usuário."},
+        )
+
+    try:
+        service.auth.admin.delete_user(user_id)
+    except Exception as e:
+        logger.error("[AUTH][ERROR] falha ao excluir usuário do Auth user_id=%s: %s", user_id, e, exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error": "delete_failed",
+                "message": "Seus sonhos foram removidos, mas houve falha ao excluir a conta. Tente novamente ou contate o suporte.",
+            },
+        )
+
+    return {"deleted": True}

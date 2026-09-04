@@ -67,6 +67,11 @@ class Arquetipo(BaseModel):
     arquetipo: str
     manifestacao: str
 
+class MitoEspelho(BaseModel):
+    """Mito ou conto que amplifica arquetipicamente a jornada do sonhador."""
+    titulo: str = ""
+    paralela: str = ""
+
 class AnaliseCompleta(BaseModel):
     """
     Formato técnico estruturado — destinado a usuários que querem profundidade.
@@ -78,11 +83,18 @@ class AnaliseCompleta(BaseModel):
     compensacao: str = ""
     fase_jornada: str = ""
     sintese_tecnica: str = ""
+    mito_espelho: MitoEspelho = MitoEspelho()
+    prospeccao: str = ""
 
     @field_validator('simbolos', 'arquetipos', mode='before')
     @classmethod
     def ensure_list(cls, v):
         return v if isinstance(v, list) else []
+
+    @field_validator('mito_espelho', mode='before')
+    @classmethod
+    def ensure_mito_espelho(cls, v):
+        return v if isinstance(v, dict) else {}
 
 class SynthesisResult(BaseModel):
     """

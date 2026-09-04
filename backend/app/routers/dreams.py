@@ -49,8 +49,11 @@ def _build_dream_row(
         ],
         "funcao_compensatoria": synthesis.analise_completa.compensacao,
         "fase_jornada": {"nome": synthesis.analise_completa.fase_jornada, "descricao": ""},
-        "prospeccao": "",
-        "mito_espelho": {"titulo": "", "paralela": ""},
+        "prospeccao": synthesis.analise_completa.prospeccao,
+        "mito_espelho": {
+            "titulo": synthesis.analise_completa.mito_espelho.titulo,
+            "paralela": synthesis.analise_completa.mito_espelho.paralela,
+        },
         "pergunta_para_reflexao": synthesis.pergunta_reflexao,
         "intensidade_sombra": 5, "intensidade_heroi": 5, "intensidade_transformacao": 5,
         "is_recorrente": is_recurrence_triggered(len(similar_dreams)),
@@ -293,8 +296,11 @@ async def create_dream(
         "funcao_compensatoria": synthesis.analise_completa.compensacao,
         "fase_jornada": {"nome": synthesis.analise_completa.fase_jornada, "descricao": ""},
         "pergunta_para_reflexao": synthesis.pergunta_reflexao,
-        "mito_espelho": {"titulo": "", "paralela": ""},
-        "prospeccao": "",
+        "mito_espelho": {
+            "titulo": synthesis.analise_completa.mito_espelho.titulo,
+            "paralela": synthesis.analise_completa.mito_espelho.paralela,
+        },
+        "prospeccao": synthesis.analise_completa.prospeccao,
         "intensidade_sombra": 5, "intensidade_heroi": 5, "intensidade_transformacao": 5,
     }
 
@@ -319,6 +325,38 @@ async def get_user_history(current_user: dict = Depends(get_current_user)):
         raise HTTPException(
             status_code=500,
             detail={"error": "history_failed", "message": "Erro ao buscar histórico."},
+        )
+
+
+@router.delete("/{dream_id}")
+async def delete_dream(dream_id: str, current_user: dict = Depends(get_current_user)):
+    """
+    Exclui um sonho do usuário autenticado (direito de exclusão — LGPD art. 18, VI).
+    service_role: bypass RLS. Ownership = ÚNICA proteção → sempre .eq("user_id", user_id).
+    """
+    user_id = current_user.get("sub")
+    supabase = get_supabase_service()
+    try:
+        result = (
+            supabase.table("dreams")
+            .delete()
+            .eq("id", dream_id)
+            .eq("user_id", user_id)
+            .execute()
+        )
+        if not result.data:
+            raise HTTPException(status_code=404, detail="Sonho não encontrado")
+        return {"deleted": True, "id": dream_id}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(
+            "[ROUTER][ERROR] delete dream_id=%s user_id=%s: %s",
+            dream_id, user_id, e, exc_info=True,
+        )
+        raise HTTPException(
+            status_code=500,
+            detail={"error": "delete_failed", "message": "Erro ao excluir o sonho."},
         )
 
 

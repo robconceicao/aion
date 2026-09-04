@@ -11,7 +11,7 @@ router = APIRouter()
 async def list_episodes():
     """Lista todos os episódios do canal em ordem crescente."""
     supabase = get_supabase()
-    response = supabase.table("episodes").select("*").order("number", ascending=True).execute()
+    response = supabase.table("episodes").select("*").order("number", desc=False).execute()
     return response.data
 
 @router.get("/{episode_number}", response_model=EpisodeModel)

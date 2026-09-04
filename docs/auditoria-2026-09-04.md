@@ -243,8 +243,8 @@ Os testes novos cobrem exatamente onde o CI estava cego: rota do Canal, posse no
 | 1 | Fallback do `ensureFreshSession()` | **IMPLEMENTADO** |
 | 2 | Status HTTP explícito (incl. voz) | **IMPLEMENTADO** ⚠️ |
 | 3 | Zero jargão na entrevista | **PARCIAL** |
-| 4 | Duração no loading | **PARCIAL** |
-| 5 | Contraste no Interview Mode | **PARCIAL** |
+| 4 | Duração no loading | **PARCIAL** → corrigido (PR #7) |
+| 5 | Contraste no Interview Mode | **PARCIAL** → corrigido (PR #7) |
 | 6 | Descoberta da busca semântica | **IMPLEMENTADO** |
 | 7 | Narração ElevenLabs | **IMPLEMENTADO** ⚠️ |
 | 8 | dart-define / CORS / RLS | **2 de 3 confirmados** |
@@ -267,13 +267,15 @@ Os testes novos cobrem exatamente onde o CI estava cego: rota do Canal, posse no
 
 | Uso | Cor | Razão | AA (4.5:1) |
 |---|---|---|---|
-| Pergunta, 17/15px (`:347`, `:364`) | `#F5F5F5` | ~16:1 | passa |
+| Pergunta, 17/15px (`:347`, `:364`) | `#F5F5F5` | 18,32:1 | passa |
 | Contador, 13px (`:258`) | `silver` @0.6 | **3,17:1** | falha |
 | Auxiliar, 14px (`:369`) | `silver` @0.55 | **~2,85:1** | falha |
 | Cabeçalho (`:229`, `:234`) | `silver` @0.5 | **2,54:1** | falha |
 | Rótulo, 10px (`:399`) | `gold` @0.5 | **2,87:1** | falha |
 
-`silver` puro (`#9898B8`) dá ~5,9:1 e passaria — o problema é inteiramente a opacidade. Remover o `withOpacity` desses cinco pontos resolve e casa com a limpeza dos 129 depreciados.
+`silver` puro (`#9898B8`) dá **7,15:1** e passa com folga — o problema é inteiramente a opacidade.
+
+**Corrigido no PR #7**, exceto o ornamento decorativo `✦` (`:399`), isento do requisito de contraste de texto por ser decoração pura. Os quatro elementos de texto e ícone foram para 7,15:1.
 
 **6 · IMPLEMENTADO** — `dream_history_screen.dart:375-424`: `TextField` com `hintText: 'Buscar no diário...'`, `prefixIcon: Icons.search`, botão de limpar, wrapper `Semantics`, indicador de busca ativa. Nota de UX: dispara só no `onSubmitted` — exige Enter, sem botão explícito nem busca incremental.
 

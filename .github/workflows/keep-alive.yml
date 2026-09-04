@@ -10,12 +10,28 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # Dois defeitos corrigidos aqui:
+      #
+      # 1. --max-time 30 era MENOR que o cold start real do Render free tier.
+      #    Medido em 2026-09-04, duas vezes: 32.5s. Ou seja, o curl estourava
+      #    exatamente nas ocasioes em que o ping serviria para alguma coisa —
+      #    quando o servidor esta dormindo. Quando ja estava quente, passava.
+      #
+      # 2. `shell: bash -e` (padrao do GitHub Actions) aborta o step no exit
+      #    code 28 do curl, antes de a logica do `if` rodar. O tratamento de
+      #    erro escrito abaixo nunca era alcancado, e o job so acumulava
+      #    falhas vermelhas sem nunca acordar o servidor.
       - name: Ping Aion API
         run: |
-          STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 https://aion-vvx7.onrender.com/)
+          # `|| true` e nao `|| echo "000"`: o curl JA imprime 000 ao falhar,
+          # entao um echo extra concatenaria e o STATUS viraria "000000".
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 120 \
+            https://aion-vvx7.onrender.com/) || true
           echo "Status HTTP: $STATUS"
           if [ "$STATUS" -ge 200 ] && [ "$STATUS" -lt 400 ]; then
             echo "Servidor ativo."
+          elif [ "$STATUS" = "000" ]; then
+            echo "::warning::Sem resposta em 120s — servidor pode estar indisponivel."
           else
-            echo "Servidor retornou $STATUS — pode estar inicializando."
+            echo "::warning::Servidor retornou $STATUS."
           fi

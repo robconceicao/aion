@@ -77,20 +77,43 @@ async def call_claude(system_prompt: str, user_content: str, max_tokens=3500):
     raise RuntimeError("[AI_SERVICE] Todos os provedores de IA falharam.")
 
 
-async def call_gemini(system_prompt: str, user_content: str):
+def _wants_json(system_prompt: str, user_content: str, json_mode: bool | None) -> bool:
+    """
+    Decide se a resposta deve vir em JSON.
+
+    Quando `json_mode` é explícito, manda ele. Caso contrário infere pela
+    presença de "JSON" no prompt — olhando o system E o user content.
+
+    Olhar só o system era o bug: synthesize_dual chama os fallbacks com
+    system="" e o prompt inteiro no user content, então a inferência dava
+    False e o modo JSON era desligado exatamente no degrau de fallback, que
+    é onde ele mais importa.
+    """
+    if json_mode is not None:
+        return json_mode
+    return "JSON" in system_prompt or "JSON" in user_content
+
+
+async def call_gemini(system_prompt: str, user_content: str, json_mode: bool | None = None):
     if not settings.GEMINI_API_KEY:
         raise ValueError("GEMINI_API_KEY ausente.")
     try:
         model = genai.GenerativeModel('gemini-2.5-flash')
         full_prompt = f"{system_prompt}\n\nUSUÁRIO: {user_content}"
-        response = await model.generate_content_async(full_prompt)
+        generation_config = None
+        if _wants_json(system_prompt, user_content, json_mode):
+            generation_config = {"response_mime_type": "application/json"}
+        response = await model.generate_content_async(
+            full_prompt, generation_config=generation_config
+        )
         return response.text
     except Exception as e:
         print(f"[AI_SERVICE] Erro fatal no Gemini: {e}")
         raise e
 
 
-async def call_xai(system_prompt: str, user_content: str, max_tokens=3500):
+async def call_xai(system_prompt: str, user_content: str, max_tokens=3500,
+                   json_mode: bool | None = None):
     """Chama o xAI (Grok) diretamente. Nao tem fallback interno."""
     if not settings.XAI_API_KEY:
         raise ValueError("[AI_SERVICE] XAI_API_KEY ausente.")
@@ -108,7 +131,11 @@ async def call_xai(system_prompt: str, user_content: str, max_tokens=3500):
             ],
             "max_tokens": max_tokens,
             "temperature": 0.7,
-            "response_format": {"type": "json_object"} if "JSON" in system_prompt else {"type": "text"}
+            "response_format": (
+                {"type": "json_object"}
+                if _wants_json(system_prompt, user_content, json_mode)
+                else {"type": "text"}
+            ),
         }
         async with httpx.AsyncClient() as client:
             res = await client.post(url, headers=headers, json=payload, timeout=60.0)
@@ -243,7 +270,9 @@ async def synthesize_dual(dream_text: str, **kwargs) -> SynthesisResult:
 
     if settings.GEMINI_API_KEY:
         try:
-            raw = await call_gemini("", prompt)
+            # json_mode explícito: o SYNTHESIS_PROMPT inteiro vai no user
+            # content e o system vai vazio — não dá para inferir pelo system.
+            raw = await call_gemini("", prompt, json_mode=True)
             data = _parse_ai_json(raw)
             result = SynthesisResult.model_validate(data)
             print("[SYNTHESIS] Sucesso via Gemini.")
@@ -254,7 +283,7 @@ async def synthesize_dual(dream_text: str, **kwargs) -> SynthesisResult:
 
     if settings.XAI_API_KEY:
         try:
-            raw = await call_xai("", prompt, max_tokens=5000)
+            raw = await call_xai("", prompt, max_tokens=5000, json_mode=True)
             data = _parse_ai_json(raw)
             result = SynthesisResult.model_validate(data)
             print("[SYNTHESIS] Sucesso via xAI.")

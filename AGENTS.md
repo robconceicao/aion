@@ -21,3 +21,5 @@ App de análise de sonhos com interpretação junguiana.
   commitada, PARE e avise — nunca sobrescreva trabalho não commitado.
 - Toda mudança: DIFF antes de aplicar, espere aprovação explícita.
 - Nada pronto sem rodar a verificação e colar a saída real.
+
+## Imported Claude Cowork project instructions

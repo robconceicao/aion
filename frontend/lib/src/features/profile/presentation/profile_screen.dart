@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme.dart';
 import '../../../core/widgets/cinematic_background.dart';
+import '../../../core/api_service.dart';
+import '../../../core/constants.dart';
 import '../../dream/presentation/widgets/aion_logo.dart';
 import '../../dream/presentation/notification_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -17,6 +19,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final _nameController = TextEditingController(text: 'Explorador do Inconsciente');
   final _emailController = TextEditingController();
   TimeOfDay? _wakeUpTime;
+  bool _isDeletingAccount = false;
 
   @override
   void initState() {
@@ -213,7 +216,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         onPressed: () async {
                           await Supabase.instance.client.auth.signOut();
                           if (mounted) {
-                            Navigator.of(context).pushNamedAndRemoveUntil('/auth', (route) => false);
+                            // '/' é a rota da AuthScreen (ver routes em main.dart) — '/auth' não existe.
+                            Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
                           }
                         },
                         child: Text(
@@ -224,6 +228,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ),
                         ),
                       ),
+                      const SizedBox(height: 24),
+                      Container(height: 1, color: AionTheme.shadow),
+                      const SizedBox(height: 24),
+                      TextButton(
+                        onPressed: _isDeletingAccount ? null : _confirmDeleteAccount,
+                        child: _isDeletingAccount
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: AionTheme.crimson,
+                                ),
+                              )
+                            : Text(
+                                'excluir conta e todos os meus dados',
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: AionTheme.crimson.withOpacity(0.75),
+                                  letterSpacing: 1,
+                                ),
+                              ),
+                      ),
                     ],
                   ),
                 ),
@@ -233,6 +259,97 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
       ),
     );
+  }
+
+  Future<void> _confirmDeleteAccount() async {
+    final firstConfirm = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: AionTheme.darkAbyss,
+        shape: RoundedRectangleBorder(
+          side: const BorderSide(color: AionTheme.shadow),
+          borderRadius: BorderRadius.circular(4),
+        ),
+        title: Text(
+          'Excluir sua conta?',
+          style: GoogleFonts.ptSerif(color: AionTheme.dawn, fontSize: 16),
+        ),
+        content: Text(
+          'Isso apaga permanentemente todos os seus sonhos, respostas e a sua conta no Aion. '
+          'Essa ação não pode ser desfeita.',
+          style: GoogleFonts.ptSerif(color: AionTheme.silver, fontSize: 13, height: 1.6),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: Text('Cancelar', style: GoogleFonts.ptSerif(color: AionTheme.silver)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: Text('Continuar', style: GoogleFonts.ptSerif(color: AionTheme.crimson)),
+          ),
+        ],
+      ),
+    );
+    if (firstConfirm != true || !mounted) return;
+
+    // Segunda confirmação — ação destrutiva e irreversível.
+    final finalConfirm = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: AionTheme.darkAbyss,
+        shape: RoundedRectangleBorder(
+          side: const BorderSide(color: AionTheme.crimson),
+          borderRadius: BorderRadius.circular(4),
+        ),
+        title: Text(
+          'Tem certeza?',
+          style: GoogleFonts.ptSerif(color: AionTheme.crimson, fontSize: 16),
+        ),
+        content: Text(
+          'Não há como recuperar seus sonhos depois disso.',
+          style: GoogleFonts.ptSerif(color: AionTheme.silver, fontSize: 13, height: 1.6),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: Text('Cancelar', style: GoogleFonts.ptSerif(color: AionTheme.silver)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: Text('Excluir definitivamente', style: GoogleFonts.ptSerif(color: AionTheme.crimson)),
+          ),
+        ],
+      ),
+    );
+    if (finalConfirm != true || !mounted) return;
+
+    await _deleteAccount();
+  }
+
+  Future<void> _deleteAccount() async {
+    setState(() => _isDeletingAccount = true);
+    try {
+      await ApiService.client.delete(AionConfig.deleteAccountUrl);
+      await Supabase.instance.client.auth.signOut();
+      if (!mounted) return;
+      // '/' é a rota da AuthScreen (ver routes em main.dart) — '/auth' não existe.
+      Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
+    } catch (e) {
+      debugPrint('[PROFILE] Erro ao excluir conta: $e');
+      if (!mounted) return;
+      setState(() => _isDeletingAccount = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Não foi possível excluir sua conta agora. Tente novamente em instantes.',
+            style: GoogleFonts.ptSerif(color: AionTheme.ghost),
+          ),
+          backgroundColor: AionTheme.crimson,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 
   Widget _buildProfileField({

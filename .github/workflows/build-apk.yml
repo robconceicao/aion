@@ -62,18 +62,33 @@ jobs:
           TADEU_APPS_SUPABASE_URL: ${{ secrets.TADEU_APPS_SUPABASE_URL }}
           TADEU_APPS_SUPABASE_ANON_KEY: ${{ secrets.TADEU_APPS_SUPABASE_ANON_KEY }}
         run: |
+          # Argumentos num ARRAY, nunca numa string expandida sem aspas.
+          #
+          # A versao anterior montava os --dart-define opcionais em `extra=""` e
+          # passava `$extra` sem aspas. Um secret cujo valor contivesse espaco
+          # era quebrado em varios argumentos pelo shell, e o Flutter recebia um
+          # posicional solto — falhando com `Target file "..." not found.`, erro
+          # que nao aponta em nada para a causa real.
+          #
+          # Com array, cada --dart-define e UM argumento, qualquer que seja o
+          # valor do secret.
+          args=(
+            --release
+            --dart-define=SUPABASE_URL="$SUPABASE_URL"
+            --dart-define=SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY"
+          )
+
           # Os TADEU_* sao opcionais: se nao definidos, o app cai nos defaults
           # de tadeu_license_service.dart — que hoje apontam para o ambiente de
           # TESTE. Definir os secrets e o que garante build de producao.
-          extra=""
-          [ -n "$TADEU_APPS_URL" ] && extra="$extra --dart-define=TADEU_APPS_URL=$TADEU_APPS_URL"
-          [ -n "$TADEU_APPS_SUPABASE_URL" ] && extra="$extra --dart-define=TADEU_APPS_SUPABASE_URL=$TADEU_APPS_SUPABASE_URL"
-          [ -n "$TADEU_APPS_SUPABASE_ANON_KEY" ] && extra="$extra --dart-define=TADEU_APPS_SUPABASE_ANON_KEY=$TADEU_APPS_SUPABASE_ANON_KEY"
+          [ -n "$TADEU_APPS_URL" ] && \
+            args+=(--dart-define=TADEU_APPS_URL="$TADEU_APPS_URL")
+          [ -n "$TADEU_APPS_SUPABASE_URL" ] && \
+            args+=(--dart-define=TADEU_APPS_SUPABASE_URL="$TADEU_APPS_SUPABASE_URL")
+          [ -n "$TADEU_APPS_SUPABASE_ANON_KEY" ] && \
+            args+=(--dart-define=TADEU_APPS_SUPABASE_ANON_KEY="$TADEU_APPS_SUPABASE_ANON_KEY")
 
-          flutter build apk --release \
-            --dart-define=SUPABASE_URL="$SUPABASE_URL" \
-            --dart-define=SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY" \
-            $extra
+          flutter build apk "${args[@]}"
 
       # Prova que as chaves entraram no binario. String.fromEnvironment e
       # dobrado em tempo de compilacao, entao o host do Supabase precisa

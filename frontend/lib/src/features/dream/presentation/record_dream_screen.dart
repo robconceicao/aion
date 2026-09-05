@@ -70,6 +70,7 @@ class _RecordDreamScreenState extends State<RecordDreamScreen> with SingleTicker
       final started = await _platformRecorder.start(_audioRecorder, config);
 
       if (started) {
+        if (!mounted) return;
         setState(() {
           _isRecording = true;
         });
@@ -91,6 +92,7 @@ class _RecordDreamScreenState extends State<RecordDreamScreen> with SingleTicker
   Future<void> _stopRecording() async {
     try {
       final path = await _platformRecorder.stop(_audioRecorder);
+      if (!mounted) return;
       setState(() {
         _isRecording = false;
       });
@@ -106,7 +108,7 @@ class _RecordDreamScreenState extends State<RecordDreamScreen> with SingleTicker
   Future<void> _sendToTranscription(String path) async {
     setState(() {
       _isTranscribing = true;
-      _loadingMessage = 'Transcrevendo sua voz...';
+      _loadingMessage = 'Transcrevendo sua voz...\nGeralmente leva alguns segundos.';
     });
     final dio = ApiService.client;
     try {
@@ -120,6 +122,7 @@ class _RecordDreamScreenState extends State<RecordDreamScreen> with SingleTicker
       // Talking to the backend via central config
       final response = await dio.post(AionConfig.transcribeUrl, data: formData);
       
+      if (!mounted) return;
       setState(() {
         _transcription = response.data['text'];
         _textInputController.text = _textInputController.text.isNotEmpty 
@@ -129,8 +132,8 @@ class _RecordDreamScreenState extends State<RecordDreamScreen> with SingleTicker
       });
     } on dio_pkg.DioException catch (e) {
       debugPrint('Transcription error: $e');
-      setState(() => _isTranscribing = false);
       if (!mounted) return;
+      setState(() => _isTranscribing = false);
       final status = e.response?.statusCode;
       final String msg;
       if (status == 401 || status == 403) {
@@ -154,17 +157,16 @@ class _RecordDreamScreenState extends State<RecordDreamScreen> with SingleTicker
       );
     } catch (e) {
       debugPrint('Transcription error: $e');
+      if (!mounted) return;
       setState(() => _isTranscribing = false);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'A tradução vocal falhou. Verifique se o servidor está acessível e sua internet.',
-            ),
-            duration: Duration(seconds: 6),
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'A tradução vocal falhou. Verifique se o servidor está acessível e sua internet.',
           ),
-        );
-      }
+          duration: Duration(seconds: 6),
+        ),
+      );
     }
   }
 
@@ -183,7 +185,11 @@ class _RecordDreamScreenState extends State<RecordDreamScreen> with SingleTicker
 
     // Refresh proativo da sessão antes da chamada longa
     final session = await ApiService.ensureFreshSession();
-    if (session == null && mounted) {
+    // `session == null` e `mounted` sao condicoes distintas e nao podem ser
+    // combinadas num unico if: sem sessao E desmontado, a guarda nao disparava
+    // e o fluxo seguia para o request sem Bearer.
+    if (session == null) {
+      if (!mounted) return;
       setState(() => _isProcessing = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -201,10 +207,15 @@ class _RecordDreamScreenState extends State<RecordDreamScreen> with SingleTicker
       return;
     }
 
+    if (!mounted) return;
+
     final dio = ApiService.client;
     try {
       // Sempre: 3 perguntas guiadas (Modo Entrevista)
-      setState(() => _loadingMessage = 'Preparando perguntas\npara aprofundar seu sonho...');
+      // A geração de perguntas dispara a cascata de LLM — por isso a duração
+      // vai na mensagem, como já acontece na síntese e no cold start.
+      setState(() => _loadingMessage =
+          'Preparando perguntas\npara aprofundar seu sonho...\nIsso leva cerca de 30 segundos.');
       final response = await dio.post(
         AionConfig.interviewUrl,
         data: {'text': text},

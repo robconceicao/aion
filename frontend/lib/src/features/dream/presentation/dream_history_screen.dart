@@ -70,6 +70,18 @@ class _DreamHistoryScreenState extends State<DreamHistoryScreen> {
     setState(() => _isSearching = true);
     try {
       final session = await ApiService.ensureFreshSession();
+      // Mesma guarda que _loadHistory ja fazia. Sem ela, a busca seguia com
+      // sessao null e caia no fail-closed do interceptor, produzindo um 401
+      // fabricado no proprio aparelho.
+      if (session == null) {
+        if (!mounted) return;
+        setState(() {
+          _error = 'Sua sessão expirou (sem token local). '
+              'Feche e reabra o app e entre novamente.';
+          _isSearching = false;
+        });
+        return;
+      }
       final response = await ApiService.client.post(
         AionConfig.searchUrl,
         data: {
@@ -154,7 +166,13 @@ class _DreamHistoryScreenState extends State<DreamHistoryScreen> {
           ? (e.response!.data['detail']?.toString() ?? '')
           : '';
       final String msg;
-      if (status == 401 || status == 403) {
+      if (detail == ApiService.clientMissingTokenCode) {
+        // Bloqueio do proprio app: a request nem chegou a sair. Dizer isso
+        // explicitamente evita a confusao com rejeicao do servidor.
+        msg = 'O app não tinha uma sessão válida para enviar '
+            '(HTTP $status [$detail] — bloqueado no aparelho, sem chegar ao servidor). '
+            'Entre novamente.';
+      } else if (status == 401 || status == 403) {
         final hint = detail.isNotEmpty ? ' [$detail]' : '';
         msg =
             'Sua sessão expirou (HTTP $status$hint). Feche e reabra o app e tente de novo.';

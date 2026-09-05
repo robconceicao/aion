@@ -3,15 +3,28 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     PROJECT_NAME: str = "Aion"
-    ALLOWED_ORIGINS: list = [
-        o.strip() for o in os.getenv(
-            "ALLOWED_ORIGINS",
-            "https://aion-self-seven.vercel.app,"
-            "https://aion-git-main-robconceicaos-projects.vercel.app,"
-            "https://aion-b546uzhij-robconceicaos-projects.vercel.app,"
-            "http://localhost:5000"
-        ).split(",") if o.strip()
-    ]
+    # Tipado como str, NÃO como list, de propósito.
+    #
+    # Para campos de tipo complexo (list, dict), o pydantic-settings tenta
+    # json.loads no valor da env var antes de qualquer validator. Com este
+    # campo declarado como `list`, definir ALLOWED_ORIGINS no Render na forma
+    # natural — "https://a.com,https://b.com" — derrubava o boot da aplicação
+    # com SettingsError. Só não quebrava porque a variável não estava setada.
+    #
+    # Como str, o valor é aceito literalmente e a divisão fica em
+    # allowed_origins_list.
+    ALLOWED_ORIGINS: str = os.getenv(
+        "ALLOWED_ORIGINS",
+        "https://aion-self-seven.vercel.app,"
+        "https://aion-git-main-robconceicaos-projects.vercel.app,"
+        "https://aion-b546uzhij-robconceicaos-projects.vercel.app,"
+        "http://localhost:5000"
+    )
+
+    @property
+    def allowed_origins_list(self) -> list[str]:
+        """Origens de CORS já divididas e sem espaços em branco."""
+        return [o.strip() for o in self.ALLOWED_ORIGINS.split(",") if o.strip()]
     GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
     ANTHROPIC_API_KEY: str = os.getenv("ANTHROPIC_API_KEY", "")
     XAI_API_KEY: str = os.getenv("XAI_API_KEY", "")

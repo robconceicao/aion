@@ -105,16 +105,27 @@ class ApiService {
     );
   }
 
+  /// Código do erro fabricado localmente quando o fail-closed bloqueia a
+  /// request por falta de Bearer.
+  ///
+  /// **Precisa ser diferente do `missing_token` que o backend devolve.** Eram
+  /// iguais, e como a UI imprime `HTTP $status [$detail]`, a mesma string
+  /// `HTTP 401 [missing_token]` aparecia tanto quando o servidor rejeitava
+  /// quanto quando o app se bloqueava sozinho — sem nenhum pacote sair do
+  /// aparelho. O sintoma apontava para o servidor e a origem era o cliente,
+  /// o que mandou a investigação do TD-01 para o lado errado.
+  static const String clientMissingTokenCode = 'client_missing_token';
+
   static DioException _missingTokenException(RequestOptions options) {
     return DioException(
       requestOptions: options,
       type: DioExceptionType.badResponse,
-      error: 'missing_token',
-      message: 'Sessão ausente: request sem Bearer',
+      error: clientMissingTokenCode,
+      message: 'Sessão ausente: request sem Bearer (bloqueado no cliente)',
       response: Response(
         requestOptions: options,
         statusCode: 401,
-        data: {'detail': 'missing_token'},
+        data: {'detail': clientMissingTokenCode},
       ),
     );
   }
@@ -182,10 +193,10 @@ class ApiService {
           final statusCode = err.response?.statusCode;
           final isAuthError = statusCode == 401 || statusCode == 403;
           final isAuthRetry = err.requestOptions.extra['_isAuthRetry'] == true;
-          final isLocalMissing = err.error == 'missing_token';
+          final isLocalMissing = err.error == clientMissingTokenCode;
 
           // On 401/403 refresh the Supabase token silently and retry once
-          // (não tenta retry em missing_token local sem sessão — inútil).
+          // (não tenta retry em bloqueio local sem sessão — inútil).
           if (isAuthError && !isAuthRetry && !isLocalMissing) {
             try {
               _pendingRefresh ??= _doRefresh();

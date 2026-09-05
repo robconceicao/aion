@@ -13,6 +13,27 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # O app le SUPABASE_URL/SUPABASE_ANON_KEY via String.fromEnvironment, sem
+      # default (frontend/lib/src/core/supabase_config.dart). Sem --dart-define
+      # elas ficam vazias e SupabaseConfig.assertConfigured() lanca StateError
+      # ANTES do runApp — o build passa e o APK morre ao abrir.
+      # Falhar aqui, com mensagem, e melhor do que publicar um artefato quebrado.
+      - name: Verificar secrets obrigatorios
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          missing=""
+          [ -z "$SUPABASE_URL" ] && missing="$missing SUPABASE_URL"
+          [ -z "$SUPABASE_ANON_KEY" ] && missing="$missing SUPABASE_ANON_KEY"
+          if [ -n "$missing" ]; then
+            echo "::error::Secrets ausentes:$missing"
+            echo "Configure em Settings > Secrets and variables > Actions."
+            echo "Sem eles o APK compila mas trava na abertura (StateError)."
+            exit 1
+          fi
+          echo "Secrets obrigatorios presentes."
+
       - name: Set up Java 17
         uses: actions/setup-java@v4
         with:
@@ -29,9 +50,47 @@ jobs:
         working-directory: frontend
         run: flutter pub get
 
+      # APK universal (sem --split-per-abi): um unico artefato instalavel em
+      # qualquer aparelho de QA, sem o passo de escolher a ABI certa. Para
+      # publicacao na Play Store o alvo correto e o appbundle, nao este APK.
       - name: Build APK release
         working-directory: frontend
-        run: flutter build apk --release
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          TADEU_APPS_URL: ${{ secrets.TADEU_APPS_URL }}
+          TADEU_APPS_SUPABASE_URL: ${{ secrets.TADEU_APPS_SUPABASE_URL }}
+          TADEU_APPS_SUPABASE_ANON_KEY: ${{ secrets.TADEU_APPS_SUPABASE_ANON_KEY }}
+        run: |
+          # Os TADEU_* sao opcionais: se nao definidos, o app cai nos defaults
+          # de tadeu_license_service.dart — que hoje apontam para o ambiente de
+          # TESTE. Definir os secrets e o que garante build de producao.
+          extra=""
+          [ -n "$TADEU_APPS_URL" ] && extra="$extra --dart-define=TADEU_APPS_URL=$TADEU_APPS_URL"
+          [ -n "$TADEU_APPS_SUPABASE_URL" ] && extra="$extra --dart-define=TADEU_APPS_SUPABASE_URL=$TADEU_APPS_SUPABASE_URL"
+          [ -n "$TADEU_APPS_SUPABASE_ANON_KEY" ] && extra="$extra --dart-define=TADEU_APPS_SUPABASE_ANON_KEY=$TADEU_APPS_SUPABASE_ANON_KEY"
+
+          flutter build apk --release \
+            --dart-define=SUPABASE_URL="$SUPABASE_URL" \
+            --dart-define=SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY" \
+            $extra
+
+      # Prova que as chaves entraram no binario. String.fromEnvironment e
+      # dobrado em tempo de compilacao, entao o host do Supabase precisa
+      # aparecer no APK — se nao aparecer, o artefato esta quebrado.
+      - name: Verificar que as chaves foram compiladas
+        working-directory: frontend
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+        run: |
+          apk=build/app/outputs/flutter-apk/app-release.apk
+          host=$(echo "$SUPABASE_URL" | sed -e 's#^https\?://##' -e 's#/.*##')
+          if unzip -p "$apk" | strings | grep -qF "$host"; then
+            echo "OK: host do Supabase presente no APK."
+          else
+            echo "::error::O host do Supabase NAO esta no APK — os --dart-define nao foram aplicados."
+            exit 1
+          fi
 
       - name: Upload APK
         uses: actions/upload-artifact@v4

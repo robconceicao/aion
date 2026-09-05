@@ -10,16 +10,20 @@ Auditoria completa do Aion (Flutter + FastAPI + Supabase), com correções aplic
 
 | | |
 |---|---|
-| Achados | **2 P0**, **12 P1**, **11 P2** |
-| Corrigidos e mergeados | 1 P0 (produção restaurada) |
-| Corrigidos, aguardando merge | 1 P0 + 3 P1 |
-| Testes | **73 → 89** passando |
-| `dart analyze` | 0 erros, 0 warnings (131 infos, todos `withOpacity`) |
-| APK release | **não gerado** — bloqueado, ver §7 |
+| Achados | **2 P0**, **14 P1**, **11 P2** |
+| Corrigidos e no ar | 2 P0 + 12 P1 |
+| Pendentes | 1 P1 por decisão de produto, 1 P1 adiado, 10 P2 |
+| Testes | **73 → 92** passando |
+| `dart analyze` | 0 erros, 0 warnings (125 infos, todos `withOpacity`) |
+| APK release | **1.0.4+5 gerado e verificado** — §7 |
 
-O achado de maior impacto não estava na lista de suspeitas: `GET /episodes/` devolvia **500 em produção** havia semanas, e o CI estava verde o tempo todo. Já corrigido e no ar.
+*Atualizado em 05/09/2026, após as correções entrarem em produção. Dois achados novos surgiram durante o próprio trabalho de correção e estão marcados como tal.*
 
-O segundo: **todo APK publicado pelo CI travava na abertura**. O build passava, o artefato era publicado, e o app morria no lançamento. Corrigido, aguardando merge.
+O achado de maior impacto não estava na lista de suspeitas: `GET /episodes/` devolvia **500 em produção** havia semanas, e o CI estava verde o tempo todo.
+
+O segundo: **todo APK publicado pelo CI travava na abertura**. O build passava, o artefato era publicado, e o app morria no lançamento. Foi o *sucesso* do build que escondeu o problema.
+
+E o terceiro só apareceu ao cruzar o dump real do RLS com o código: **as rotas de escrita de `episodes` gravavam pelo cliente anon**, que o RLS nega. Os dois primeiros se escondiam um atrás do outro — enquanto o `GET` dava 500, ninguém chegava a descobrir que o `POST` também não funcionava. Isso corrige uma conclusão errada que este relatório trazia na versão anterior: a tabela vazia não era falta de conteúdo, era impossibilidade de cadastrar.
 
 Duas das premissas do escopo original não se confirmaram (§2.1).
 
@@ -88,11 +92,15 @@ depois: 200 0.924s
 
 **Por que o CI não pegou:** `test_episode_model.py` valida só o modelo Pydantic. Nenhum teste exercitava a rota.
 
-#### P0-2 · Todo APK do CI travava na abertura — **CORRIGIDO, AGUARDANDO MERGE**
+#### P0-2 · Todo APK do CI travava na abertura — **CORRIGIDO E NO AR**
 
 `.github/workflows/build-apk.yml` rodava `flutter build apk --release` cru, sem nenhum `--dart-define`. O app lê as chaves via `String.fromEnvironment` **sem default** (`frontend/lib/src/core/supabase_config.dart:13-17`), e `frontend/lib/main.dart:20` chama `assertConfigured()` — que lança `StateError` — **antes do `runApp`**.
 
 O build **passava**: artefato de 32 MB publicado, CI verde. O app morria no lançamento. Foi o sucesso do build que escondeu o problema.
+
+A correção (PR #5) injeta os `--dart-define` a partir de GitHub Secrets, falha cedo com mensagem se os obrigatórios faltarem, e — o passo que mais importa — **verifica o artefato depois do build**: como `String.fromEnvironment` é dobrado em tempo de compilação, o host do Supabase tem de aparecer no binário; se não aparecer, o job falha em vez de publicar artefato quebrado.
+
+Ela própria introduziu uma regressão, corrigida no PR #10 (P1-14) — registrada aqui porque uma correção que quebra o que conserta merece ficar visível.
 
 ### 2.3 P1
 
@@ -100,23 +108,25 @@ O build **passava**: artefato de 32 MB publicado, CI verde. O app morria no lan�
 |---|---|---|---|
 | 1 | **Modo JSON desligado no fallback.** `call_xai` decidia `response_format` por `"JSON" in system_prompt`, mas `synthesize_dual` chama com `system=""` e o prompt no user content → JSON desligado no último degrau da cascata. `call_gemini` nunca pedia JSON. | `ai_service.py:111`, `:257` | **corrigido** (PR #5) |
 | 2 | **Cascata de IA sem timeout.** SDK Anthropic usa default de 600s; 3 modelos em série = até 30 min pendurado, com o cliente já tendo desistido em 180s. | `ai_service.py:56`, `:86`, `:228` | **corrigido** (PR #5) |
-| 3 | **keep-alive nunca acordou o Render.** `--max-time 30` contra cold start medido em **32,5 s**, e `bash -e` abortando antes do `if`. Passava só quando o servidor já estava quente. | `keep-alive.yml` | **corrigido** (PR #5) |
-| 4 | **`setState` após `await` sem guarda `mounted`** — 5 ocorrências; em duas o `setState` vem *antes* do `if (mounted)`. | `record_dream_screen.dart:73, 94, 123, 132, 157` | pendente |
-| 5 | **`missing_token` do cliente indistinguível do servidor** — causa do diagnóstico errado de TD-01 (§3). | `api_service.dart:112` | pendente |
-| 6 | **`ALLOWED_ORIGINS` derruba o boot.** `pydantic-settings` tenta `json.loads` no valor por ser campo `list`. Reproduzido: `ALLOWED_ORIGINS="https://a.com,https://b.com"` → `SettingsError`. Só não quebra porque a var não está setada no Render. | `config.py:6` | pendente |
+| 3 | **keep-alive nunca acordou o Render.** `--max-time 30` contra cold start medido em **32,5 s**, e `bash -e` abortando antes do `if`. Passava só quando o servidor já estava quente. | `keep-alive.yml` | **corrigido** (PR #5), mas ver §2.6 — o workflow ficou correto e ainda assim não resolve o problema |
+| 4 | **`setState` após `await` sem guarda `mounted`** — 5 ocorrências; em duas o `setState` vem *antes* do `if (mounted)`. | `record_dream_screen.dart:73, 94, 123, 132, 157` | **corrigido** (PR #7) — eram 6, não 5 |
+| 5 | **`missing_token` do cliente indistinguível do servidor** — causa do diagnóstico errado de TD-01 (§3). | `api_service.dart:112` | **corrigido** (PR #7) |
+| 6 | **`ALLOWED_ORIGINS` derruba o boot.** `pydantic-settings` tenta `json.loads` no valor por ser campo `list`. Reproduzido: `ALLOWED_ORIGINS="https://a.com,https://b.com"` → `SettingsError`. Só não quebra porque a var não está setada no Render. | `config.py:6` | **corrigido** (PR #7) |
 | 7 | **Tadeu com default de TESTE** em backend e app (`tadeu-apps-core-test2.vercel.app`). | `tadeu_metering.py:12`, `tadeu_license_service.dart:107` | mitigado no CI (PR #5) |
 | 8 | **Licenciamento é fail-open.** `TADEU_LICENSE_ENFORCED` default `"false"`: sem `X-Tadeu-Token` o backend loga warning e libera. Burla-se omitindo o header. O commit chama-se "Enable AION licensing by default", mas o default no código é `false`. | `tadeu_metering.py:14, 22-31` | pendente — decisão de produto |
-| 9 | **RLS de `dreams`/`episodes` não versionada.** Migrations cobrem só `feedback` e `narracao_cache`. As políticas existem apenas no painel. | `backend/migrations/` | pendente |
-| 10 | **Zero jargão sem verificação determinística** (§6, item 3). | `ai_service.py:411` | pendente |
-| 11 | **Retry multiplica o custo de IA.** Se a síntese estourar os 180 s de `receiveTimeout`, o interceptor repete a request até 2×, e cada repetição dispara uma cascata de LLM completa. Uma síntese lenta vira três sínteses pagas. | `api_service.dart:206-227` | pendente |
-| 12 | **Contraste abaixo do mínimo** no Interview Mode (§6, item 5). | `interview_screen.dart` | pendente |
+| 9 | **RLS de `dreams`/`episodes` não versionada.** Migrations cobrem só `feedback` e `narracao_cache`. As políticas existem apenas no painel. | `backend/migrations/` | **corrigido** (PR #8) — `006_rls_policies.sql` |
+| 10 | **Zero jargão sem verificação determinística** (§6, item 3). | `ai_service.py:411` | **corrigido** (PR #9) |
+| 11 | **Retry multiplica o custo de IA.** Se a síntese estourar os 180 s de `receiveTimeout`, o interceptor repete a request até 2×, e cada repetição dispara uma cascata de LLM completa. Uma síntese lenta vira três sínteses pagas. | `api_service.dart:206-227` | **pendente** — adiado, merece tratamento próprio |
+| 12 | **Contraste abaixo do mínimo** no Interview Mode (§6, item 5). | `interview_screen.dart` | **corrigido** (PR #7) |
+| 13 | **Escrita de `episodes` usava o cliente anon.** ⚠️ *Achado após a primeira versão deste relatório.* As três rotas autenticavam o admin via `Depends(get_current_admin)` e gravavam pelo client anon. As políticas de escrita são `TO authenticated` com claim de admin no JWT — o anon tem role `anon`, nenhuma política permissiva se aplica, e o RLS nega. Admin passava na API, escrita morria no banco. | `episodes.py:29, 49, 62` | **corrigido** (PR #8) |
+| 14 | **Build do APK quebrava com secret contendo espaço.** ⚠️ *Regressão introduzida pela própria correção do P0-2.* Os `--dart-define` opcionais eram acumulados numa string expandida sem aspas; um valor com espaço virava vários argumentos e o Flutter falhava com `Target file "secret" not found.` — mensagem que não aponta para a causa. | `build-apk.yml` | **corrigido** (PR #10) |
 
 ### 2.4 P2
 
 - **Vazamento de `TextEditingController`** — `auth_screen.dart:18-20` (3 controllers) e `onboarding_screen.dart:18` não têm `dispose()`.
 - **Endpoints de analytics são stubs silenciosos** — `/admin/stats/geo` e `/admin/stats/daily` devolvem `[]` com HTTP 200 (`analytics.py:36, 41`), porque `analytics_events` nunca migrou do MongoDB. O dashboard mostra "sem dados" em vez de "indisponível". `/admin/dashboard` engole exceções e devolve `0` (`:20-25`), então falha de Supabase vira "0 usuários".
 - **`except:` pelado** em `ai_service.py:137` — engole `KeyboardInterrupt`/`SystemExit`.
-- **`dist/` não está no `.gitignore`** e contém um APK de 61 MB + logs de QA.
+- ~~**`dist/` não está no `.gitignore`**~~ — **corrigido** (PR #11): `dist/`, `*.apk` e `*.aab` agora ignorados.
 - **`_buscarSemantico` sem null-check de sessão** (`dream_history_screen.dart:71`) — único caminho da tela sem a guarda que `_loadHistory` tem.
 - **I/O síncrono em handler async** — `file.file.read()` em `voice.py:51` bloqueia o event loop em uploads de até 15 MB.
 - **Código morto** — `analyze_dream` e `analyze_dream_narrative`, marcados DEPRECATED desde 07/07 com "REMOVER em P2".
@@ -135,6 +145,18 @@ O `CLAUDE.md` orienta o trabalho no projeto, então erros nele custam tempo real
 | "`SUPABASE_URL` e `anonKey` estão **hardcodadas** em `main.dart`" | Falso — `main.dart:22-23` usa `SupabaseConfig`, que lê de `--dart-define`. O próprio documento se contradiz adiante ("Não colocar a anonKey... em nenhum arquivo .dart"). |
 | "`generate_embedding()` retorna `[0.0] * 768` como fallback silencioso" | Retorna `None` (`ai_service.py:30, 41, 44`) — corrigido no A-02. |
 | Tabela de endpoints | Omite `/interpretacoes/*` (áudio e narração), já em produção. |
+
+---
+
+### 2.6 O keep-alive ficou correto — e ainda assim não resolve o problema
+
+Registro isto porque um workflow verde passa a impressão de que a questão foi resolvida, e não foi.
+
+A correção do P1-3 é real: o primeiro run após ela passou em **44 s**, enquanto todos os anteriores falhavam em 36 s — prova direta de que o `--max-time 30` era o defeito.
+
+Mas o objetivo era manter o Render acordado, e isso continua sem acontecer. O `cron` pede execução a cada 10 minutos; o histórico real mostra intervalos de **3 a 4 horas**, porque o GitHub estrangula agressivamente workflows agendados em repositórios de baixa atividade. O Render free tier dorme após 15 minutos de inatividade. Em 05/09, com o workflow já corrigido, medi **33,7 s** de cold start.
+
+Ou seja: o workflow deixou de mentir, mas a abordagem não alcança o objetivo. As saídas reais são tier pago no Render ou um pinger externo com agendador confiável. Enquanto isso, o retry do Dio (que o `CLAUDE.md` manda preservar) continua sendo o que salva a experiência no primeiro acesso do dia.
 
 ---
 
@@ -192,9 +214,15 @@ No código atual, tanto o histórico (`dream_history_screen.dart:112-121`) quant
 
 | PR | Conteúdo | Estado |
 |---|---|---|
-| [#3](https://github.com/robconceicao/aion/pull/3) | P0-1: `.order(ascending=)` → `desc=False` + 3 testes de rota | **merged** — produção no ar |
-| [#4](https://github.com/robconceicao/aion/pull/4) | Trabalho local resgatado (LGPD, mito espelho, busca) + 12 testes de posse | aberto, CI verde |
-| [#5](https://github.com/robconceicao/aion/pull/5) | P0-2 + P1-1, P1-2, P1-3 + 16 testes | aberto, CI verde |
+| [#3](https://github.com/robconceicao/aion/pull/3) | P0-1: `.order(ascending=)` → `desc=False` + 3 testes de rota | merged |
+| [#4](https://github.com/robconceicao/aion/pull/4) | Trabalho local resgatado (LGPD, mito espelho, busca) + 12 testes de posse | merged |
+| [#5](https://github.com/robconceicao/aion/pull/5) | P0-2 + P1-1, P1-2, P1-3 + 16 testes | merged |
+| [#7](https://github.com/robconceicao/aion/pull/7) | P1-4, P1-5, P1-6, P1-12 + item 4 da Etapa 4 | merged |
+| [#8](https://github.com/robconceicao/aion/pull/8) | P1-9 (RLS versionada) + P1-13 (escrita de `episodes`) + 5 testes | merged |
+| [#9](https://github.com/robconceicao/aion/pull/9) | P1-10 (jargão determinístico) + 16 testes | merged |
+| [#10](https://github.com/robconceicao/aion/pull/10) | P1-14 (quoting no build do APK) | merged |
+| [#11](https://github.com/robconceicao/aion/pull/11) | Versão 1.0.4+5 + `dist/` no `.gitignore` | aberto |
+| [#6](https://github.com/robconceicao/aion/pull/6) | Este relatório | aberto |
 
 ### 4.1 Validação por mutação
 
@@ -208,6 +236,10 @@ Cada correção teve os testes verificados nos dois sentidos:
 | `_wants_json` volta a olhar só o system | 2 failed |
 | `synthesize_dual` sem `json_mode` | 1 failed |
 | remover os 4 timeouts da cascata | 4 failed |
+| escrita de `episodes` de volta para o cliente anon | 3 failed |
+| `ALLOWED_ORIGINS` de volta como campo `list` | módulo nem importa — `SettingsError` na coleta |
+| remover a verificação de jargão | 4 failed |
+| fallback da entrevista voltando a usar "psique" | 2 failed |
 
 Todos os arquivos mutados foram restaurados e verificados idênticos ao HEAD.
 
@@ -215,10 +247,12 @@ Todos os arquivos mutados foram restaurados e verificados idênticos ao HEAD.
 
 ```
 início da auditoria:  73 passed
-final:                89 passed   (+16)
+final:                92 passed   (+19)
 ```
 
-Os testes novos cobrem exatamente onde o CI estava cego: rota do Canal, posse nos endpoints destrutivos, modo JSON no fallback, e tetos de tempo.
+Os testes novos cobrem exatamente onde o CI estava cego: rota do Canal, separação de clientes anon/service_role, posse nos endpoints destrutivos, modo JSON no fallback, tetos de tempo, parsing de `ALLOWED_ORIGINS` e filtro de jargão.
+
+Nenhum deles foi aceito só por passar. Cada um foi verificado por mutação — o teste tinha de **reprovar** o código sem a correção. Dois casos revelaram problemas que a leitura não pegaria: a mutação de `delete_dream` mostrou o cenário real de vazamento (usuário B apagando sonho de A), e a de `ALLOWED_ORIGINS` mostrou que o defeito impede até o import do módulo, não só a validação.
 
 ---
 
@@ -226,11 +260,12 @@ Os testes novos cobrem exatamente onde o CI estava cego: rota do Canal, posse no
 
 | Item | Por quê |
 |---|---|
-| P1-4 (`setState`/`mounted`), P1-5 (`client_missing_token`), P1-6 (`ALLOWED_ORIGINS`), P1-12 (contraste) | Priorização acordada: os 4 primeiros P1 primeiro. Todos têm correção definida e são de baixo risco. |
+| ~~P1-4, P1-5, P1-6, P1-12~~ | **Resolvidos** no PR #7. |
+| ~~P1-9~~ | **Resolvido** no PR #8, com as políticas reais transcritas do dump de `pg_policies`. |
+| ~~P1-10~~ | **Resolvido** no PR #9. |
 | P1-8 (licenciamento fail-open) | **Decidido em 04/09/2026: manter desligado por ora.** Ligar `TADEU_LICENSE_ENFORCED` bloquearia todo cliente sem token, inclusive o APK de 05/08 no aparelho. Reavaliar quando houver um build distribuído com o interceptor de licença — ver §9.5. |
-| P1-9 (RLS em migration) | Requer acesso ao painel do projeto Supabase real, que está em outra conta. |
-| P1-10 (jargão determinístico) | Depende de decisão sobre o comportamento em caso de reprovação (§6, item 3). |
-| P1-11 (retry multiplica custo de IA) | Achado tardio; merece tratamento próprio, não um remendo. |
+| P1-11 (retry multiplica custo de IA) | **Continua pendente.** É o item aberto de maior impacto financeiro: uma síntese lenta pode virar três sínteses pagas. Merece tratamento próprio, não um remendo. |
+| Cold start do Render (§2.6) | O keep-alive foi corrigido, mas a abordagem não alcança o objetivo. Resolver exige tier pago ou pinger externo — decisão de custo. |
 | Todos os P2 | Fora da priorização P0→P1 acordada. |
 | **Etapa 6 (APK)** | Bloqueada — §7. |
 
@@ -242,7 +277,7 @@ Os testes novos cobrem exatamente onde o CI estava cego: rota do Canal, posse no
 |---|---|---|
 | 1 | Fallback do `ensureFreshSession()` | **IMPLEMENTADO** |
 | 2 | Status HTTP explícito (incl. voz) | **IMPLEMENTADO** ⚠️ |
-| 3 | Zero jargão na entrevista | **PARCIAL** |
+| 3 | Zero jargão na entrevista | **PARCIAL** → corrigido (PR #9) |
 | 4 | Duração no loading | **PARCIAL** → corrigido (PR #7) |
 | 5 | Contraste no Interview Mode | **PARCIAL** → corrigido (PR #7) |
 | 6 | Descoberta da busca semântica | **IMPLEMENTADO** |
@@ -303,39 +338,70 @@ from pg_policies where schemaname='public' order by tablename;
 
 ## 7. Etapa 6 — build do APK release
 
-**Não realizado.** Bloqueado, e a decisão de não forçar é deliberada.
+**Realizado em 05/09/2026.** Versão **`1.0.4+5`** (`versionCode=5`, `versionName=1.0.4`, `minSdk=24`).
 
-### 7.1 Situação da assinatura Android
+### 7.1 Assinatura
 
-`android/key.properties` e `*.keystore`/`*.jks` **estão** no `.gitignore` (linhas 28-30) — nenhum segredo de assinatura versionado. `dart_define.json` também está ignorado e confirmadamente não rastreado.
+`android/key.properties` e `*.keystore`/`*.jks` estão no `.gitignore` — nenhum segredo de assinatura versionado. `dart_define.json` idem, e confirmadamente não rastreado.
 
-### 7.2 Por que não prosseguir
+Isso cria uma consequência que só apareceu ao olhar o `build.gradle.kts`:
 
-O item 6.5 do escopo pede confirmar que o APK aponta para o ambiente de produção. Hoje isso é inverificável:
+```kotlin
+signingConfig = if (hasKeystore) signingConfigs.getByName("release")
+                else            signingConfigs.getByName("debug")
+```
 
-1. **O `build-apk.yml` só passa a injetar as chaves depois do merge do PR #5.** Antes disso, qualquer APK do CI trava na abertura.
-2. **Os GitHub Secrets ainda não existem.** Sem `TADEU_APPS_URL`, o app compila apontando para `tadeu-apps-core-test2.vercel.app` — o **ambiente de teste**. Um APK assim não é build de produção, mesmo compilando e abrindo.
+No CI o keystore não existe, então `hasKeystore` é `false` e o APK sai assinado com a chave de **debug** — silenciosamente, sem aviso, com o build passando. Um APK assim não instala por cima de uma versão release-signed (conflito de assinatura) nem serve para a Play Store.
 
-Gerar um artefato agora produziria um APK que aponta para teste enquanto o relatório o chama de release. Preferi entregar o bloqueio nomeado.
+Por isso o build de distribuição foi feito **localmente** (caminho A), mantendo a chave fora do CI. A alternativa — levar o keystore para o GitHub como secret — foi descartada por opção do responsável.
 
-### 7.3 Para desbloquear
+O APK do CI continua útil para QA em aparelho limpo, mas não é o artefato de distribuição.
 
-1. Merge do PR #5.
-2. Criar em *Settings → Secrets and variables → Actions*:
-   - **Obrigatórios:** `SUPABASE_URL`, `SUPABASE_ANON_KEY`
-   - **Recomendados:** `TADEU_APPS_URL`, `TADEU_APPS_SUPABASE_URL`, `TADEU_APPS_SUPABASE_ANON_KEY`
-3. O push em `main` dispara o build. O step de verificação pós-build confirma que o host do Supabase está no binário — se os defines não entrarem, o job falha em vez de publicar artefato quebrado.
-4. Subir a versão em `pubspec.yaml` (hoje `1.0.3+4`) antes do build de distribuição.
+### 7.2 Artefatos
 
-Nota: o workflow gera **APK universal**, sem `--split-per-abi` — um único arquivo instalável em qualquer aparelho de QA. Para a Play Store o alvo correto é o appbundle.
+| Arquivo | Tamanho |
+|---|---|
+| `dist/aion-1.0.4+5-release.apk` (universal) | 59,2 MB |
+| `dist/aion-1.0.4+5-arm64-v8a.apk` | **24,3 MB** |
+| `dist/aion-1.0.4+5-armeabi-v7a.apk` | 22,0 MB |
+| `dist/aion-1.0.4+5-x86_64.apk` | 25,6 MB |
+
+O `--split-per-abi` acabou valendo a pena por dois motivos que só apareceram na prática: reduz o download em ~58% para o usuário final, e cada arquivo fica abaixo dos limites usuais de transferência. Para a Play Store o alvo correto continua sendo o appbundle, não estes APKs.
+
+### 7.3 Verificações do artefato
+
+Medidas, não presumidas:
+
+| Verificação | Resultado |
+|---|---|
+| Assinatura | `CN=Aion Dream Analysis, OU=Mobile, O=Roberto Tadeu` · RSA 2048 · esquema v2 |
+| É a chave de debug? | **Não** |
+| Instala por cima do APK do aparelho? | **Sim** — SHA-256 do certificado idêntico ao do build de 05/08 |
+| Supabase de produção no binário | ✅ nos 4 artefatos |
+| `aion-vvx7.onrender.com` no binário | ✅ nos 4 artefatos |
+
+**Uma armadilha que quase inverteu a conclusão:** `keytool -printcert -jarfile` respondeu *"não é um arquivo jar assinado"*, o que soa como APK sem assinatura. Não é — o `keytool` só entende assinatura v1 (JAR), e o APK usa o esquema v2. Aceitar aquela saída teria levado ao oposto do verdadeiro. A ferramenta correta é o `apksigner`, do Android SDK build-tools.
+
+O ponto de maior valor prático é a terceira linha: como o certificado é o mesmo do build de 05/08, a atualização instala por cima **sem desinstalar**, preservando a sessão e os dados locais do Hive.
+
+### 7.4 Ressalva — o Tadeu aponta para teste
+
+Os quatro artefatos foram compilados com `TADEU_APPS_URL` no default, `tadeu-apps-core-test2.vercel.app` — o **ambiente de teste**. Não há ambiente de produção do Tadeu Apps definido, e os secrets correspondentes não foram configurados.
+
+Sem efeito prático hoje, porque `TADEU_LICENSE_ENFORCED` está desligado por decisão de produto (P1-8). Mas isto **passa a importar no momento em que o licenciamento for ligado**: um build com este default validaria licenças contra o ambiente errado. Resolver o P1-7 é pré-requisito de ligar o P1-8.
 
 ---
 
 ## 8. Roteiro de teste manual no aparelho
 
-Executar com o APK novo, **após** os merges e os secrets. Anotar o que divergir.
+Executar com o `aion-1.0.4+5-arm64-v8a.apk`. Anotar o que divergir.
 
-**Pré-condições:** desinstalar a versão anterior (sessão antiga do Supabase mascara problemas de auth); rede móvel, não Wi-Fi (expõe latência real); primeira chamada do dia leva ~30 s pelo cold start do Render — é esperado.
+**Pré-condições:**
+
+- **Instalar por cima, sem desinstalar.** O certificado é o mesmo do build de 05/08 (§7.3), então a atualização preserva a sessão e os dados locais do Hive. *Isto corrige a instrução da versão anterior deste relatório, que mandava desinstalar — desnecessário, e destruiria o histórico local de teste.*
+- **Rede móvel, não Wi-Fi** — expõe a latência real.
+- **A primeira chamada do dia leva ~30 s**, pelo cold start do Render. É esperado, não é falha (§2.6).
+- O backend já está em produção com todas as correções desde 05/09; o app é a parte que estava atrasada.
 
 ### A. Abertura e sessão
 1. Abrir o app. **Deve** chegar à tela de login. Se travar na splash, os `--dart-define` não entraram.
@@ -381,7 +447,7 @@ Executar com o APK novo, **após** os merges e os secrets. Anotar o que divergir
 29. Girar a tela nas telas de resultado e histórico.
 30. Alternar para outro app durante a síntese e voltar depois de 1 min.
 
-### H. LGPD (só se o PR #4 estiver no build)
+### H. LGPD
 31. Excluir um sonho pelo histórico. Confirmar o diálogo. O item deve sumir da lista.
 32. **Testar o rollback:** modo avião, tentar excluir → o item deve **voltar** para a lista.
 33. Excluir a conta. Confirmar que o login deixa de funcionar e que os sonhos sumiram.
@@ -390,14 +456,36 @@ Executar com o APK novo, **após** os merges e os secrets. Anotar o que divergir
 
 ## 9. Recomendações, em ordem
 
-1. **Merge do PR #5 + criar os secrets** — desbloqueia a Etapa 6 e fecha o P0-2.
-2. **Revisar e mergear o PR #4** — os endpoints destrutivos agora têm 12 testes de posse.
-3. **Estreitar o pin do `supabase`** em `requirements.txt`. A faixa `>=2.11.0,<3` foi o que permitiu o P0-1.
-4. **Renomear o erro fabricado para `client_missing_token`** (P1-5) — uma linha que fecha o TD-01 de vez.
+Os itens 1, 2, 4 e 6 da versão anterior deste relatório já foram executados. O que resta:
+
+1. **Instalar o `1.0.4+5` no aparelho e rodar o roteiro da §8.** É a única verificação que este relatório não consegue fazer sozinho — tudo aqui foi medido contra código, CI e produção, mas nada contra um dedo numa tela.
+
+2. **Tratar o P1-11 — o retry que multiplica o custo de IA.** É o item aberto de maior impacto financeiro. Se a síntese estourar os 180 s de `receiveTimeout`, o interceptor repete a request até 2×, e cada repetição dispara uma cascata de LLM completa. Uma síntese lenta vira três sínteses pagas, sem que ninguém perceba. Merece desenho próprio: provavelmente excluir do retry as rotas caras, ou tornar a síntese idempotente por chave de requisição.
+
+3. **Estreitar o pin do `supabase`** em `requirements.txt`. A faixa `>=2.11.0,<3` aceita qualquer 2.x, e foi exatamente isso que permitiu o P0-1 — um `TypeError` em produção com o CI verde.
+
+4. **Decidir sobre o cold start** (§2.6). O keep-alive está correto mas não alcança o objetivo, e o `GET /` continua levando ~33 s no primeiro acesso do dia. Tier pago no Render ou pinger externo — é decisão de custo, não técnica.
+
 5. **`TADEU_LICENSE_ENFORCED` — decidido: fica desligado por ora** (P1-8).
 
    Consequência aceita conscientemente: **o licenciamento não está sendo aplicado**. Sem o header `X-Tadeu-Token`, o backend registra um warning e libera a operação (`tadeu_metering.py:22-31`) — qualquer cliente contorna a cota simplesmente omitindo o header. Não é uma falha a corrigir agora; é uma janela de transição escolhida, para não quebrar os APKs já distribuídos que não têm o interceptor de licença.
 
-   **Condição para reavaliar:** quando houver um build distribuído contendo `TadeuLicenseInterceptor` (hoje só existe em `main`, não no aparelho de QA). Ao ligar, ligar primeiro em ambiente de teste — e antes disso resolver o P1-7, senão o backend valida contra `tadeu-apps-core-test2.vercel.app`.
-6. **Versionar as políticas RLS** como `006_rls_dreams_episodes.sql` (P1-9).
-7. **Atualizar o `CLAUDE.md`** (§2.5) — quatro afirmações desatualizadas, uma delas contradizendo o próprio documento.
+   **Condição para reavaliar:** quando houver um build distribuído contendo `TadeuLicenseInterceptor`. Ao ligar, ligar primeiro em ambiente de teste — e antes disso resolver o P1-7 (§7.4), senão o backend valida contra `tadeu-apps-core-test2.vercel.app`.
+
+6. **Atualizar o `CLAUDE.md`** (§2.5) — quatro afirmações desatualizadas, uma delas contradizendo o próprio documento. Como ele orienta o trabalho no projeto, erros ali custam tempo real: a seção "Dual DB" descreve um MongoDB que não existe mais no código, e a nota sobre chaves hardcoded contradiz a regra que o próprio documento estabelece adiante.
+
+7. **Cadastrar episódios no Canal.** A tela funciona desde o PR #3, e o cadastro desde o PR #8 — mas a tabela `episodes` está vazia, então o Canal abre no estado vazio. Agora é falta de conteúdo de verdade, não bug.
+
+8. **Endereçar os P2 restantes** (§2.4), especialmente os stubs silenciosos de `/admin/stats/*`, que devolvem `[]` com HTTP 200 e fazem um dashboard vazio parecer um dashboard sem dados.
+
+---
+
+## 10. Nota de método
+
+Duas escolhas moldaram este trabalho e valem registro para auditorias futuras.
+
+**Nenhum achado foi reportado por leitura de código isolada.** Cada um foi confirmado por execução — sondagem contra produção, reprodução local do erro, ou teste automatizado. Isso custou tempo e evitou pelo menos dois erros: a hipótese de descompasso ES256/HS256 no TD-01, descartada por probe; e a de que o Supabase estava fora do ar, que cheguei a reportar como P0 e retirei ao descobrir que a falha de DNS era transitória na máquina de auditoria.
+
+**Nenhum teste foi aceito só por passar.** Cada um foi verificado por mutação: quebrar deliberadamente o código corrigido e confirmar que o teste reprova. Isso revelou coisas que a leitura não pegaria — a mutação de `delete_dream` mostrou o cenário concreto de vazamento entre usuários, e a de `ALLOWED_ORIGINS` mostrou que o defeito impede até o import do módulo, não apenas a validação de um campo.
+
+Três achados desta auditoria surgiram **durante o próprio trabalho de correção**, não no levantamento: a escrita de `episodes` pelo cliente anon (P1-13), o quoting no build do APK (P1-14, regressão introduzida por mim ao corrigir o P0-2) e a assinatura de debug no CI (§7.1). Nenhum deles apareceria numa auditoria puramente estática.

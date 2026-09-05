@@ -15,14 +15,16 @@
 | Armazenamento local | Hive | ^2.2.3 |
 | Auth + DB remoto | Supabase | ^2.5.4 (Flutter) |
 | Backend | FastAPI (Python 3.11) | — |
-| DB backend | MongoDB + Supabase (PostgreSQL) | Dual DB — ver seção abaixo |
+| DB backend | Supabase (PostgreSQL + pgvector) | Banco único — ver seção abaixo |
 | Embeddings | Gemini embedding-001 | 768 dimensões → pgvector |
 | IA análise | Claude (Anthropic) com fallback | ver cadeia abaixo |
 | IA transcrição de voz | Gemini 2.5 Flash | voice_service.py |
 | Áudio | record ^5.1.0 | Flutter |
 | Deploy frontend | Vercel (+ Firebase configurado) | — |
 | Deploy backend | Render.com | cold start ~30s no free tier |
-| CI/CD | GitHub Actions | .github/workflows/deploy.yml |
+| CI/CD | GitHub Actions | `deploy.yml` (testes), `build-apk.yml` (APK), `keep-alive.yml` |
+| Narração premium | ElevenLabs | `tts_service.py` — sob demanda, com cache |
+| Licenciamento | Tadeu Apps | `tadeu_metering.py` — hoje **desligado** (fail-open) |
 | Ferramenta de código | Antigravity | — |
 
 ## URLs de Produção
@@ -37,33 +39,40 @@ Frontend: Vercel (ver .firebaserc e vercel.json para domínios)
 aion/
 ├── backend/
 │   ├── app/
-│   │   ├── main.py              # FastAPI app, CORS, inclui todos os routers
-│   │   ├── database.py          # Supabase client
+│   │   ├── main.py              # FastAPI app, CORS, middleware de metering Tadeu
+│   │   ├── database.py          # get_supabase() [anon] e get_supabase_service()
 │   │   ├── core/
-│   │   │   ├── config.py        # Settings via pydantic-settings + .env
+│   │   │   ├── config.py        # Settings (pydantic-settings) + .env
+│   │   │   ├── jwt_verify.py    # validação local do JWT: ES256 via JWKS, HS256 legado
+│   │   │   ├── recurrence.py
 │   │   │   └── security.py
 │   │   ├── models/
-│   │   │   ├── dream.py         # DreamCreate, InterviewRequest, NarrativeRequest, SemanticSearchRequest
+│   │   │   ├── dream.py         # DreamCreate, SynthesisResult, AnaliseCompleta, MitoEspelho
 │   │   │   ├── episode.py
 │   │   │   ├── feedback.py
 │   │   │   └── user.py
 │   │   ├── routers/
-│   │   │   ├── auth.py          # POST /auth/login, /auth/register
-│   │   │   ├── dreams.py        # POST /dreams/, GET /dreams/history, busca semântica, filtros
+│   │   │   ├── auth.py          # GET /auth/me, DELETE /auth/account (LGPD)
+│   │   │   ├── dreams.py        # POST /dreams/, /interview, /search, /filter,
+│   │   │   │                    #   GET /dreams/history, DELETE /dreams/{id}
+│   │   │   ├── interpretacoes.py# POST /interpretacoes/{id}/audio e /narracao
 │   │   │   ├── voice.py         # POST /voice/transcribe
-│   │   │   ├── episodes.py      # GET /episodes/ (Canal Mito & Psique)
-│   │   │   ├── feedback.py      # POST /feedback/
-│   │   │   └── analytics.py     # GET /admin/...
+│   │   │   ├── episodes.py      # GET público; escrita só admin + service_role
+│   │   │   ├── feedback.py
+│   │   │   └── analytics.py     # GET /admin/... (stats/* são stubs — ver Banco de Dados)
 │   │   └── services/
-│   │       ├── ai_service.py    # Toda a lógica de IA (Claude/Gemini/xAI)
-│   │       └── voice_service.py # Transcrição de áudio via Gemini
+│   │       ├── ai_service.py    # Toda a lógica de IA (Claude/Gemini/xAI) + filtro de jargão
+│   │       ├── voice_service.py # Transcrição de áudio via Gemini
+│   │       ├── tts_service.py   # ElevenLabs (narração) + Edge TTS
+│   │       ├── tts_sanitizer.py
+│   │       ├── audio_service.py
+│   │       ├── narracao_cache.py
+│   │       └── tadeu_metering.py# Cota/licença Tadeu Apps (hoje fail-open)
+│   ├── migrations/              # 001..006 — 006 versiona todas as políticas de RLS
 │   ├── requirements.txt
 │   ├── Dockerfile
 │   ├── Procfile
-│   ├── analisador.py
-│   ├── processador_sonhos.py
-│   └── tests/
-│       └── test_api.py
+│   └── tests/                   # 21 arquivos, 131 testes
 ├── frontend/
 │   ├── lib/
 │   │   ├── main.dart            # Entry point: Supabase.initialize, Hive, Riverpod ProviderScope
@@ -129,6 +138,11 @@ aion/
 | `historyUrl` | `/dreams/history` | GET — histórico |
 | `transcribeUrl` | `/voice/transcribe` | POST — transcrição de voz |
 | `episodesUrl` | `/episodes/` | GET — canal Mito & Psique |
+| `audioUrl(id)` | `/interpretacoes/{id}/audio` | POST — áudio Edge TTS sob demanda |
+| `narracaoUrl(id)` | `/interpretacoes/{id}/narracao` | POST — narração premium ElevenLabs |
+
+Rotas sem constante em `AionConfig` (uso só no backend ou via `client`):
+`DELETE /dreams/{id}` e `DELETE /auth/account` (exclusão de dados — LGPD art. 18, VI).
 
 **Importante:** ao adicionar novos endpoints, atualizar `frontend/lib/src/core/constants.dart`.
 
@@ -171,10 +185,24 @@ Se adicionar modelos novos, inserir no início da lista `AI_MODELS`.
 
 ## Segurança — RLS (Row Level Security)
 
+**As políticas estão versionadas em `backend/migrations/006_rls_policies.sql`**
+— transcrição do estado real do banco, idempotente e dentro de `BEGIN/COMMIT`.
+Antes disso viviam só no painel do Supabase, sem revisão possível.
+
 | Tabela | RLS | Políticas |
 |---|---|---|
-| `public.dreams` | ✅ Ativo | Usuário vê apenas seus próprios sonhos |
+| `public.dreams` | ✅ Ativo | SELECT/INSERT/UPDATE/DELETE com `auth.uid() = user_id` |
 | `public.episodes` | ✅ Ativo | SELECT público; INSERT/UPDATE/DELETE só admin |
+| `public.feedback` | ✅ Ativo | `ALL` com `auth.uid() = user_id` |
+| `public.narracao_cache` | ✅ Ativo | só SELECT próprio — escrita apenas via `service_role` |
+| `storage.objects` | ✅ Ativo | bucket `interpretacoes-audio` (privado), só `service_role` |
+
+⚠️ **Pegadinha que já causou bug:** as políticas de escrita de `episodes` são
+`TO authenticated` com claim de admin no JWT. O cliente **anon** tem role
+`anon`, então nenhuma política permissiva se aplica e o RLS **nega**. As rotas
+de escrita autenticavam o admin na API e a escrita morria no banco. Por isso
+elas usam `get_supabase_service()`; a leitura continua no anon, de propósito.
+Coberto por `tests/test_episodes_clients.py`.
 
 **Admin no Supabase:** identificado via `app_metadata.is_admin = true` no JWT.
 Para promover um usuário a admin, executar no SQL Editor do Supabase:
@@ -186,19 +214,32 @@ WHERE email = 'email_do_usuario@exemplo.com';
 
 ⚠️ Nunca desabilitar RLS nas tabelas acima. Nunca usar `execute_sql` via MCP sem revisar o SQL completo antes.
 
-## Banco de Dados Duplo
+## Banco de Dados
 
-O projeto usa **dois** bancos:
+O projeto usa **apenas Supabase (PostgreSQL)**. Auth, dados de sonhos, pgvector
+para embeddings, episódios do Canal e busca semântica — tudo lá.
 
-| Banco | Uso | Acesso |
+> Histórico: houve um MongoDB paralelo, já removido. Não há driver Mongo em
+> `requirements.txt` nem uso no código. Sobraram dois comentários em
+> `analytics.py` explicando que `analytics_events` nunca foi migrado — por
+> isso `/admin/stats/geo` e `/admin/stats/daily` devolvem `[]` com HTTP 200.
+> São stubs, não dados vazios.
+
+| Cliente | Quando usar | Onde |
 |---|---|---|
-| **MongoDB** | Dados principais do app (legado/paralelo) | `MONGODB_URL` + `DATABASE_NAME` |
-| **Supabase (PostgreSQL)** | Auth, pgvector para embeddings, episódios, busca semântica | `SUPABASE_URL` + `SUPABASE_KEY` |
+| **anon** (`get_supabase()`) | leituras públicas — ex.: `GET /episodes/` | `SUPABASE_KEY` |
+| **service_role** (`get_supabase_service()`) | toda escrita, e leituras sob RLS restritivo | `SUPABASE_SERVICE_KEY` |
 
-A busca semântica usa a RPC `buscar_sonhos_semanticos` no Supabase com pgvector.
+⚠️ **`service_role` contorna o RLS.** Em qualquer rota que o use, a checagem de
+posse no código é a ÚNICA proteção — sempre `.eq("user_id", user_id)`. Coberto
+por `tests/test_lgpd_delete_ownership.py`.
+
+A busca semântica usa a RPC `buscar_sonhos_semanticos` com pgvector.
 Threshold de **recorrência:** 0.75 | Threshold de **busca manual:** 0.60–0.65.
 
-Embeddings: gerados via `generate_embedding()` no backend → Gemini `embedding-001` → 768 dimensões.
+Embeddings: `generate_embedding()` → Gemini `embedding-001` → 768 dimensões.
+Em falha retorna **`None`**, nunca vetor de zeros — `None` sinaliza ausência de
+indexação, e um vetor zero poluiria a busca por similaridade.
 
 ## Análise de Recorrência (Background Task)
 Após enviar a resposta ao cliente, o backend roda `_background_save_and_recurrence()`:
@@ -223,19 +264,35 @@ Seções renderizadas na ordem:
 ## Variáveis de Ambiente (backend/.env)
 
 ```env
-MONGODB_URL=...
-DATABASE_NAME=aion_db
-JWT_SECRET=...
-GEMINI_API_KEY=...          # Transcrição de voz + embeddings + fallback
-ANTHROPIC_API_KEY=...       # Análise principal de sonhos
-XAI_API_KEY=...             # Fallback final (Grok)
+GEMINI_API_KEY=...              # Transcrição de voz + embeddings + fallback
+ANTHROPIC_API_KEY=...           # Análise principal de sonhos
+XAI_API_KEY=...                 # Fallback final (Grok)
+
 SUPABASE_URL=...
-SUPABASE_KEY=...
-SUPABASE_JWT_SECRET=...
+SUPABASE_KEY=...                # anon
+SUPABASE_SERVICE_KEY=...        # service_role — escritas sob RLS restritivo
+SUPABASE_JWT_SECRET=...         # só para tokens HS256 legados
+
+ELEVENLABS_API_KEY=...          # narração premium
+ELEVENLABS_VOICE_ID=...         # sem default no código — obrigatória
+
+# Opcionais, com default no código:
+# ALLOWED_ORIGINS=...           # lista separada por vírgula (campo str, ver nota)
+# AI_TIMEOUT_SECONDS=120        # teto por tentativa de provider de IA
+# TADEU_APPS_URL=...            # default aponta para TESTE
+# TADEU_LICENSE_ENFORCED=false  # hoje desligado por decisão de produto
 ```
 
-⚠️ A `SUPABASE_URL` e `anonKey` do Supabase estão **hardcodadas** em `frontend/lib/main.dart`.
-Isso é aceitável para a anonKey pública, mas monitorar se precisar trocar o projeto Supabase.
+✅ **As chaves do Supabase NÃO estão hardcoded no app.** `SupabaseConfig`
+(`frontend/lib/src/core/supabase_config.dart`) as lê via `String.fromEnvironment`
+sem default, e `assertConfigured()` falha explicitamente antes do `runApp` se
+faltarem. Sempre construir com `--dart-define-from-file=dart_define.json`.
+
+⚠️ `ALLOWED_ORIGINS` é tipada como **`str`**, não `list`, de propósito: para
+tipos complexos o `pydantic-settings` tenta `json.loads` no valor da env var
+antes de qualquer validator, e um valor natural como
+`"https://a.com,https://b.com"` derrubava o boot com `SettingsError`. A divisão
+fica em `settings.allowed_origins_list`.
 
 ## Retry Automático (Dio — Cold Start do Render)
 O `ApiService` em `api_service.dart` tem retry automático para timeouts e erros 5xx:
@@ -273,7 +330,7 @@ venv/Scripts/activate          # Windows
 pip install -r requirements.txt
 uvicorn app.main:app --reload  # dev local
 
-# Testes
+# Testes — 131 no total; o CI roda `pytest --ignore=tests/test_api.py`
 pytest tests/
 
 # Build Docker
@@ -293,7 +350,10 @@ cp ../dart_define.example.json ../dart_define.json
 flutter run -d chrome --dart-define-from-file=../dart_define.json   # web
 flutter run --dart-define-from-file=../dart_define.json             # mobile
 flutter build web --dart-define-from-file=../dart_define.json       # build web
-flutter build apk --dart-define-from-file=../dart_define.json       # build Android
+# Build de DISTRIBUIÇÃO — sempre local, nunca o artefato do CI (ver abaixo)
+flutter build apk --release --dart-define-from-file=../dart_define.json
+flutter build apk --release --split-per-abi --dart-define-from-file=../dart_define.json
+
 sh build.sh                                                          # script completo
 
 # Gerar código Riverpod/Hive
@@ -309,7 +369,11 @@ python test_voice.py           # Testar endpoint de voz
 
 ## Erros Conhecidos e Soluções
 - **Backend retorna 502/timeout:** Cold start do Render — o Dio retenta automaticamente; se persistir, verificar logs no Render
-- **Embedding retorna zeros:** `GEMINI_API_KEY` ausente ou inválida — `generate_embedding()` retorna `[0.0] * 768` como fallback silencioso
+- **Embedding não gerado:** `GEMINI_API_KEY` ausente ou inválida — `generate_embedding()` retorna **`None`** (nunca vetor de zeros). O sonho é salvo sem indexação, e a busca semântica não o encontra
+- **`Target file "..." not found.` no build do APK:** algum secret usado em `--dart-define` contém espaço. Os argumentos são montados em array no `build-apk.yml` justamente para isso não quebrar — se voltar a aparecer, conferir o valor do secret
+- **APK do CI não instala por cima do release:** o keystore não existe no runner, então o `build.gradle.kts` cai silenciosamente na assinatura de **debug**. Para distribuição, buildar localmente
+- **`keytool` diz "não é um arquivo jar assinado":** falso alarme — ele só entende assinatura v1 (JAR) e o APK usa v2. Verificar com `apksigner verify --print-certs`
+- **Perguntas da entrevista com jargão:** o prompt proíbe, e `violacoes_de_jargao()` verifica a saída, regenera uma vez e cai para o fallback. Termos ambíguos (`sombra`, `complexo`, `anima`) ficam fora do filtro automático de propósito — barrá-los rejeitaria perguntas legítimas
 - **Análise retorna erro de modelo:** Modelo Claude não disponível para a chave — a cadeia de fallback tenta os próximos; verificar `ANTHROPIC_API_KEY` e disponibilidade de créditos
 - **Busca semântica vazia:** Verificar se o índice ivfflat do pgvector foi criado **após** inserção dos embeddings
 - **build_runner falhando:** Rodar `dart run build_runner clean` antes de `build`
@@ -323,4 +387,14 @@ python test_voice.py           # Testar endpoint de voz
 - Não commitar o `backend/.env`
 - Não commitar `dart_define.json` (contém credenciais reais; está no .gitignore)
 - Não colocar a anonKey ou SUPABASE_URL literalmente em nenhum arquivo .dart
-- Para CI/CD: injetar SUPABASE_URL e SUPABASE_ANON_KEY como GitHub Secrets e passar via --dart-define-from-file em `.github/workflows/`
+- Para CI/CD: injetar `SUPABASE_URL` e `SUPABASE_ANON_KEY` como GitHub Secrets e passar via `--dart-define` em `.github/workflows/build-apk.yml`
+- **Não distribuir o APK gerado pelo CI.** O keystore não existe no runner, então o `build.gradle.kts` cai silenciosamente na assinatura de **debug** — o artefato não instala por cima de um release nem serve para a Play Store. Serve só para QA em aparelho limpo. Build de distribuição é local
+- **Não usar `get_supabase()` (anon) em rota de escrita.** As políticas de escrita exigem role `authenticated` ou `service_role`; o anon é negado pelo RLS e a falha aparece só em produção
+- **Não confiar só no prompt para regras de saída da IA.** Prompt é controle probabilístico. A regra de zero jargão tem verificação determinística em `violacoes_de_jargao()` — se criar outra regra desse tipo, verificar a saída também
+- **Não deixar chamada de LLM sem `timeout=`.** O SDK da Anthropic usa 600s por default; três modelos em série pendurariam o worker do Render por meia hora. Usar `AI_TIMEOUT_SECONDS`
+- **Não aceitar teste que só passa.** Quebrar o código de propósito e confirmar que o teste reprova — foi assim que os bugs de posse e de `ALLOWED_ORIGINS` apareceram
+
+---
+
+*Revisado em 05/09/2026 após a auditoria completa. O relatório com achados,
+correções e o roteiro de teste manual está em `docs/auditoria-2026-09-04.md`.*

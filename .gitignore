@@ -21,6 +21,11 @@ env/
 .pub/
 build/
 
+# Artefatos de build e QA (APKs, logs, screenshots) — nunca versionar
+dist/
+*.apk
+*.aab
+
 # Mobile specific
 ios/Flutter/Generated.xcconfig
 android/local.properties

@@ -289,17 +289,123 @@ async def analyze_dream(dream_text: str, **kwargs) -> dict:
         return _get_error_response(str(e))
 
 
+# ─── VERIFICAÇÃO DETERMINÍSTICA DE JARGÃO (regra de zero jargão) ──────────
+#
+# O INTERVIEW_SYSTEM_PROMPT já proíbe jargão, mas prompt é controle
+# probabilístico: perguntas com "Divine Child", "Self emergente" e "arquétipo"
+# chegaram ao usuário em produção. Esta verificação roda DEPOIS da geração e é
+# determinística.
+#
+# CALIBRAGEM — por que a lista é menor que a do prompt:
+#
+# Um filtro agressivo demais é pior que nenhum. Reprovar leva à regeneração e,
+# persistindo, ao fallback fixo — que perde a especificidade ao sonho, o valor
+# principal da entrevista. Então só entram aqui termos SEM uso cotidiano
+# plausível numa pergunta sobre um sonho.
+#
+# Deliberadamente FORA da lista, apesar de constarem no prompt:
+#   "sombra"    — "uma sombra no corredor" é elemento concreto de sonho
+#   "complexo"  — adjetivo comum ("um sentimento complexo")
+#   "anima"     — colide com o verbo animar ("o que te anima")
+#   "projeção"  — uso cotidiano frequente
+#   "persona"   — idem
+# Bloqueá-los rejeitaria perguntas legítimas. Continuam proibidos pelo prompt;
+# apenas não são barrados automaticamente.
+_JARGAO_PROIBIDO = [
+    "arquetipo", "arquetipos", "arquetipico", "arquetipica", "arquetipal",
+    "individuacao", "individuar",
+    "inconsciente coletivo",
+    "monomito",
+    "animus",
+    "psique", "psiquico", "psiquica",
+    "numinoso", "numinosa",
+    "enantiodromia",
+    "sizigia",
+    "mandala",
+    "self",
+    "divine child", "crianca divina",
+    "velho sabio",
+    "limiar arquetipico",
+]
+
+
+def _normalizar(texto: str) -> str:
+    """Minúsculas e sem acentos, para o casamento não depender de grafia."""
+    import unicodedata
+    decomposto = unicodedata.normalize("NFD", texto.lower())
+    return "".join(c for c in decomposto if unicodedata.category(c) != "Mn")
+
+
+def violacoes_de_jargao(perguntas: list) -> list:
+    """
+    Termos proibidos encontrados nas perguntas. Lista vazia = aprovado.
+
+    Casa por palavra inteira: "psique" não dispara em "psicólogo", e "self"
+    não dispara em "selfie".
+    """
+    alvo = _normalizar(" || ".join(str(p) for p in perguntas))
+    encontrados = []
+    for termo in _JARGAO_PROIBIDO:
+        if re.search(rf"(?<!\w){re.escape(termo)}(?!\w)", alvo):
+            encontrados.append(termo)
+    return encontrados
+
+
+# Usado quando a IA falha ou reprova duas vezes na verificação.
+#
+# Estas perguntas TÊM de passar em violacoes_de_jargao() — antes usavam
+# "psique", ou seja, o fallback violava a própria regra que o prompt impõe e
+# servia jargão justamente no caminho de degradação. Há teste garantindo isso.
+INTERVIEW_FALLBACK_QUESTIONS = [
+    "Que figura ou presença do seu sonho gerou a carga emocional mais intensa — e o que essa figura poderia representar de você mesmo que ainda não foi reconhecido?",
+    "Havia algum lugar, passagem ou fronteira no sonho que você se aproximou mas não atravessou completamente? O que estava — ou o que você temia encontrar — do outro lado?",
+    "Se a cena mais marcante do sonho fosse um recado direto sobre algo que você precisa encarar agora, o que ela estaria pedindo de você?",
+]
+
+
 async def generate_interview_questions(dream_text: str) -> list:
-    try:
-        content = await call_claude(INTERVIEW_SYSTEM_PROMPT, f"Sonho: {dream_text}", max_tokens=1200)
-        data = _parse_ai_json(content)
-        return data.get("perguntas", [])
-    except Exception as e:
-        return [
-            "Que figura ou presença do seu sonho gerou a carga emocional mais intensa — e o que essa figura poderia representar de você mesmo que ainda não foi reconhecido?",
-            "Havia algum lugar, passagem ou fronteira no sonho que você se aproximou mas não atravessou completamente? O que estava — ou o que você temia encontrar — do outro lado?",
-            "Se a cena mais marcante do sonho fosse uma mensagem direta do que sua psique está tentando integrar agora, o que ela estaria pedindo de você?"
-        ]
+    """
+    Gera 3 perguntas de entrevista, verificando jargão de forma determinística.
+
+    Fluxo: gera → verifica → se reprovar, regenera UMA vez citando os termos
+    encontrados → se reprovar de novo, usa o fallback fixo.
+
+    Uma única regeneração é proposital: o usuário está esperando na tela, e
+    cada tentativa dispara a cascata de LLM.
+    """
+    violacoes: list = []
+
+    for tentativa in (1, 2):
+        reforco = ""
+        if violacoes:
+            reforco = (
+                "\n\nATENÇÃO: sua resposta anterior foi REJEITADA por conter "
+                f"jargão proibido: {', '.join(violacoes)}. "
+                "Reescreva as 3 perguntas sem NENHUM desses termos, "
+                "mantendo a referência concreta a elementos do sonho relatado."
+            )
+        try:
+            content = await call_claude(
+                INTERVIEW_SYSTEM_PROMPT,
+                f"Sonho: {dream_text}{reforco}",
+                max_tokens=1200,
+            )
+            perguntas = _parse_ai_json(content).get("perguntas", [])
+        except Exception as e:
+            print(f"[INTERVIEW] tentativa {tentativa} falhou ({type(e).__name__}): {e}")
+            break
+
+        if not perguntas:
+            print(f"[INTERVIEW] tentativa {tentativa} devolveu lista vazia.")
+            break
+
+        violacoes = violacoes_de_jargao(perguntas)
+        if not violacoes:
+            return perguntas
+
+        print(f"[INTERVIEW] tentativa {tentativa} rejeitada por jargão: {violacoes}")
+
+    return list(INTERVIEW_FALLBACK_QUESTIONS)
 
 
 async def analyze_recurring_pattern(current_dream: str, similar_dreams: list) -> str:

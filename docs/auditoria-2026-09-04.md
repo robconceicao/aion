@@ -13,7 +13,7 @@ Auditoria completa do Aion (Flutter + FastAPI + Supabase), com correções aplic
 | Achados | **2 P0**, **14 P1**, **11 P2** |
 | Corrigidos e no ar | 2 P0 + 12 P1 |
 | Pendentes | 1 P1 por decisão de produto, 1 P1 adiado, 10 P2 |
-| Testes | **73 → 92** passando |
+| Testes | **73 → 131** passando |
 | `dart analyze` | 0 erros, 0 warnings (125 infos, todos `withOpacity`) |
 | APK release | **1.0.4+5 gerado e verificado** — §7 |
 
@@ -247,8 +247,10 @@ Todos os arquivos mutados foram restaurados e verificados idênticos ao HEAD.
 
 ```
 início da auditoria:  73 passed
-final:                92 passed   (+19)
+final (main):         131 passed  (+58)
 ```
+
+*Nota de contagem: durante o trabalho, cada branch reportava 73 mais os seus próprios testes, porque partiam do `main` em momentos diferentes. O número que vale é o do `main` com tudo integrado: **131**.*
 
 Os testes novos cobrem exatamente onde o CI estava cego: rota do Canal, separação de clientes anon/service_role, posse nos endpoints destrutivos, modo JSON no fallback, tetos de tempo, parsing de `ALLOWED_ORIGINS` e filtro de jargão.
 

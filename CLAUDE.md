@@ -405,6 +405,8 @@ python test_voice.py           # Testar endpoint de voz
 - **Análise retorna erro de modelo:** Modelo Claude não disponível para a chave — a cadeia de fallback tenta os próximos; verificar `ANTHROPIC_API_KEY` e disponibilidade de créditos
 - **Busca semântica vazia:** Verificar se o índice ivfflat do pgvector foi criado **após** inserção dos embeddings
 - **build_runner falhando:** Rodar `dart run build_runner clean` antes de `build`
+- **`Building with plugins requires symlink support` no build web local (Windows):** limitação do SO, não do projeto — aparece com `flutter build web` depois de um `flutter clean`, com ou sem o `build.sh`. Ativar o Modo de Desenvolvedor (`start ms-settings:developers`). No Vercel (Linux) não acontece
+- **`sh build.sh` baixando o SDK do Flutter:** não deve mais acontecer. O script usa, nesta ordem, `FLUTTER_SDK` do ambiente, o `flutter` do PATH e só então clona em `frontend/flutter`. Se estiver clonando, é porque não há Flutter no PATH da sessão
 
 ## O que NÃO fazer
 - Não fazer chamadas HTTP diretamente com `Dio()` no Flutter — sempre `ApiService.client`

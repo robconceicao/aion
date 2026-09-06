@@ -83,6 +83,7 @@ aion/
 │   │       │   └── theme.dart          # AionTheme (darkVoid, gold, etc.)
 │   │       ├── features/
 │   │       │   ├── auth/presentation/auth_screen.dart
+│   │       │   ├── dashboard/presentation/dashboard_screen.dart
 │   │       │   ├── onboarding/presentation/onboarding_screen.dart
 │   │       │   ├── profile/presentation/profile_screen.dart
 │   │       │   └── dream/

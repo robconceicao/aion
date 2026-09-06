@@ -49,7 +49,7 @@ class _MandalaSpinnerState extends State<MandalaSpinner> with SingleTickerProvid
                     height: 300,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      border: Border.all(color: AionTheme.gold.withOpacity(0.25), width: 1.5),
+                      border: Border.all(color: AionTheme.gold.withValues(alpha: 0.25), width: 1.5),
                     ),
                   ),
                 ),

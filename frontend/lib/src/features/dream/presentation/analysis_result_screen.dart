@@ -439,7 +439,7 @@ class AnalysisResultScreen extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 36),
       decoration: BoxDecoration(
         color: AionTheme.darkDeep,
-        border: Border.all(color: AionTheme.gold.withOpacity(0.28)),
+        border: Border.all(color: AionTheme.gold.withValues(alpha: 0.28)),
       ),
       child: Column(
         children: [

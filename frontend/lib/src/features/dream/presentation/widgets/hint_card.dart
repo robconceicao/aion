@@ -84,7 +84,7 @@ class _DreamHintCardState extends State<DreamHintCard>
         decoration: BoxDecoration(
           color: AionTheme.darkAbyss,
           border: Border(
-            left: BorderSide(color: AionTheme.gold.withOpacity(0.5), width: 2),
+            left: BorderSide(color: AionTheme.gold.withValues(alpha: 0.5), width: 2),
           ),
         ),
         child: Padding(
@@ -98,7 +98,7 @@ class _DreamHintCardState extends State<DreamHintCard>
                 child: Text(
                   '✦',
                   style: TextStyle(
-                    color: AionTheme.gold.withOpacity(0.7),
+                    color: AionTheme.gold.withValues(alpha: 0.7),
                     fontSize: 11,
                   ),
                 ),
@@ -114,7 +114,7 @@ class _DreamHintCardState extends State<DreamHintCard>
                       style: GoogleFonts.ptSerif(
                         fontSize: 8,
                         letterSpacing: 2.5,
-                        color: AionTheme.gold.withOpacity(0.6),
+                        color: AionTheme.gold.withValues(alpha: 0.6),
                       ),
                     ),
                     const SizedBox(height: 5),
@@ -139,7 +139,7 @@ class _DreamHintCardState extends State<DreamHintCard>
                   child: Icon(
                     Icons.close,
                     size: 14,
-                    color: AionTheme.silver.withOpacity(0.35),
+                    color: AionTheme.silver.withValues(alpha: 0.35),
                   ),
                 ),
               ),

@@ -86,10 +86,10 @@ class _LoadingTipState extends State<LoadingTip>
         margin: const EdgeInsets.symmetric(horizontal: 16),
         padding: const EdgeInsets.fromLTRB(24, 18, 24, 18),
         decoration: BoxDecoration(
-          color: AionTheme.darkAbyss.withOpacity(0.6),
+          color: AionTheme.darkAbyss.withValues(alpha: 0.6),
           border: Border(
-            left: BorderSide(color: AionTheme.gold.withOpacity(0.45), width: 1),
-            right: BorderSide(color: AionTheme.gold.withOpacity(0.45), width: 1),
+            left: BorderSide(color: AionTheme.gold.withValues(alpha: 0.45), width: 1),
+            right: BorderSide(color: AionTheme.gold.withValues(alpha: 0.45), width: 1),
           ),
         ),
         child: Column(
@@ -100,21 +100,21 @@ class _LoadingTipState extends State<LoadingTip>
                 height: 1,
                 decoration: BoxDecoration(gradient: LinearGradient(colors: [
                   Colors.transparent,
-                  AionTheme.gold.withOpacity(0.5),
+                  AionTheme.gold.withValues(alpha: 0.5),
                 ])),
               )),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 10),
                 child: Text('✦',
                     style: TextStyle(
-                      color: AionTheme.gold.withOpacity(0.7),
+                      color: AionTheme.gold.withValues(alpha: 0.7),
                       fontSize: 9,
                     )),
               ),
               Expanded(child: Container(
                 height: 1,
                 decoration: BoxDecoration(gradient: LinearGradient(colors: [
-                  AionTheme.gold.withOpacity(0.5),
+                  AionTheme.gold.withValues(alpha: 0.5),
                   Colors.transparent,
                 ])),
               )),
@@ -129,7 +129,7 @@ class _LoadingTipState extends State<LoadingTip>
                 fontSize: 15,
                 height: 1.65,
                 fontStyle: FontStyle.italic,
-                color: AionTheme.silver.withOpacity(0.85),
+                color: AionTheme.silver.withValues(alpha: 0.85),
                 letterSpacing: 0.3,
               ),
             ),

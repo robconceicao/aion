@@ -212,7 +212,7 @@ class _AuthScreenState extends State<AuthScreen> {
   }) {
     return Container(
       decoration: BoxDecoration(
-        color: AionTheme.darkAbyss.withOpacity(0.3),
+        color: AionTheme.darkAbyss.withValues(alpha: 0.3),
         border: Border.all(color: AionTheme.veil),
       ),
       child: TextField(
@@ -221,7 +221,7 @@ class _AuthScreenState extends State<AuthScreen> {
         style: const TextStyle(color: Colors.white, fontSize: 14),
         decoration: InputDecoration(
           hintText: hint,
-          hintStyle: TextStyle(color: AionTheme.silver.withOpacity(0.5), fontSize: 11, letterSpacing: 2),
+          hintStyle: TextStyle(color: AionTheme.silver.withValues(alpha: 0.5), fontSize: 11, letterSpacing: 2),
           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
           border: InputBorder.none,
         ),
@@ -233,7 +233,7 @@ class _AuthScreenState extends State<AuthScreen> {
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
-        color: AionTheme.darkAbyss.withOpacity(0.3),
+        color: AionTheme.darkAbyss.withValues(alpha: 0.3),
         border: Border.all(color: AionTheme.veil),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -243,7 +243,7 @@ class _AuthScreenState extends State<AuthScreen> {
           hint: Text(
             'GÊNERO',
             style: TextStyle(
-              color: AionTheme.silver.withOpacity(0.5),
+              color: AionTheme.silver.withValues(alpha: 0.5),
               fontSize: 11,
               letterSpacing: 2,
             ),

@@ -255,7 +255,7 @@ class _DualInterpretationScreenState extends State<DualInterpretationScreen>
         bottom: TabBar(
           controller: _tabController,
           labelColor: AionTheme.gold,
-          unselectedLabelColor: AionTheme.silver.withOpacity(0.5),
+          unselectedLabelColor: AionTheme.silver.withValues(alpha: 0.5),
           indicatorColor: AionTheme.gold,
           indicatorWeight: 1,
           labelStyle: GoogleFonts.ptSerif(fontSize: 9, letterSpacing: 1.5),
@@ -324,9 +324,9 @@ class _DualInterpretationScreenState extends State<DualInterpretationScreen>
                   padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
                   decoration: BoxDecoration(
                     border: Border(
-                      left: BorderSide(color: AionTheme.gold.withOpacity(0.35), width: 2),
+                      left: BorderSide(color: AionTheme.gold.withValues(alpha: 0.35), width: 2),
                     ),
-                    color: AionTheme.darkAbyss.withOpacity(0.5),
+                    color: AionTheme.darkAbyss.withValues(alpha: 0.5),
                   ),
                   child: Text(
                     '"${widget.dreamText}"',
@@ -349,7 +349,7 @@ class _DualInterpretationScreenState extends State<DualInterpretationScreen>
                 'A leitura simbólica ainda não está disponível para este sonho.',
                 style: GoogleFonts.ptSerif(
                   fontSize: 14,
-                  color: AionTheme.silver.withOpacity(0.6),
+                  color: AionTheme.silver.withValues(alpha: 0.6),
                   fontStyle: FontStyle.italic,
                   height: 1.6,
                 ),
@@ -385,7 +385,7 @@ class _DualInterpretationScreenState extends State<DualInterpretationScreen>
                   textAlign: TextAlign.center,
                   style: GoogleFonts.cormorantGaramond(
                     fontSize: 13, fontStyle: FontStyle.italic,
-                    color: AionTheme.silver.withOpacity(0.35), height: 1.7,
+                    color: AionTheme.silver.withValues(alpha: 0.35), height: 1.7,
                   ),
                 ),
                 const SizedBox(height: 6),
@@ -393,7 +393,7 @@ class _DualInterpretationScreenState extends State<DualInterpretationScreen>
                     textAlign: TextAlign.center,
                     style: GoogleFonts.ptSerif(
                       fontSize: 9, letterSpacing: 2,
-                      color: AionTheme.silver.withOpacity(0.3),
+                      color: AionTheme.silver.withValues(alpha: 0.3),
                     )),
                 const SizedBox(height: 48),
                 OutlinedButton(
@@ -474,8 +474,8 @@ class _DualInterpretationScreenState extends State<DualInterpretationScreen>
                     shape: BoxShape.circle,
                     border: Border.all(
                       color: isError
-                          ? AionTheme.crimson.withOpacity(0.5)
-                          : AionTheme.gold.withOpacity(0.6),
+                          ? AionTheme.crimson.withValues(alpha: 0.5)
+                          : AionTheme.gold.withValues(alpha: 0.6),
                     ),
                   ),
                   child: isLoading
@@ -483,15 +483,15 @@ class _DualInterpretationScreenState extends State<DualInterpretationScreen>
                           padding: const EdgeInsets.all(12),
                           child: CircularProgressIndicator(
                             strokeWidth: 1.5,
-                            color: AionTheme.gold.withOpacity(0.6),
+                            color: AionTheme.gold.withValues(alpha: 0.6),
                           ),
                         )
                       : Icon(
                           isPlaying ? Icons.pause : Icons.play_arrow,
                           size: 24,
                           color: isError
-                              ? AionTheme.crimson.withOpacity(0.6)
-                              : AionTheme.gold.withOpacity(0.85),
+                              ? AionTheme.crimson.withValues(alpha: 0.6)
+                              : AionTheme.gold.withValues(alpha: 0.85),
                         ),
                 ),
               ),
@@ -511,12 +511,12 @@ class _DualInterpretationScreenState extends State<DualInterpretationScreen>
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      border: Border.all(color: AionTheme.silver.withOpacity(0.35)),
+                      border: Border.all(color: AionTheme.silver.withValues(alpha: 0.35)),
                     ),
                     child: Icon(
                       Icons.stop,
                       size: 20,
-                      color: AionTheme.silver.withOpacity(0.75),
+                      color: AionTheme.silver.withValues(alpha: 0.75),
                     ),
                   ),
                 ),
@@ -539,8 +539,8 @@ class _DualInterpretationScreenState extends State<DualInterpretationScreen>
                         fontSize: 9,
                         letterSpacing: 1.5,
                         color: isError
-                            ? AionTheme.crimson.withOpacity(0.7)
-                            : AionTheme.gold.withOpacity(0.7),
+                            ? AionTheme.crimson.withValues(alpha: 0.7)
+                            : AionTheme.gold.withValues(alpha: 0.7),
                       ),
                     ),
                   ),
@@ -556,8 +556,8 @@ class _DualInterpretationScreenState extends State<DualInterpretationScreen>
                       minHeight: 2,
                       backgroundColor: AionTheme.shadow,
                       color: isError
-                          ? AionTheme.crimson.withOpacity(0.4)
-                          : AionTheme.gold.withOpacity(0.45),
+                          ? AionTheme.crimson.withValues(alpha: 0.4)
+                          : AionTheme.gold.withValues(alpha: 0.45),
                     ),
                   ),
                 ],
@@ -583,7 +583,7 @@ class _DualInterpretationScreenState extends State<DualInterpretationScreen>
                     style: GoogleFonts.ptSerif(
                       fontSize: 11,
                       letterSpacing: 0.5,
-                      color: AionTheme.gold.withOpacity(0.8),
+                      color: AionTheme.gold.withValues(alpha: 0.8),
                     ),
                   ),
                 ),
@@ -647,13 +647,13 @@ class _DualInterpretationScreenState extends State<DualInterpretationScreen>
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('◯', style: TextStyle(fontSize: 40, color: AionTheme.gold.withOpacity(0.3))),
+            Text('◯', style: TextStyle(fontSize: 40, color: AionTheme.gold.withValues(alpha: 0.3))),
             const SizedBox(height: 24),
             Text(
               'ANÁLISE TÉCNICA INDISPONÍVEL',
               style: GoogleFonts.ptSerif(
                 fontSize: 10, letterSpacing: 3,
-                color: AionTheme.silver.withOpacity(0.5),
+                color: AionTheme.silver.withValues(alpha: 0.5),
               ),
             ),
             const SizedBox(height: 16),
@@ -664,7 +664,7 @@ class _DualInterpretationScreenState extends State<DualInterpretationScreen>
               'símbolos, arquétipos, compensação e fase da jornada.',
               textAlign: TextAlign.center,
               style: GoogleFonts.ptSerif(
-                fontSize: 13, color: AionTheme.silver.withOpacity(0.5),
+                fontSize: 13, color: AionTheme.silver.withValues(alpha: 0.5),
                 height: 1.7, fontStyle: FontStyle.italic,
               ),
             ),
@@ -709,7 +709,7 @@ class _DualInterpretationScreenState extends State<DualInterpretationScreen>
                     Text(
                       (s['amplificacao'] ?? '').toString(),
                       style: TextStyle(
-                        color: AionTheme.silver.withOpacity(0.6),
+                        color: AionTheme.silver.withValues(alpha: 0.6),
                         fontSize: 11, height: 1.5, fontStyle: FontStyle.italic,
                       ),
                     ),
@@ -852,7 +852,7 @@ class _DualInterpretationScreenState extends State<DualInterpretationScreen>
         text: TextSpan(
           style: GoogleFonts.cormorantGaramond(
             fontSize: fontSize, height: 1.85,
-            color: AionTheme.ghost.withOpacity(0.88), fontWeight: FontWeight.w300,
+            color: AionTheme.ghost.withValues(alpha: 0.88), fontWeight: FontWeight.w300,
           ),
           children: _buildRichSpans(text),
         ),
@@ -897,7 +897,7 @@ class _DualInterpretationScreenState extends State<DualInterpretationScreen>
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 28),
       decoration: BoxDecoration(
         color: AionTheme.darkDeep,
-        border: Border.all(color: AionTheme.gold.withOpacity(0.28)),
+        border: Border.all(color: AionTheme.gold.withValues(alpha: 0.28)),
       ),
       child: Column(
         children: [
@@ -919,14 +919,14 @@ class _DualInterpretationScreenState extends State<DualInterpretationScreen>
   Widget _buildDivider() {
     return Row(children: [
       Expanded(child: Container(height: 1, decoration: BoxDecoration(
-        gradient: LinearGradient(colors: [Colors.transparent, AionTheme.gold.withOpacity(0.3)]),
+        gradient: LinearGradient(colors: [Colors.transparent, AionTheme.gold.withValues(alpha: 0.3)]),
       ))),
       Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12),
-        child: Text('✦', style: TextStyle(color: AionTheme.gold.withOpacity(0.5), fontSize: 10)),
+        child: Text('✦', style: TextStyle(color: AionTheme.gold.withValues(alpha: 0.5), fontSize: 10)),
       ),
       Expanded(child: Container(height: 1, decoration: BoxDecoration(
-        gradient: LinearGradient(colors: [AionTheme.gold.withOpacity(0.3), Colors.transparent]),
+        gradient: LinearGradient(colors: [AionTheme.gold.withValues(alpha: 0.3), Colors.transparent]),
       ))),
     ]);
   }

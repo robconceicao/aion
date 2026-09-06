@@ -117,7 +117,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             Text(
                               'Defina seu horário de despertar para receber um lembrete de registrar o sonho.',
                               style: GoogleFonts.ptSerif(
-                                fontSize: 12, color: AionTheme.silver.withOpacity(0.6), height: 1.6,
+                                fontSize: 12, color: AionTheme.silver.withValues(alpha: 0.6), height: 1.6,
                               ),
                             ),
                             const SizedBox(height: 16),
@@ -160,7 +160,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               child: Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                                 decoration: BoxDecoration(
-                                  border: Border.all(color: AionTheme.gold.withOpacity(0.4)),
+                                  border: Border.all(color: AionTheme.gold.withValues(alpha: 0.4)),
                                 ),
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
@@ -223,7 +223,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         child: Text(
                           'sair da conta',
                           style: theme.textTheme.bodySmall?.copyWith(
-                            color: AionTheme.silver.withOpacity(0.5),
+                            color: AionTheme.silver.withValues(alpha: 0.5),
                             letterSpacing: 1,
                           ),
                         ),
@@ -245,7 +245,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             : Text(
                                 'excluir conta e todos os meus dados',
                                 style: theme.textTheme.bodySmall?.copyWith(
-                                  color: AionTheme.crimson.withOpacity(0.75),
+                                  color: AionTheme.crimson.withValues(alpha: 0.75),
                                   letterSpacing: 1,
                                 ),
                               ),
@@ -366,7 +366,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           style: GoogleFonts.ptSerif(
             fontSize: 10,
             letterSpacing: 2,
-            color: AionTheme.gold.withOpacity(0.7),
+            color: AionTheme.gold.withValues(alpha: 0.7),
           ),
         ),
         if (readOnly) ...[
@@ -375,7 +375,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             'Vinculado à sua conta — não editável aqui',
             style: GoogleFonts.ptSerif(
               fontSize: 10,
-              color: AionTheme.silver.withOpacity(0.45),
+              color: AionTheme.silver.withValues(alpha: 0.45),
               fontStyle: FontStyle.italic,
             ),
           ),
@@ -392,7 +392,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             decoration: InputDecoration(
               filled: true,
-              fillColor: AionTheme.darkAbyss.withOpacity(readOnly ? 0.45 : 0.3),
+              fillColor: AionTheme.darkAbyss.withValues(alpha: readOnly ? 0.45 : 0.3),
               enabledBorder: const UnderlineInputBorder(
                 borderSide: BorderSide(color: AionTheme.veil),
               ),

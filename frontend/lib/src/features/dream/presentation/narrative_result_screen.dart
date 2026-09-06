@@ -103,13 +103,13 @@ class _NarrativeResultScreenState extends State<NarrativeResultScreen>
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Icon(Icons.arrow_back, size: 14,
-                                    color: AionTheme.silver.withOpacity(0.5)),
+                                    color: AionTheme.silver.withValues(alpha: 0.5)),
                                 const SizedBox(width: 8),
                                 Text('VOLTAR',
                                     style: GoogleFonts.ptSerif(
                                       fontSize: 9,
                                       letterSpacing: 3,
-                                      color: AionTheme.silver.withOpacity(0.5),
+                                      color: AionTheme.silver.withValues(alpha: 0.5),
                                     )),
                               ],
                             ),
@@ -149,10 +149,10 @@ class _NarrativeResultScreenState extends State<NarrativeResultScreen>
                             decoration: BoxDecoration(
                               border: Border(
                                 left: BorderSide(
-                                  color: AionTheme.gold.withOpacity(0.35), width: 2,
+                                  color: AionTheme.gold.withValues(alpha: 0.35), width: 2,
                                 ),
                               ),
-                              color: AionTheme.darkAbyss.withOpacity(0.5),
+                              color: AionTheme.darkAbyss.withValues(alpha: 0.5),
                               borderRadius: const BorderRadius.only(
                                 topRight: Radius.circular(4),
                                 bottomRight: Radius.circular(4),
@@ -198,7 +198,7 @@ class _NarrativeResultScreenState extends State<NarrativeResultScreen>
                             textAlign: TextAlign.center,
                             style: GoogleFonts.cormorantGaramond(
                               fontSize: 14, fontStyle: FontStyle.italic,
-                              color: AionTheme.silver.withOpacity(0.4), height: 1.7,
+                              color: AionTheme.silver.withValues(alpha: 0.4), height: 1.7,
                             ),
                           ),
                           const SizedBox(height: 6),
@@ -206,7 +206,7 @@ class _NarrativeResultScreenState extends State<NarrativeResultScreen>
                               textAlign: TextAlign.center,
                               style: GoogleFonts.ptSerif(
                                 fontSize: 10, letterSpacing: 2,
-                                color: AionTheme.silver.withOpacity(0.3),
+                                color: AionTheme.silver.withValues(alpha: 0.3),
                               )),
                           const SizedBox(height: 48),
                           OutlinedButton(
@@ -245,7 +245,7 @@ class _NarrativeResultScreenState extends State<NarrativeResultScreen>
         text: TextSpan(
           style: GoogleFonts.cormorantGaramond(
             fontSize: 18, height: 1.85,
-            color: AionTheme.ghost.withOpacity(0.88), fontWeight: FontWeight.w300,
+            color: AionTheme.ghost.withValues(alpha: 0.88), fontWeight: FontWeight.w300,
           ),
           children: _buildRichSpans(text),
         ),
@@ -261,7 +261,7 @@ class _NarrativeResultScreenState extends State<NarrativeResultScreen>
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 36),
       decoration: BoxDecoration(
         color: AionTheme.darkDeep,
-        border: Border.all(color: AionTheme.gold.withOpacity(0.28)),
+        border: Border.all(color: AionTheme.gold.withValues(alpha: 0.28)),
       ),
       child: Column(
         children: [
@@ -297,7 +297,7 @@ class _NarrativeResultScreenState extends State<NarrativeResultScreen>
             height: 1,
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [Colors.transparent, AionTheme.gold.withOpacity(0.3)],
+                colors: [Colors.transparent, AionTheme.gold.withValues(alpha: 0.3)],
               ),
             ),
           ),
@@ -305,14 +305,14 @@ class _NarrativeResultScreenState extends State<NarrativeResultScreen>
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12),
           child: Text('✦',
-              style: TextStyle(color: AionTheme.gold.withOpacity(0.5), fontSize: 10)),
+              style: TextStyle(color: AionTheme.gold.withValues(alpha: 0.5), fontSize: 10)),
         ),
         Expanded(
           child: Container(
             height: 1,
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [AionTheme.gold.withOpacity(0.3), Colors.transparent],
+                colors: [AionTheme.gold.withValues(alpha: 0.3), Colors.transparent],
               ),
             ),
           ),

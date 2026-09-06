@@ -327,7 +327,7 @@ class _InterviewScreenState extends State<InterviewScreen>
                 height: 24,
                 margin: const EdgeInsets.only(right: 12, top: 2),
                 decoration: BoxDecoration(
-                  border: Border.all(color: AionTheme.gold.withOpacity(0.5)),
+                  border: Border.all(color: AionTheme.gold.withValues(alpha: 0.5)),
                 ),
                 child: Center(
                   child: Text(
@@ -388,7 +388,7 @@ class _InterviewScreenState extends State<InterviewScreen>
             height: 1,
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [Colors.transparent, AionTheme.gold.withOpacity(0.3)],
+                colors: [Colors.transparent, AionTheme.gold.withValues(alpha: 0.3)],
               ),
             ),
           ),
@@ -396,14 +396,14 @@ class _InterviewScreenState extends State<InterviewScreen>
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12),
           child: Text('✦',
-              style: TextStyle(color: AionTheme.gold.withOpacity(0.5), fontSize: 10)),
+              style: TextStyle(color: AionTheme.gold.withValues(alpha: 0.5), fontSize: 10)),
         ),
         Expanded(
           child: Container(
             height: 1,
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [AionTheme.gold.withOpacity(0.3), Colors.transparent],
+                colors: [AionTheme.gold.withValues(alpha: 0.3), Colors.transparent],
               ),
             ),
           ),

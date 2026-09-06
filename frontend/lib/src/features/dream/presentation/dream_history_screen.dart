@@ -214,12 +214,12 @@ class _DreamHistoryScreenState extends State<DreamHistoryScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: isActive ? color.withOpacity(0.15) : Colors.transparent,
-            border: Border.all(color: isActive ? color.withOpacity(0.6) : AionTheme.shadow),
+            color: isActive ? color.withValues(alpha: 0.15) : Colors.transparent,
+            border: Border.all(color: isActive ? color.withValues(alpha: 0.6) : AionTheme.shadow),
           ),
           child: Text(label, style: GoogleFonts.ptSerif(
             fontSize: 11, letterSpacing: 1,
-            color: isActive ? color : AionTheme.silver.withOpacity(0.7),
+            color: isActive ? color : AionTheme.silver.withValues(alpha: 0.7),
           )),
         ),
       ),
@@ -352,7 +352,7 @@ class _DreamHistoryScreenState extends State<DreamHistoryScreen> {
             children: [
               Text(
                 '☽',
-                style: TextStyle(fontSize: 48, color: AionTheme.gold.withOpacity(0.3)),
+                style: TextStyle(fontSize: 48, color: AionTheme.gold.withValues(alpha: 0.3)),
               ),
               const SizedBox(height: 24),
               Text(
@@ -360,7 +360,7 @@ class _DreamHistoryScreenState extends State<DreamHistoryScreen> {
                 style: GoogleFonts.ptSerif(
                   fontSize: 10,
                   letterSpacing: 4,
-                  color: AionTheme.silver.withOpacity(0.5),
+                  color: AionTheme.silver.withValues(alpha: 0.5),
                 ),
               ),
               const SizedBox(height: 10),
@@ -368,7 +368,7 @@ class _DreamHistoryScreenState extends State<DreamHistoryScreen> {
                 'Registre seu primeiro sonho para começar.',
                 style: GoogleFonts.ptSerif(
                   fontSize: 13,
-                  color: AionTheme.silver.withOpacity(0.4),
+                  color: AionTheme.silver.withValues(alpha: 0.4),
                   fontStyle: FontStyle.italic,
                 ),
               ),
@@ -409,9 +409,9 @@ class _DreamHistoryScreenState extends State<DreamHistoryScreen> {
                   // Label acessível via Semantics wrapper; hint visual limpo.
                   hintText: 'Buscar no diário...',
                   hintStyle: GoogleFonts.ptSerif(
-                      color: AionTheme.silver.withOpacity(0.45), fontSize: 13),
+                      color: AionTheme.silver.withValues(alpha: 0.45), fontSize: 13),
                   prefixIcon: Icon(Icons.search,
-                      color: AionTheme.silver.withOpacity(0.5), size: 20,
+                      color: AionTheme.silver.withValues(alpha: 0.5), size: 20,
                       semanticLabel: 'Ícone de busca'),
                   suffixIcon: _isSearching
                       ? const Padding(
@@ -428,7 +428,7 @@ class _DreamHistoryScreenState extends State<DreamHistoryScreen> {
                                 minHeight: 44,
                               ),
                               icon: Icon(Icons.close,
-                                  size: 18, color: AionTheme.silver.withOpacity(0.5)),
+                                  size: 18, color: AionTheme.silver.withValues(alpha: 0.5)),
                               onPressed: () {
                                 _searchController.clear();
                                 _loadHistory();
@@ -456,7 +456,7 @@ class _DreamHistoryScreenState extends State<DreamHistoryScreen> {
             style: GoogleFonts.ptSerif(
               fontSize: 9,
               letterSpacing: 2,
-              color: AionTheme.gold.withOpacity(0.8),
+              color: AionTheme.gold.withValues(alpha: 0.8),
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -541,7 +541,7 @@ class _DreamHistoryScreenState extends State<DreamHistoryScreen> {
                   style: GoogleFonts.ptSerif(
                     fontSize: 9,
                     letterSpacing: 3,
-                    color: AionTheme.silver.withOpacity(0.5),
+                    color: AionTheme.silver.withValues(alpha: 0.5),
                   ),
                 ),
               ),
@@ -562,7 +562,7 @@ class _DreamHistoryScreenState extends State<DreamHistoryScreen> {
                         textAlign: TextAlign.center,
                         style: GoogleFonts.ptSerif(
                           fontSize: 14,
-                          color: AionTheme.silver.withOpacity(0.55),
+                          color: AionTheme.silver.withValues(alpha: 0.55),
                           fontStyle: FontStyle.italic,
                           height: 1.6,
                         ),
@@ -598,8 +598,8 @@ class _DreamHistoryScreenState extends State<DreamHistoryScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        border: Border.all(color: color.withOpacity(0.3)),
+        color: color.withValues(alpha: 0.1),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
         borderRadius: BorderRadius.circular(4),
       ),
       child: Row(
@@ -763,7 +763,7 @@ class _DreamHistoryCardState extends State<_DreamHistoryCard> {
             color: _hovered ? AionTheme.darkAbyss : AionTheme.darkDeep,
             border: Border.all(
               color: _hovered
-                  ? AionTheme.gold.withOpacity(0.35)
+                  ? AionTheme.gold.withValues(alpha: 0.35)
                   : AionTheme.shadow,
             ),
           ),
@@ -778,7 +778,7 @@ class _DreamHistoryCardState extends State<_DreamHistoryCard> {
                     widget.date,
                     style: GoogleFonts.ptSerif(
                       fontSize: 10,
-                      color: AionTheme.gold.withOpacity(0.6),
+                      color: AionTheme.gold.withValues(alpha: 0.6),
                       letterSpacing: 1,
                     ),
                   ),
@@ -789,7 +789,7 @@ class _DreamHistoryCardState extends State<_DreamHistoryCard> {
                         textAlign: TextAlign.right,
                         style: GoogleFonts.ptSerif(
                           fontSize: 9,
-                          color: AionTheme.silver.withOpacity(0.5),
+                          color: AionTheme.silver.withValues(alpha: 0.5),
                           letterSpacing: 1,
                         ),
                         overflow: TextOverflow.ellipsis,
@@ -806,7 +806,7 @@ class _DreamHistoryCardState extends State<_DreamHistoryCard> {
                       icon: Icon(
                         Icons.delete_outline,
                         size: 16,
-                        color: AionTheme.silver.withOpacity(0.4),
+                        color: AionTheme.silver.withValues(alpha: 0.4),
                       ),
                       onPressed: widget.onDelete,
                     ),
@@ -821,7 +821,7 @@ class _DreamHistoryCardState extends State<_DreamHistoryCard> {
                 style: GoogleFonts.cormorantGaramond(
                   fontSize: 14,
                   fontStyle: FontStyle.italic,
-                  color: AionTheme.ghost.withOpacity(0.75),
+                  color: AionTheme.ghost.withValues(alpha: 0.75),
                   height: 1.6,
                 ),
               ),
@@ -838,7 +838,7 @@ class _DreamHistoryCardState extends State<_DreamHistoryCard> {
                   essencia,
                   style: GoogleFonts.ptSerif(
                     fontSize: 12,
-                    color: AionTheme.silver.withOpacity(0.6),
+                    color: AionTheme.silver.withValues(alpha: 0.6),
                     height: 1.6,
                   ),
                   maxLines: 2,
@@ -855,14 +855,14 @@ class _DreamHistoryCardState extends State<_DreamHistoryCard> {
                     style: GoogleFonts.ptSerif(
                       fontSize: 9,
                       letterSpacing: 2,
-                      color: _hovered ? AionTheme.gold : AionTheme.silver.withOpacity(0.4),
+                      color: _hovered ? AionTheme.gold : AionTheme.silver.withValues(alpha: 0.4),
                     ),
                   ),
                   const SizedBox(width: 6),
                   Icon(
                     Icons.arrow_forward,
                     size: 11,
-                    color: _hovered ? AionTheme.gold : AionTheme.silver.withOpacity(0.4),
+                    color: _hovered ? AionTheme.gold : AionTheme.silver.withValues(alpha: 0.4),
                   ),
                 ],
               ),

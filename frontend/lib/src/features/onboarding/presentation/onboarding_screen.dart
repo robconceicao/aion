@@ -207,7 +207,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           style: theme.textTheme.bodyLarge?.copyWith(fontSize: 16),
           decoration: InputDecoration(
             hintText: 'SEU NOME OU ESSÊNCIA',
-            hintStyle: TextStyle(color: AionTheme.silver.withOpacity(0.3), fontSize: 12, letterSpacing: 2),
+            hintStyle: TextStyle(color: AionTheme.silver.withValues(alpha: 0.3), fontSize: 12, letterSpacing: 2),
             enabledBorder: const UnderlineInputBorder(borderSide: BorderSide(color: AionTheme.veil)),
             focusedBorder: const UnderlineInputBorder(borderSide: BorderSide(color: AionTheme.gold)),
           ),

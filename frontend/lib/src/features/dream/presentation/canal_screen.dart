@@ -304,7 +304,7 @@ class _CanalScreenState extends State<CanalScreen> {
       decoration: BoxDecoration(
         color: AionTheme.deep,
         border: Border(
-          top: BorderSide(color: AionTheme.gold.withOpacity(0.5), width: 1),
+          top: BorderSide(color: AionTheme.gold.withValues(alpha: 0.5), width: 1),
           left: BorderSide(color: AionTheme.shadow),
           right: BorderSide(color: AionTheme.shadow),
           bottom: BorderSide(color: AionTheme.shadow),
@@ -374,7 +374,7 @@ class _CanalScreenState extends State<CanalScreen> {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
-                        border: Border.all(color: AionTheme.gold.withOpacity(0.4)),
+                        border: Border.all(color: AionTheme.gold.withValues(alpha: 0.4)),
                       ),
                       child: Text(
                         tag,

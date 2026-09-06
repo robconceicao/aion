@@ -7,15 +7,41 @@ echo "=== INICIANDO BUILD DIRETO (AION) ==="
 # No Vercel: buildCommand faz `cd frontend && bash build.sh` → PWD = frontend/
 PROJECT_ROOT=$PWD
 REPO_ROOT="$(cd "$PROJECT_ROOT/.." && pwd)"
-FLUTTER_SDK=$PROJECT_ROOT/flutter
-FLUTTER_BIN=$FLUTTER_SDK/bin/flutter
 
-# 1. Garantir Flutter SDK
-if [ ! -f "$FLUTTER_BIN" ]; then
-  echo "Flutter não encontrado em $FLUTTER_BIN. Iniciando download..."
-  rm -rf "$FLUTTER_SDK"
-  git clone https://github.com/flutter/flutter.git --depth 1 -b stable "$FLUTTER_SDK"
-  echo "Download concluído."
+# 1. Escolher o Flutter SDK
+#
+# Antes daqui o caminho era fixo em $PROJECT_ROOT/flutter, então rodar este
+# script na máquina de quem já tem Flutter instalado baixava um SDK inteiro
+# dentro do repositório — centenas de MB duplicados que ainda por cima faziam
+# `flutter analyze` varrer o SDK e reportar milhares de erros que não são do
+# projeto.
+#
+# Ordem de precedência, do mais explícito ao último recurso:
+#   1) FLUTTER_SDK do ambiente — override manual, vale sobre tudo
+#   2) o flutter que já estiver no PATH — o caso da máquina do dev
+#   3) clone em $PROJECT_ROOT/flutter — o caso do Vercel, onde não há nenhum
+if [ -n "${FLUTTER_SDK:-}" ]; then
+  FLUTTER_BIN=$FLUTTER_SDK/bin/flutter
+  if [ ! -f "$FLUTTER_BIN" ]; then
+    echo "ERRO: FLUTTER_SDK=$FLUTTER_SDK não contém bin/flutter." >&2
+    exit 1
+  fi
+  echo "Flutter SDK definido pelo ambiente: $FLUTTER_SDK"
+elif command -v flutter >/dev/null 2>&1; then
+  FLUTTER_BIN="$(command -v flutter)"
+  FLUTTER_SDK="$(cd "$(dirname "$FLUTTER_BIN")/.." && pwd)"
+  echo "Usando o Flutter já instalado: $FLUTTER_SDK"
+else
+  FLUTTER_SDK=$PROJECT_ROOT/flutter
+  FLUTTER_BIN=$FLUTTER_SDK/bin/flutter
+  if [ ! -f "$FLUTTER_BIN" ]; then
+    echo "Nenhum Flutter no PATH. Baixando para $FLUTTER_SDK..."
+    rm -rf "$FLUTTER_SDK"
+    git clone https://github.com/flutter/flutter.git --depth 1 -b stable "$FLUTTER_SDK"
+    echo "Download concluído."
+  else
+    echo "Usando o Flutter do repositório: $FLUTTER_SDK"
+  fi
 fi
 
 # Adicionar ao PATH para esta sessão

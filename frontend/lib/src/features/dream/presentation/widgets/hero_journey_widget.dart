@@ -165,17 +165,17 @@ class _HeroJourneyWidgetState extends State<HeroJourneyWidget>
       Container(
         width: 8, height: 8,
         decoration: BoxDecoration(
-          color: active ? color : color.withOpacity(0.2),
+          color: active ? color : color.withValues(alpha: 0.2),
           shape: BoxShape.circle,
           boxShadow: active
-              ? [BoxShadow(color: color.withOpacity(0.5), blurRadius: 8, spreadRadius: 1)]
+              ? [BoxShadow(color: color.withValues(alpha: 0.5), blurRadius: 8, spreadRadius: 1)]
               : null,
         ),
       ),
       const SizedBox(height: 4),
       Text(label, style: TextStyle(
         fontSize: 8, letterSpacing: 1.5,
-        color: active ? color : color.withOpacity(0.3),
+        color: active ? color : color.withValues(alpha: 0.3),
         fontWeight: active ? FontWeight.w600 : FontWeight.w400,
       )),
     ]);

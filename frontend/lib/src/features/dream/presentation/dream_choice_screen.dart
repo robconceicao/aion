@@ -99,11 +99,11 @@ class _DreamChoiceScreenState extends State<DreamChoiceScreen>
                         decoration: BoxDecoration(
                           border: Border(
                             left: BorderSide(
-                              color: AionTheme.gold.withOpacity(0.35),
+                              color: AionTheme.gold.withValues(alpha: 0.35),
                               width: 2,
                             ),
                           ),
-                          color: AionTheme.darkAbyss.withOpacity(0.6),
+                          color: AionTheme.darkAbyss.withValues(alpha: 0.6),
                           borderRadius: const BorderRadius.only(
                             topRight: Radius.circular(6),
                             bottomRight: Radius.circular(6),
@@ -193,7 +193,7 @@ class _DreamChoiceScreenState extends State<DreamChoiceScreen>
                         textAlign: TextAlign.center,
                         style: GoogleFonts.ptSerif(
                           fontSize: 11,
-                          color: AionTheme.silver.withOpacity(0.4),
+                          color: AionTheme.silver.withValues(alpha: 0.4),
                           letterSpacing: 0.5,
                           fontStyle: FontStyle.italic,
                         ),
@@ -217,7 +217,7 @@ class _DreamChoiceScreenState extends State<DreamChoiceScreen>
             height: 1,
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [Colors.transparent, AionTheme.gold.withOpacity(0.3)],
+                colors: [Colors.transparent, AionTheme.gold.withValues(alpha: 0.3)],
               ),
             ),
           ),
@@ -226,7 +226,7 @@ class _DreamChoiceScreenState extends State<DreamChoiceScreen>
           padding: const EdgeInsets.symmetric(horizontal: 12),
           child: Text(
             '✦',
-            style: TextStyle(color: AionTheme.gold.withOpacity(0.5), fontSize: 10),
+            style: TextStyle(color: AionTheme.gold.withValues(alpha: 0.5), fontSize: 10),
           ),
         ),
         Expanded(
@@ -234,7 +234,7 @@ class _DreamChoiceScreenState extends State<DreamChoiceScreen>
             height: 1,
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [AionTheme.gold.withOpacity(0.3), Colors.transparent],
+                colors: [AionTheme.gold.withValues(alpha: 0.3), Colors.transparent],
               ),
             ),
           ),
@@ -356,7 +356,7 @@ class _ChoiceCardState extends State<_ChoiceCard> {
           decoration: BoxDecoration(
             color: _hovered ? AionTheme.darkAbyss : AionTheme.darkDeep,
             border: Border.all(
-              color: _hovered ? widget.accentColor.withOpacity(0.5) : AionTheme.shadow,
+              color: _hovered ? widget.accentColor.withValues(alpha: 0.5) : AionTheme.shadow,
               width: 1,
             ),
           ),
@@ -389,7 +389,7 @@ class _ChoiceCardState extends State<_ChoiceCard> {
               Container(
                 height: 1,
                 width: 32,
-                color: widget.accentColor.withOpacity(0.35),
+                color: widget.accentColor.withValues(alpha: 0.35),
                 margin: const EdgeInsets.only(bottom: 12),
               ),
               Text(
@@ -402,7 +402,7 @@ class _ChoiceCardState extends State<_ChoiceCard> {
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                 decoration: BoxDecoration(
                   color: _hovered ? widget.accentColor : Colors.transparent,
-                  border: Border.all(color: widget.accentColor.withOpacity(0.4)),
+                  border: Border.all(color: widget.accentColor.withValues(alpha: 0.4)),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,

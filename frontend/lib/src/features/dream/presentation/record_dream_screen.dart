@@ -304,7 +304,7 @@ class _RecordDreamScreenState extends State<RecordDreamScreen> with SingleTicker
 
   Widget _buildTranscribingOverlay() {
     return Container(
-      color: AionTheme.darkVoid.withOpacity(0.6),
+      color: AionTheme.darkVoid.withValues(alpha: 0.6),
       child: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -335,7 +335,7 @@ class _RecordDreamScreenState extends State<RecordDreamScreen> with SingleTicker
 
   Widget _buildLoadingOverlay() {
     return Container(
-      color: AionTheme.darkVoid.withOpacity(0.92),
+      color: AionTheme.darkVoid.withValues(alpha: 0.92),
       child: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -366,7 +366,7 @@ class _RecordDreamScreenState extends State<RecordDreamScreen> with SingleTicker
                 textAlign: TextAlign.center,
                 style: GoogleFonts.cormorantGaramond(
                   fontSize: 18,
-                  color: AionTheme.ghost.withOpacity(0.7),
+                  color: AionTheme.ghost.withValues(alpha: 0.7),
                   fontStyle: FontStyle.italic,
                 ),
               ),
@@ -462,7 +462,7 @@ class _RecordDreamScreenState extends State<RecordDreamScreen> with SingleTicker
               color: AionTheme.deep,
               border: Border.all(
                 color: _textInputController.text.length > 20 
-                    ? AionTheme.gold.withOpacity(0.6) 
+                    ? AionTheme.gold.withValues(alpha: 0.6) 
                     : AionTheme.shadow,
               ),
             ),
@@ -551,7 +551,7 @@ class _RecordDreamScreenState extends State<RecordDreamScreen> with SingleTicker
           const SizedBox(height: 4),
           Text('Selecione até 3 emoções',
               style: GoogleFonts.ptSerif(
-                fontSize: 11, color: AionTheme.silver.withOpacity(0.65),
+                fontSize: 11, color: AionTheme.silver.withValues(alpha: 0.65),
               )),
           const SizedBox(height: 16),
 
@@ -604,7 +604,7 @@ class _RecordDreamScreenState extends State<RecordDreamScreen> with SingleTicker
           const SizedBox(height: 4),
           Text('Selecione até 2 temas',
               style: GoogleFonts.ptSerif(
-                fontSize: 11, color: AionTheme.silver.withOpacity(0.65),
+                fontSize: 11, color: AionTheme.silver.withValues(alpha: 0.65),
               )),
           const SizedBox(height: 16),
           TagSelector(
@@ -626,7 +626,7 @@ class _RecordDreamScreenState extends State<RecordDreamScreen> with SingleTicker
           const SizedBox(height: 4),
           Text('Contexto que pode ter influenciado o sonho',
               style: GoogleFonts.ptSerif(
-                fontSize: 11, color: AionTheme.silver.withOpacity(0.65),
+                fontSize: 11, color: AionTheme.silver.withValues(alpha: 0.65),
               )),
           const SizedBox(height: 16),
           TagSelector(
@@ -648,7 +648,7 @@ class _RecordDreamScreenState extends State<RecordDreamScreen> with SingleTicker
             textAlign: TextAlign.center,
             style: GoogleFonts.ptSerif(
               fontSize: 11,
-              color: AionTheme.silver.withOpacity(0.55),
+              color: AionTheme.silver.withValues(alpha: 0.55),
               fontStyle: FontStyle.italic,
               height: 1.5,
             ),

@@ -39,7 +39,7 @@ class _AionPulseLogoState extends State<AionPulseLogo> with SingleTickerProvider
             shape: BoxShape.circle,
             boxShadow: [
               BoxShadow(
-                color: AionTheme.gold.withOpacity(0.12 * _controller.value),
+                color: AionTheme.gold.withValues(alpha: 0.12 * _controller.value),
                 blurRadius: 45 * _controller.value,
                 spreadRadius: 8 * _controller.value,
               ),
@@ -51,7 +51,7 @@ class _AionPulseLogoState extends State<AionPulseLogo> with SingleTickerProvider
             child: Image.asset(
               'assets/images/logo.png',
               fit: BoxFit.contain,
-              color: Colors.white.withOpacity(0.9),
+              color: Colors.white.withValues(alpha: 0.9),
               colorBlendMode: BlendMode.modulate,
             ),
           ),
@@ -100,7 +100,7 @@ class _AionSpinLogoState extends State<AionSpinLogo> with SingleTickerProviderSt
             shape: BoxShape.circle,
             boxShadow: [
               BoxShadow(
-                color: AionTheme.gold.withOpacity(0.15),
+                color: AionTheme.gold.withValues(alpha: 0.15),
                 blurRadius: 35,
                 spreadRadius: 4,
               ),
@@ -115,7 +115,7 @@ class _AionSpinLogoState extends State<AionSpinLogo> with SingleTickerProviderSt
               width: widget.size,
               height: widget.size,
               fit: BoxFit.contain,
-              color: Colors.white.withOpacity(0.9),
+              color: Colors.white.withValues(alpha: 0.9),
               colorBlendMode: BlendMode.modulate,
             ),
           ),

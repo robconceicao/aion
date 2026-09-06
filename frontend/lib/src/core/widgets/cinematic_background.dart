@@ -32,7 +32,7 @@ class _AmbientLighting extends StatelessWidget {
             width: 400, height: 400,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              gradient: RadialGradient(colors: [AionTheme.gold.withOpacity(0.03), Colors.transparent]),
+              gradient: RadialGradient(colors: [AionTheme.gold.withValues(alpha: 0.03), Colors.transparent]),
             ),
           ),
         ),
@@ -42,7 +42,7 @@ class _AmbientLighting extends StatelessWidget {
             width: 500, height: 500,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              gradient: RadialGradient(colors: [AionTheme.indigo.withOpacity(0.04), Colors.transparent]),
+              gradient: RadialGradient(colors: [AionTheme.indigo.withValues(alpha: 0.04), Colors.transparent]),
             ),
           ),
         ),
@@ -90,13 +90,13 @@ class _StardustPainter extends CustomPainter {
   _StardustPainter(this.stars, this.progress);
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = AionTheme.silver.withOpacity(0.25);
+    final paint = Paint()..color = AionTheme.silver.withValues(alpha: 0.25);
     for (var star in stars) {
       final x = (star.x * size.width + (star.drift * size.width * progress)) % size.width;
       final y = (star.y * size.height - (star.speed * size.height * progress)) % size.height;
       canvas.drawCircle(Offset(x, y), star.size, paint);
       if (star.size > 1.4) {
-        canvas.drawCircle(Offset(x, y), star.size * 2, Paint()..color = AionTheme.gold.withOpacity(0.08));
+        canvas.drawCircle(Offset(x, y), star.size * 2, Paint()..color = AionTheme.gold.withValues(alpha: 0.08));
       }
     }
   }

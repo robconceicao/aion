@@ -41,13 +41,13 @@ class DashboardScreen extends StatelessWidget {
       blur: 15,
       alignment: Alignment.center,
       border: 1,
-      linearGradient: LinearGradient(colors: [Colors.white.withOpacity(0.1), Colors.white.withOpacity(0.05)]),
-      borderGradient: LinearGradient(colors: [const Color(0xFFD4AF37).withOpacity(0.3), Colors.transparent]),
+      linearGradient: LinearGradient(colors: [Colors.white.withValues(alpha: 0.1), Colors.white.withValues(alpha: 0.05)]),
+      borderGradient: LinearGradient(colors: [const Color(0xFFD4AF37).withValues(alpha: 0.3), Colors.transparent]),
       child: RadarChart(
         RadarChartData(
           dataSets: [
             RadarDataSet(
-              fillColor: const Color(0xFFD4AF37).withOpacity(0.4),
+              fillColor: const Color(0xFFD4AF37).withValues(alpha: 0.4),
               borderColor: const Color(0xFFD4AF37),
               entryRadius: 3,
               dataEntries: [

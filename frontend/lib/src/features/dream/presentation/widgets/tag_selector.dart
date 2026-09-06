@@ -86,11 +86,11 @@ class TagSelector extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
                 decoration: BoxDecoration(
                   color: isSelected
-                      ? accentColor.withOpacity(0.15)
+                      ? accentColor.withValues(alpha: 0.15)
                       : AionTheme.darkAbyss,
                   border: Border.all(
                     color: isSelected
-                        ? accentColor.withOpacity(0.6)
+                        ? accentColor.withValues(alpha: 0.6)
                         : AionTheme.shadow,
                   ),
                 ),
@@ -100,7 +100,7 @@ class TagSelector extends StatelessWidget {
                     fontSize: 11,
                     color: isSelected
                         ? accentColor
-                        : AionTheme.silver.withOpacity(canSelect ? 0.7 : 0.3),
+                        : AionTheme.silver.withValues(alpha: canSelect ? 0.7 : 0.3),
                     letterSpacing: 0.3,
                   ),
                 ),

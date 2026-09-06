@@ -85,4 +85,19 @@ app.include_router(interpretacoes.router, prefix="/interpretacoes", tags=["Inter
 
 @app.get("/")
 async def root():
-    return {"message": f"Welcome to {settings.PROJECT_NAME} API - Aion está ativo."}
+    """Liveness + identificação do build em execução.
+
+    O `commit` existe para responder "o Render já subiu o merge?" com um curl,
+    sem abrir o painel. O Render não registra deploy nenhum na API do GitHub e
+    as mudanças de backend costumam ser invisíveis de fora, então antes disto
+    não havia sonda que distinguisse uma versão da outra.
+
+    O SHA é público de propósito: o repositório é público, então o commit não
+    revela nada que já não esteja no GitHub. Não colocar aqui nada que não
+    valha para um leitor anônimo.
+    """
+    return {
+        "message": f"Welcome to {settings.PROJECT_NAME} API - Aion está ativo.",
+        "commit": settings.commit_curto,
+        "branch": settings.RENDER_GIT_BRANCH or "desconhecido",
+    }

@@ -25,6 +25,23 @@ class Settings(BaseSettings):
     def allowed_origins_list(self) -> list[str]:
         """Origens de CORS já divididas e sem espaços em branco."""
         return [o.strip() for o in self.ALLOWED_ORIGINS.split(",") if o.strip()]
+    # Commit em execução — responde "o deploy já subiu?" sem abrir o painel.
+    #
+    # O Render injeta RENDER_GIT_COMMIT e RENDER_GIT_BRANCH sozinho em todo
+    # deploy, inclusive nos baseados em Docker. Por isso não há build-arg nem
+    # ARG no Dockerfile: qualquer um deles congelaria o SHA no momento do build
+    # da imagem, que não é o que queremos saber.
+    #
+    # Fora do Render as duas ficam vazias e o GET / responde "desconhecido" —
+    # ausência de informação, nunca um SHA errado.
+    RENDER_GIT_COMMIT: str = os.getenv("RENDER_GIT_COMMIT", "")
+    RENDER_GIT_BRANCH: str = os.getenv("RENDER_GIT_BRANCH", "")
+
+    @property
+    def commit_curto(self) -> str:
+        """Os 7 primeiros caracteres do SHA, como o `git log --oneline`."""
+        return self.RENDER_GIT_COMMIT[:7] if self.RENDER_GIT_COMMIT else "desconhecido"
+
     GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
     ANTHROPIC_API_KEY: str = os.getenv("ANTHROPIC_API_KEY", "")
     XAI_API_KEY: str = os.getenv("XAI_API_KEY", "")

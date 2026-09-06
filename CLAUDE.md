@@ -72,7 +72,7 @@ aion/
 │   ├── requirements.txt
 │   ├── Dockerfile
 │   ├── Procfile
-│   └── tests/                   # 21 arquivos, 131 testes
+│   └── tests/                   # 22 arquivos, 136 testes
 ├── frontend/
 │   ├── lib/
 │   │   ├── main.dart            # Entry point: Supabase.initialize, Hive, Riverpod ProviderScope
@@ -131,6 +131,7 @@ aion/
 | Constante | URL | Uso |
 |---|---|---|
 | `apiBaseUrl` | `https://aion-vvx7.onrender.com` | Base |
+| — | `/` | GET — liveness + `commit`/`branch` do deploy (ver abaixo) |
 | `analyzeUrl` | `/dreams/` | POST — análise completa |
 | `interviewUrl` | `/dreams/interview` | POST — gera perguntas |
 | `searchUrl` | `/dreams/search` | POST — busca semântica |
@@ -150,6 +151,24 @@ sem cache). Não tem constante e não é chamado pelo app — o caminho atual é
 `POST /interpretacoes/{id}/audio`. Mantido só por compatibilidade.
 
 **Importante:** ao adicionar novos endpoints, atualizar `frontend/lib/src/core/constants.dart`.
+
+### Qual build está em produção
+
+```bash
+curl -s https://aion-vvx7.onrender.com/
+# {"message":"...","commit":"1b2ca79","branch":"main"}
+```
+
+O Render **não** registra deploy na API do GitHub — os deployments que aparecem
+lá são todos do `vercel[bot]`, do frontend. E mudanças de backend costumam ser
+invisíveis de fora. Sem este campo, "o merge já subiu?" só tinha resposta
+abrindo o painel do Render.
+
+O SHA vem de `RENDER_GIT_COMMIT`, que o Render injeta sozinho em todo deploy,
+inclusive nos baseados em Docker. Por isso **não** há `ARG` no Dockerfile: um
+build-arg congelaria o SHA no build da imagem, que não é o que se quer saber.
+Fora do Render a variável não existe e a resposta é `"desconhecido"` — ausência
+de informação, nunca um SHA errado.
 
 ## Fluxo do Usuário
 
@@ -335,7 +354,11 @@ venv/Scripts/activate          # Windows
 pip install -r requirements.txt
 uvicorn app.main:app --reload  # dev local
 
-# Testes — 131 no total; o CI roda `pytest --ignore=tests/test_api.py`
+# Testes — 136 no total; o CI roda `pytest --ignore=tests/test_api.py`
+#
+# test_api.py é ignorado porque usa TestClient, que quebra com httpx 0.28 +
+# starlette 0.27 (TypeError no construtor). Teste novo NÃO deve usar
+# TestClient: chame a corotina do endpoint direto, como test_root_commit.py.
 pytest tests/
 
 # Build Docker

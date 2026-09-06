@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from app.models.episode import EpisodeCreate, EpisodeModel
 from app.database import get_supabase, get_supabase_service
 from app.routers.auth import get_current_admin
-from datetime import datetime
+from datetime import datetime, timezone
 import uuid
 
 router = APIRouter()
@@ -46,7 +46,7 @@ async def create_episode(episode_in: EpisodeCreate, admin: dict = Depends(get_cu
 
     episode_dict = episode_in.model_dump()
     episode_dict["id"] = str(uuid.uuid4())
-    episode_dict["created_at"] = datetime.utcnow().isoformat()
+    episode_dict["created_at"] = datetime.now(timezone.utc).isoformat()
 
     response = supabase.table("episodes").insert(episode_dict).execute()
     return response.data[0]

@@ -94,6 +94,7 @@ aion/
 │   │       │       │   ├── interview_screen.dart        # Modo Entrevista
 │   │       │       │   ├── analysis_result_screen.dart  # Mapa Arquetípico
 │   │       │       │   ├── narrative_result_screen.dart # Narrativa
+│   │       │       │   ├── dual_interpretation_screen.dart # Interpretação dupla
 │   │       │       │   ├── dream_history_screen.dart    # Histórico
 │   │       │       │   ├── archetypes_screen.dart
 │   │       │       │   ├── canal_screen.dart            # Episódios Mito & Psique
@@ -133,16 +134,20 @@ aion/
 | `analyzeUrl` | `/dreams/` | POST — análise completa |
 | `interviewUrl` | `/dreams/interview` | POST — gera perguntas |
 | `searchUrl` | `/dreams/search` | POST — busca semântica |
-| `filterUrl` | `/dreams/filter` | POST — filtros |
-| `narrativeUrl` | `/dreams/narrative` | POST — narrativa |
+| `filterUrl` | `/dreams/filter` | GET — filtros por emoção/fase (query params) |
 | `historyUrl` | `/dreams/history` | GET — histórico |
 | `transcribeUrl` | `/voice/transcribe` | POST — transcrição de voz |
 | `episodesUrl` | `/episodes/` | GET — canal Mito & Psique |
 | `audioUrl(id)` | `/interpretacoes/{id}/audio` | POST — áudio Edge TTS sob demanda |
 | `narracaoUrl(id)` | `/interpretacoes/{id}/narracao` | POST — narração premium ElevenLabs |
 
-Rotas sem constante em `AionConfig` (uso só no backend ou via `client`):
-`DELETE /dreams/{id}` e `DELETE /auth/account` (exclusão de dados — LGPD art. 18, VI).
+Exclusão de dados (LGPD art. 18, VI) — ambas com constante em `AionConfig`:
+`DELETE /dreams/{id}` via `deleteDreamUrl(id)` e `DELETE /auth/account` via
+`deleteAccountUrl`.
+
+Existe ainda um `GET /dreams/{id}/audio` **legado** no backend (Edge TTS direto,
+sem cache). Não tem constante e não é chamado pelo app — o caminho atual é
+`POST /interpretacoes/{id}/audio`. Mantido só por compatibilidade.
 
 **Importante:** ao adicionar novos endpoints, atualizar `frontend/lib/src/core/constants.dart`.
 

@@ -9,7 +9,7 @@ from app.services.ai_service import (
     generate_interview_questions, analyze_recurring_pattern,
     generate_embedding
 )
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 import uuid
 import asyncio
@@ -78,7 +78,7 @@ def _build_dream_row(
         "recurrence_count": len(similar_dreams),
         "user_id": user_id,
         "user_email": user_email,
-        "created_at": datetime.utcnow().isoformat(),
+        "created_at": datetime.now(timezone.utc).isoformat(),
         "interpretation_status": "ok",
         "embedding_status": "failed" if embedding is None else "ok",
     }

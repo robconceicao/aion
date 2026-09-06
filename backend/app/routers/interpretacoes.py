@@ -225,7 +225,7 @@ async def request_audio(
     try:
         supabase.table("dreams").update({
             "audio_path": audio_path,
-            "audio_gerado_em": datetime.datetime.utcnow().isoformat(),
+            "audio_gerado_em": datetime.datetime.now(datetime.timezone.utc).isoformat(),
         }).eq("id", dream_id).eq("user_id", user_id).execute()
     except Exception as e:
         # Não fatal — o áudio foi gerado e uploadado; só o cache ficou sem registro

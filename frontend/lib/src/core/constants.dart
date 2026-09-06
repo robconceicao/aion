@@ -5,13 +5,13 @@ class AionConfig {
   static const String transcribeUrl = '$apiBaseUrl/voice/transcribe';
   // Ajustado: O endpoint correto no FastAPI é apenas /dreams/
   static const String analyzeUrl = '$apiBaseUrl/dreams/';
-  static const String dreamUrl     = '$apiBaseUrl/dreams/';
   static const String historyUrl   = '$apiBaseUrl/dreams/history';
   static const String episodesUrl  = '$apiBaseUrl/episodes/';
   static const String interviewUrl = '$apiBaseUrl/dreams/interview';
   static const String searchUrl    = '$apiBaseUrl/dreams/search';
+
+  /// Filtro por emoção/fase. GET com query params — não POST.
   static const String filterUrl    = '$apiBaseUrl/dreams/filter';
-  static const String narrativeUrl = '$apiBaseUrl/dreams/narrative';
 
   /// Exclusão de um sonho específico (LGPD art. 18, VI — direito de eliminação).
   static String deleteDreamUrl(String dreamId) => '$apiBaseUrl/dreams/$dreamId';

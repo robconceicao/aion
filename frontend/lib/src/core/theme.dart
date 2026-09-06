@@ -80,7 +80,10 @@ class AionTheme {
         primary: gold,
         secondary: amber,
         surface: darkAbyss,
-        background: darkVoid,
+        // `background` foi deprecado e fundido em `surface` no Material 3.
+        // Removido em vez de migrado: nada no projeto lê colorScheme.background,
+        // e o fundo das telas vem de scaffoldBackgroundColor (darkVoid) logo
+        // acima — apontar `surface` para darkVoid mudaria a cor dos cards.
       ),
       textTheme: TextTheme(
         displayLarge: GoogleFonts.cormorantGaramond(

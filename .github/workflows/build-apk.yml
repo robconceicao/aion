@@ -1,8 +1,8 @@
-name: Build APK
+name: Build Homologation APK
 
 on:
   push:
-    branches: [ main, claude/** ]
+    branches: [ main, claude/**, 'codex/**' ]
   workflow_dispatch:
 
 jobs:
@@ -50,6 +50,13 @@ jobs:
         working-directory: frontend
         run: flutter pub get
 
+      - name: Test license build policy (production and homologation)
+        working-directory: frontend
+        run: |
+          flutter test test/license_build_test.dart
+          flutter test test/license_build_test.dart --dart-define=APP_ENV=homologation --dart-define=TEST_LICENSE_BYPASS=true
+          flutter test test/license_build_test.dart --dart-define=APP_ENV=production --dart-define=TEST_LICENSE_BYPASS=true
+
       # APK universal (sem --split-per-abi): um unico artefato instalavel em
       # qualquer aparelho de QA, sem o passo de escolher a ABI certa. Para
       # publicacao na Play Store o alvo correto e o appbundle, nao este APK.
@@ -74,6 +81,8 @@ jobs:
           # valor do secret.
           args=(
             --release
+            --dart-define=APP_ENV=homologation
+            --dart-define=TEST_LICENSE_BYPASS=true
             --dart-define=SUPABASE_URL="$SUPABASE_URL"
             --dart-define=SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY"
           )
@@ -110,6 +119,6 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: aion-release-${{ github.sha }}
+          name: aion-homologation-${{ github.sha }}
           path: frontend/build/app/outputs/flutter-apk/app-release.apk
           retention-days: 14

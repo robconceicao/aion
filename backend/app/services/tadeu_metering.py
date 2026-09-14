@@ -11,12 +11,10 @@ TADEU_APPS_URL = os.getenv(
     "TADEU_APPS_URL",
     "https://tadeu-apps-core-test2.vercel.app",
 ).rstrip("/")
-TADEU_LICENSE_ENFORCED = os.getenv("TADEU_LICENSE_ENFORCED", "false").lower() in {
-    "1",
-    "true",
-    "yes",
-    "on",
-}
+TEST_LICENSE_BYPASS = os.getenv("TEST_LICENSE_BYPASS") == "true"
+if TEST_LICENSE_BYPASS and os.getenv("APP_ENV") != "homologation":
+    raise RuntimeError("TEST_LICENSE_BYPASS requires APP_ENV=homologation")
+TADEU_LICENSE_ENFORCED = not TEST_LICENSE_BYPASS
 
 
 def _missing_token() -> None:
@@ -57,6 +55,8 @@ def _handle_auth_or_quota(response: httpx.Response, feature: str, data: dict) ->
 
 async def check_tadeu_quota(*, token: Optional[str], feature: str) -> dict | None:
     """Consulta a cota sem consumir nada, antes de chamar IA/voz."""
+    if TEST_LICENSE_BYPASS:
+        return None
     if not token:
         _missing_token()
         return None
@@ -125,6 +125,8 @@ async def consume_tadeu_usage(
     idempotency_key: Optional[str] = None,
 ) -> dict | None:
     """Registra uso somente depois de a operação do AION concluir com sucesso."""
+    if TEST_LICENSE_BYPASS:
+        return None
     if not token:
         _missing_token()
         return None

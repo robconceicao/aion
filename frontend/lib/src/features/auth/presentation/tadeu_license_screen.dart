@@ -22,11 +22,6 @@ class _TadeuLicenseScreenState extends State<TadeuLicenseScreen> {
   }
 
   Future<void> _tryExistingLicense() async {
-    if (!TadeuLicenseService.isConfigured) {
-      if (mounted) Navigator.pushReplacementNamed(context, '/home');
-      return;
-    }
-
     try {
       await TadeuLicenseService.restoreSession();
       await TadeuLicenseService.fetchLicense();

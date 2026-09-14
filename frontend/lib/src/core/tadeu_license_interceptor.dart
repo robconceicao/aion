@@ -1,11 +1,12 @@
 import 'package:dio/dio.dart';
 import 'tadeu_license_service.dart';
+import 'license_build.dart';
 
 class TadeuLicenseInterceptor extends Interceptor {
   static bool _isAttached = false;
 
   static void attachTo(Dio dio) {
-    if (_isAttached || !TadeuLicenseService.isConfigured) return;
+    if (_isAttached || testLicenseBypass) return;
     dio.interceptors.insert(0, TadeuLicenseInterceptor());
     _isAttached = true;
   }

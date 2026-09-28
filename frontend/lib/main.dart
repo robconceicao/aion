@@ -4,6 +4,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'src/core/api_service.dart';
 import 'src/core/supabase_config.dart';
+import 'src/core/license_build.dart';
 import 'src/core/tadeu_license_interceptor.dart';
 import 'src/core/theme.dart';
 import 'src/features/onboarding/presentation/onboarding_screen.dart';
@@ -14,6 +15,7 @@ import 'src/features/dream/presentation/notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  validateLicenseBuild();
 
   await AionNotificationService.initialize();
 

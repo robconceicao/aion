@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'license_build.dart';
 
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -34,9 +35,10 @@ class TadeuLicense {
   });
 
   bool hasFeature(String key) =>
-      plan == 'legacy' || features.any((feature) => feature.key == key);
+      testLicenseBypass || plan == 'legacy' || features.any((feature) => feature.key == key);
 
   LicensedFeature? feature(String key) {
+    if (testLicenseBypass) return null;
     for (final feature in features) {
       if (feature.key == key) return feature;
     }
@@ -125,7 +127,7 @@ class TadeuLicenseService {
   }
 
   static Future<void> restoreSession() async {
-    if (!isConfigured) return;
+    if (testLicenseBypass || !isConfigured) return;
     final refreshToken = await _storage.read(key: _refreshTokenKey);
     if (refreshToken == null || refreshToken.isEmpty) return;
     try {
@@ -178,6 +180,7 @@ class TadeuLicenseService {
     if (raw == null) return null;
     try {
       final parsed = TadeuLicense.fromJson(jsonDecode(raw) as Map<String, dynamic>, offline: true);
+      if (parsed.plan == 'homologation') return null;
       if (DateTime.now().difference(parsed.checkedAt) > _maxOffline) return null;
       if (parsed.expiresAt != null && parsed.expiresAt!.isBefore(DateTime.now())) return null;
       return parsed;
@@ -187,6 +190,8 @@ class TadeuLicenseService {
   }
 
   static Future<TadeuLicense> fetchLicense() async {
+    validateLicenseBuild();
+    if (testLicenseBypass) return TadeuLicense(plan: 'homologation', features: const [], expiresAt: null, checkedAt: DateTime.now());
     if (!isConfigured) throw StateError('Licenciamento Tadeu Apps não configurado.');
     final token = await _accessToken();
 
@@ -224,6 +229,7 @@ class TadeuLicenseService {
     int amount = 1,
     String? idempotencyKey,
   }) async {
+    if (testLicenseBypass) return const UsageResult(used: 0, limit: null, remaining: null, unit: null, duplicated: false);
     final token = await _accessToken();
     try {
       final response = await Dio().post<Map<String, dynamic>>(

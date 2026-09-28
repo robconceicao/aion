@@ -1,3 +1,4 @@
+import 'retry_policy.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -224,7 +225,7 @@ class ApiService {
 
           final retryCount = err.requestOptions.extra['retryCount'] as int? ?? 0;
 
-          if (shouldRetry && retryCount < 2) {
+          if (mayRetryTransport(err.requestOptions.method) && shouldRetry && retryCount < 2) {
             // Backoff progressivo: 3s na 1ª tentativa, 6s na 2ª
             await Future.delayed(Duration(seconds: 3 * (retryCount + 1)));
             final opts = err.requestOptions;

@@ -17,7 +17,8 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   validateLicenseBuild();
 
-  await AionNotificationService.initialize();
+  try { await AionNotificationService.initialize(); }
+  catch (error) { debugPrint('Lembretes indisponíveis: $error'); }
 
   SupabaseConfig.assertConfigured();
   await Supabase.initialize(

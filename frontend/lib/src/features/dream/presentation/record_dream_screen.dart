@@ -180,8 +180,6 @@ class _RecordDreamScreenState extends State<RecordDreamScreen> with SingleTicker
       _loadingMessage = 'Aion está acordando...\nIsso pode levar até 1 minuto na primeira vez.';
     });
     
-    // Cancela notificação do dia quando usuário inicia um registro
-    await AionNotificationService.cancelTodaysMorning();
 
     // Refresh proativo da sessão antes da chamada longa
     final session = await ApiService.ensureFreshSession();

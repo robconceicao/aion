@@ -86,51 +86,43 @@ def _build_dream_row(
 
 
 async def _persist_dream_dual_with_retry(dream_data: dict, max_attempts: int = 3) -> None:
-    """
-    Insert síncrono via service_role + retry + verificação por SELECT.
-    Levanta se todas as tentativas falharem — o caller NÃO devolve HTTP 200.
-    """
+    """Recover uncertain commits by reading the same operation ID and owner."""
     service = get_supabase_service()
     dream_id = dream_data["id"]
+    owner = dream_data["user_id"]
     last_err: Exception | None = None
-    delays = (0.5, 1.5)
 
-    for attempt in range(1, max_attempts + 1):
+    immutable_fields = [field for field in (
+        "relato", "tags_emocao", "temas", "residuos_diurnos",
+        "interpretacao_narrativa", "pergunta_reflexao",
+    ) if field in dream_data]
+
+    def exists() -> bool:
+        result = (service.table("dreams").select(",".join(["id", *immutable_fields]))
+                  .eq("id", dream_id).eq("user_id", owner).limit(1).execute())
+        if not result.data:
+            return False
+        if any(result.data[0].get(field) != dream_data[field] for field in immutable_fields):
+            raise RuntimeError("ID existente com conteúdo divergente; dados preservados")
+        return True
+
+    for attempt in range(max_attempts):
         try:
-            service.table("dreams").insert(dream_data).execute()
-            check = (
-                service.table("dreams")
-                .select("id")
-                .eq("id", dream_id)
-                .limit(1)
-                .execute()
-            )
-            if check.data:
-                logger.info(
-                    "[PERSIST] OK dream_id=%s attempt=%s embedding=%s",
-                    dream_id, attempt, dream_data.get("embedding_status"),
-                )
+            if exists():
                 return
-            last_err = RuntimeError(
-                f"insert retornou sem erro mas SELECT não encontrou id={dream_id}"
-            )
-            logger.error(
-                "[PERSIST][ERROR] verify miss dream_id=%s attempt=%s/%s",
-                dream_id, attempt, max_attempts,
-            )
-        except Exception as e:
-            last_err = e
-            logger.error(
-                "[PERSIST][ERROR] insert falhou dream_id=%s attempt=%s/%s: %s",
-                dream_id, attempt, max_attempts, e,
-                exc_info=True,
-            )
-        if attempt < max_attempts:
-            await asyncio.sleep(delays[attempt - 1])
-
-    raise RuntimeError(
-        f"persist failed after {max_attempts} attempts for dream_id={dream_id}: {last_err}"
-    )
+            try:
+                service.table("dreams").insert(dream_data).execute()
+            except Exception as error:
+                # Lost insert response or duplicate ID: verify before deciding it failed.
+                last_err = error
+            if exists():
+                return
+            last_err = RuntimeError("Persistência ainda não confirmada")
+        except Exception as error:
+            last_err = error
+        if attempt + 1 < max_attempts:
+            await asyncio.sleep(min(0.5 * (attempt + 1), 1.5))
+    raise RuntimeError(f"persist failed after {max_attempts} attempts for dream_id={dream_id}: {last_err}")
 
 
 async def _background_recurrence_enrich(

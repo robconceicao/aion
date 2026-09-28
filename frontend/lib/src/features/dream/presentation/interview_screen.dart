@@ -1,3 +1,4 @@
+import 'notification_service.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:dio/dio.dart';
@@ -136,6 +137,9 @@ class _InterviewScreenState extends State<InterviewScreen>
       );
 
       final detailedAnalysis = response.data as Map<String, dynamic>;
+      // Only a successfully persisted dream suppresses today's reminder.
+      try { await AionNotificationService.cancelTodaysMorning(); }
+      catch (error) { debugPrint('Lembrete não atualizado: $error'); }
       final narrativeText = (detailedAnalysis['narrative'] as String?) ?? '';
 
       if (!mounted) return;

@@ -1,4 +1,7 @@
 import 'dart:math';
+import 'dart:convert';
+import 'package:hive_flutter/hive_flutter.dart';
+import '../../../core/dream_command_journal.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:record/record.dart';
@@ -11,7 +14,6 @@ import '../../auth/presentation/auth_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'interview_screen.dart';
 import 'dream_history_screen.dart';
-import 'notification_service.dart';
 import 'audio_recorder.dart';
 import 'audio_recorder_platform.dart';
 import 'widgets/tag_selector.dart';
@@ -266,12 +268,33 @@ class _RecordDreamScreenState extends State<RecordDreamScreen> with SingleTicker
   final List<String> _temas = [];
   final List<String> _residuosDiurnos = [];
 
+  Future<void> _resumePendingAnalysis() async {
+    final owner = Supabase.instance.client.auth.currentUser?.id;
+    if (owner == null) return;
+    final command = Hive.box('dreams').get(DreamCommandJournal.key(owner));
+    if (command == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Não há análise pendente nesta conta.')));
+      return;
+    }
+    final data = jsonDecode(command['payload'] as String) as Map;
+    await Navigator.push(context, MaterialPageRoute(builder: (_) => InterviewScreen(
+      dreamText: data['text'] as String,
+      tagsEmocao: List<String>.from(data['tags_emocao'] ?? []),
+      temas: List<String>.from(data['temas'] ?? []),
+      residuosDiurnos: List<String>.from(data['residuos_diurnos'] ?? []),
+      perguntas: (data['interview_answers'] as List).map((a) => a['pergunta'] as String).toList(),
+    )));
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     
     return Scaffold(
       backgroundColor: AionTheme.darkVoid,
+      appBar: AppBar(backgroundColor: AionTheme.darkVoid, actions: [
+        TextButton(onPressed: _resumePendingAnalysis, child: const Text('Recuperar análise pendente')),
+      ]),
       body: SafeArea(
         child: Stack(
           children: [

@@ -1,5 +1,6 @@
 from pydantic import BaseModel, Field, field_validator
 from typing import List, Optional, Dict, Any
+from uuid import UUID
 
 
 # Limites de input (proteção de custo LLM / DoS)
@@ -15,6 +16,7 @@ class InterviewAnswerItem(BaseModel):
     resposta: str
 
 class DreamCreate(BaseModel):
+    command_id: Optional[UUID] = None
     text: str = Field(..., min_length=DREAM_TEXT_MIN_LEN, max_length=DREAM_TEXT_MAX_LEN)
     user_email: Optional[str] = "usuario@aion.app"
     emotion: Optional[str] = None

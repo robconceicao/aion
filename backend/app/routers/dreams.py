@@ -193,108 +193,111 @@ async def create_dream(
     user_id = current_user.get("sub")
     user_email = current_user.get("email", "anonimo@aion.app")
 
-    # Síntese dual + embedding em paralelo
-    try:
-        synthesis_coro = synthesize_dual(
-            dream_text=dream_in.text,
-            tags_emocao=dream_in.tags_emocao,
-            temas=dream_in.temas,
-            residuos_diurnos=dream_in.residuos_diurnos,
-            interview_answers=dream_in.interview_answers,
-        )
-        synthesis, embedding = await asyncio.gather(
-            synthesis_coro,
-            generate_embedding(dream_in.text),
-            return_exceptions=False,  # SynthesisError propaga diretamente
-        )
-    except SynthesisError as e:
-        logger.error("[ROUTER][ERROR] SynthesisError — nenhum dado salvo: %s", e)
-        raise HTTPException(
-            status_code=503,
-            detail={
-                "error": "synthesis_failed",
-                "message": "Aion está em silêncio profundo. Nenhum provider de IA está disponível no momento. Tente novamente em instantes.",
-            }
-        )
-    except Exception as e:
-        if isinstance(e, SynthesisError):
-            logger.error("[ROUTER][ERROR] SynthesisError (via gather): %s", e)
+    async def generate():
+        # Síntese dual + embedding em paralelo
+        try:
+            synthesis_coro = synthesize_dual(
+                dream_text=dream_in.text,
+                tags_emocao=dream_in.tags_emocao,
+                temas=dream_in.temas,
+                residuos_diurnos=dream_in.residuos_diurnos,
+                interview_answers=dream_in.interview_answers,
+            )
+            synthesis, embedding = await asyncio.gather(
+                synthesis_coro,
+                generate_embedding(dream_in.text),
+                return_exceptions=False,  # SynthesisError propaga diretamente
+            )
+        except SynthesisError as e:
+            logger.error("[ROUTER][ERROR] SynthesisError — nenhum dado salvo: %s", e)
             raise HTTPException(
                 status_code=503,
                 detail={
                     "error": "synthesis_failed",
-                    "message": "Aion está em silêncio profundo. Tente novamente em instantes.",
+                    "message": "Aion está em silêncio profundo. Nenhum provider de IA está disponível no momento. Tente novamente em instantes.",
                 }
             )
-        logger.error("[ROUTER][ERROR] Erro inesperado em create_dream: %s", e, exc_info=True)
-        raise HTTPException(
-            status_code=500,
-            detail={
-                "error": "internal_error",
-                "message": "Erro interno ao processar o sonho. Tente novamente em instantes.",
+        except Exception as e:
+            if isinstance(e, SynthesisError):
+                logger.error("[ROUTER][ERROR] SynthesisError (via gather): %s", e)
+                raise HTTPException(
+                    status_code=503,
+                    detail={
+                        "error": "synthesis_failed",
+                        "message": "Aion está em silêncio profundo. Tente novamente em instantes.",
+                    }
+                )
+            logger.error("[ROUTER][ERROR] Erro inesperado em create_dream: %s", e, exc_info=True)
+            raise HTTPException(
+                status_code=500,
+                detail={
+                    "error": "internal_error",
+                    "message": "Erro interno ao processar o sonho. Tente novamente em instantes.",
+                },
+            )
+
+        dream_id, dream_data = _build_dream_row(
+            dream_in, synthesis, embedding, user_id, user_email
+        )
+        # 200: dual + id (linha garantida)
+        response = {
+            "id": dream_id,
+            # Alias: clientes que leem dream_id (ex. telas dual/áudio)
+            "dream_id": dream_id,
+            "analise_completa": synthesis.analise_completa.model_dump(),
+            "interpretacao_narrativa": synthesis.interpretacao_narrativa,
+            "pergunta_reflexao": synthesis.pergunta_reflexao,
+            # Compatibilidade com clientes Flutter antigos que leem 'narrative' e campos planos
+            "narrative": synthesis.interpretacao_narrativa,
+            "essencia": synthesis.analise_completa.sintese_tecnica,
+            "simbolos_chave": [
+                {"elemento": s.elemento, "significado": s.significado}
+                for s in synthesis.analise_completa.simbolos
+            ],
+            "arquetipos": [
+                {"nome": a.arquetipo, "descricao": a.manifestacao, "simbolo": "◯"}
+                for a in synthesis.analise_completa.arquetipos
+            ],
+            "funcao_compensatoria": synthesis.analise_completa.compensacao,
+            "fase_jornada": {"nome": synthesis.analise_completa.fase_jornada, "descricao": ""},
+            "pergunta_para_reflexao": synthesis.pergunta_reflexao,
+            "mito_espelho": {
+                "titulo": synthesis.analise_completa.mito_espelho.titulo,
+                "paralela": synthesis.analise_completa.mito_espelho.paralela,
             },
+            "prospeccao": synthesis.analise_completa.prospeccao,
+            "intensidade_sombra": 5, "intensidade_heroi": 5, "intensidade_transformacao": 5,
+        }
+
+        return dream_data, response
+
+    def enrich(dream):
+        synthesis = SynthesisResult(
+            analise_completa=dream["analise_completa"],
+            interpretacao_narrativa=dream["interpretacao_narrativa"],
+            pergunta_reflexao=dream["pergunta_reflexao"],
+        )
+        background_tasks.add_task(
+            _background_recurrence_enrich, dream["id"], dream_in,
+            synthesis, dream.get("embedding"), user_id,
         )
 
-    # Persistência dual SÍNCRONA — 200 só com linha confirmada
-    dream_id, dream_data = _build_dream_row(
-        dream_in, synthesis, embedding, user_id, user_email
-    )
+    if dream_in.command_id is not None:
+        from app.services.dream_commands import execute_dream_command
+        payload = dream_in.model_dump(mode="json", exclude={"command_id", "user_email"})
+        return await execute_dream_command(
+            get_supabase_service(), user_id, dream_in.command_id, payload,
+            generate, _persist_dream_dual_with_retry, enrich,
+        )
+
+    # Compatibility with already installed clients; new builds send command_id.
+    dream_data, response = await generate()
     try:
         await _persist_dream_dual_with_retry(dream_data)
-    except Exception as e:
-        logger.error(
-            "[ROUTER][ERROR] Persistência dual FALHOU dream_id=%s user_id=%s: %s",
-            dream_id,
-            user_id,
-            e,
-            exc_info=True,
-        )
-        raise HTTPException(
-            status_code=503,
-            detail={
-                "error": "persist_failed",
-                "message": (
-                    "A interpretação foi gerada, mas não foi possível salvá-la. "
-                    "Tente novamente em instantes."
-                ),
-            },
-        )
-
-    # Recorrência (enriquecimento) — best-effort em background
-    background_tasks.add_task(
-        _background_recurrence_enrich,
-        dream_id, dream_in, synthesis, embedding, user_id,
-    )
-
-    # 200: dual + id (linha garantida)
-    return {
-        "id": dream_id,
-        # Alias: clientes que leem dream_id (ex. telas dual/áudio)
-        "dream_id": dream_id,
-        "analise_completa": synthesis.analise_completa.model_dump(),
-        "interpretacao_narrativa": synthesis.interpretacao_narrativa,
-        "pergunta_reflexao": synthesis.pergunta_reflexao,
-        # Compatibilidade com clientes Flutter antigos que leem 'narrative' e campos planos
-        "narrative": synthesis.interpretacao_narrativa,
-        "essencia": synthesis.analise_completa.sintese_tecnica,
-        "simbolos_chave": [
-            {"elemento": s.elemento, "significado": s.significado}
-            for s in synthesis.analise_completa.simbolos
-        ],
-        "arquetipos": [
-            {"nome": a.arquetipo, "descricao": a.manifestacao, "simbolo": "◯"}
-            for a in synthesis.analise_completa.arquetipos
-        ],
-        "funcao_compensatoria": synthesis.analise_completa.compensacao,
-        "fase_jornada": {"nome": synthesis.analise_completa.fase_jornada, "descricao": ""},
-        "pergunta_para_reflexao": synthesis.pergunta_reflexao,
-        "mito_espelho": {
-            "titulo": synthesis.analise_completa.mito_espelho.titulo,
-            "paralela": synthesis.analise_completa.mito_espelho.paralela,
-        },
-        "prospeccao": synthesis.analise_completa.prospeccao,
-        "intensidade_sombra": 5, "intensidade_heroi": 5, "intensidade_transformacao": 5,
-    }
+    except Exception:
+        raise HTTPException(503, detail={"error": "persist_failed", "message": "Não foi possível confirmar a persistência do sonho."})
+    enrich(dream_data)
+    return response
 
 
 @router.get("/history", response_model=list)

@@ -191,8 +191,8 @@ class TestDualPersistPayload(unittest.IsolatedAsyncioTestCase):
             def execute(self):
                 # verify SELECT: devolve a row se já houve insert
                 if insert_payloads:
-                    return MagicMock(data=[{"id": insert_payloads[-1]["id"]}])
-                return MagicMock(data=[{}])
+                    return MagicMock(data=[insert_payloads[-1]])
+                return MagicMock(data=[])
 
             def rpc(self, *a, **k):
                 m = MagicMock()

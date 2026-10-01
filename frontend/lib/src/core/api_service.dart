@@ -97,6 +97,7 @@ class ApiService {
     Map<String, dynamic>? extraHeaders,
   }) {
     return Options(
+      extra: {if (session != null) 'expectedOwnerId': session.user.id},
       receiveTimeout: receiveTimeout,
       sendTimeout: sendTimeout,
       headers: {
@@ -156,6 +157,10 @@ class ApiService {
       // Interceptor de autenticação + retry automático
       _dio.interceptors.add(InterceptorsWrapper(
         onRequest: (options, handler) async {
+          final expectedOwner = options.extra['expectedOwnerId'];
+          if (expectedOwner != null && expectedOwner != Supabase.instance.client.auth.currentUser?.id) {
+            return handler.reject(DioException(requestOptions: options, error: 'account_changed', message: 'A conta mudou. Reabra a tela na conta original.'));
+          }
           // Se a tela já setou Authorization, não sobrescreve (Bearer explícito).
           final existing = options.headers['Authorization']?.toString() ?? '';
           if (existing.startsWith('Bearer ') && existing.length > 8) {
@@ -204,6 +209,10 @@ class ApiService {
               final newSession = await _pendingRefresh;
               if (newSession != null && newSession.accessToken.isNotEmpty) {
                 final opts = err.requestOptions;
+                final expectedOwner = opts.extra['expectedOwnerId'];
+                if (expectedOwner != null && expectedOwner != newSession.user.id) {
+                  return handler.next(err);
+                }
                 opts.headers['Authorization'] =
                     'Bearer ${newSession.accessToken}';
                 opts.extra['_isAuthRetry'] = true;

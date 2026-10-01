@@ -22,3 +22,13 @@ Configure APP_ENV=homologation e TEST_LICENSE_BYPASS=true somente na instância 
 3. Nos servidores, remover TEST_LICENSE_BYPASS e fixar APP_ENV=production. Validar conta sem licença, expirada, cancelada, offline e com limite esgotado.
 4. Confirmar assinatura Android oficial, applicationId e canal de distribuição production. Testar instalação e atualização em aparelho real.
 5. Billing permanece BILLING_MODE=test e BILLING_PROVIDER=mock durante esta entrega. A ativação financeira real é uma etapa posterior explícita.
+
+## Comando durável — 2026-10-01
+
+Versão prevista 1.0.5 (6). Entrevista e UUID ficam persistidos por conta antes do POST.
+O backend reserva o comando no Postgres e salva o resultado da IA antes de concluir
+o sonho; repetição recupera o checkpoint. Operação externa incerta não é repetida
+automaticamente. Backend: 151 testes; Flutter: 20 testes; SQL: 12 asserções passaram.
+Aplicar `20260928134214_dream_command_idempotency.sql` no projeto AION e atualizar
+o backend de homologação antes de entregar este cliente. Produção: bypass desligado,
+revisão de operações incertas, aprovação de homologação e billing separado.

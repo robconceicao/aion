@@ -1,4 +1,7 @@
 import 'notification_service.dart';
+import 'dart:convert';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../../core/dream_command_journal.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:dio/dio.dart';
@@ -34,6 +37,8 @@ class _InterviewScreenState extends State<InterviewScreen>
   final List<TextEditingController> _controllers = [];
   final _dio = ApiService.client;
   bool _isLoading = false;
+  late final String _ownerId;
+  String get _draftKey => 'interview_draft:$_ownerId';
 
   late AnimationController _animController;
   late Animation<double> _fadeIn;
@@ -41,6 +46,7 @@ class _InterviewScreenState extends State<InterviewScreen>
   @override
   void initState() {
     super.initState();
+    _ownerId = Supabase.instance.client.auth.currentUser?.id ?? '';
     for (var _ in widget.perguntas) {
       _controllers.add(TextEditingController());
     }
@@ -62,7 +68,18 @@ class _InterviewScreenState extends State<InterviewScreen>
 
   void _tryRestoreDraft() {
     try {
-      final draft = Hive.box('dreams').get('interview_draft');
+      final savedCommand = Hive.box('dreams').get(DreamCommandJournal.key(_ownerId));
+      if (savedCommand != null) {
+        final payload = jsonDecode(savedCommand['payload'] as String) as Map;
+        if (payload['text'] == widget.dreamText) {
+          final answers = List<Map>.from(payload['interview_answers'] as List);
+          if (answers.length == widget.perguntas.length && List.generate(answers.length, (i) => answers[i]['pergunta'] == widget.perguntas[i]).every((v) => v)) {
+            for (var i = 0; i < answers.length; i++) { _controllers[i].text = answers[i]['resposta'] as String; }
+            return;
+          }
+        }
+      }
+      final draft = Hive.box('dreams').get(_draftKey);
       if (draft == null || draft['dreamText'] != widget.dreamText) return;
       final savedQs = List<String>.from(draft['questions'] as List? ?? []);
       if (savedQs.length != widget.perguntas.length) return;
@@ -84,14 +101,14 @@ class _InterviewScreenState extends State<InterviewScreen>
     setState(() => _isLoading = true);
 
     try {
-      Hive.box('dreams').put('interview_draft', {
+      if (_ownerId.isEmpty || Supabase.instance.client.auth.currentUser?.id != _ownerId) {
+        throw StateError('A conta mudou. Reabra a entrevista na conta original.');
+      }
+      await Hive.box('dreams').put(_draftKey, {
         'dreamText': widget.dreamText,
         'questions': widget.perguntas,
         'answers': _controllers.map((c) => c.text).toList(),
       });
-    } catch (_) {}
-
-    try {
       // Refresh da sessão antes da análise longa (evita expirar no meio)
       final session = await ApiService.ensureFreshSession();
       if (session == null) {
@@ -118,24 +135,34 @@ class _InterviewScreenState extends State<InterviewScreen>
         },
       );
 
+      if (session.user.id != _ownerId) {
+        throw StateError('A conta mudou. Reabra a entrevista na conta original.');
+      }
+      final payload = <String, dynamic>{
+        'text': widget.dreamText,
+        if (widget.tagsEmocao.isNotEmpty) 'tags_emocao': widget.tagsEmocao,
+        if (widget.temas.isNotEmpty) 'temas': widget.temas,
+        if (widget.residuosDiurnos.isNotEmpty) 'residuos_diurnos': widget.residuosDiurnos,
+        'interview_answers': interviewAnswers,
+        'is_recurrent': false,
+      };
+      final box = Hive.box('dreams');
+      final journal = DreamCommandJournal(box.get, box.put);
+      final command = await journal.prepare(_ownerId, payload);
       final response = await _dio.post(
         AionConfig.analyzeUrl,
-        data: {
-          'text': widget.dreamText,
-          if (widget.tagsEmocao.isNotEmpty) 'tags_emocao': widget.tagsEmocao,
-          if (widget.temas.isNotEmpty) 'temas': widget.temas,
-          if (widget.residuosDiurnos.isNotEmpty) 'residuos_diurnos': widget.residuosDiurnos,
-          'interview_answers': interviewAnswers,
-          // Recorrência é detectada no backend; não depende de toggle do usuário
-          'is_recurrent': false,
-        },
+        data: {...payload, 'command_id': command['command_id']},
         options: ApiService.authOptions(
           session: session,
+          extraHeaders: {'X-Tadeu-Idempotency-Key': 'dream:${command["command_id"]}'},
           receiveTimeout: const Duration(seconds: 180),
           sendTimeout: const Duration(seconds: 90),
         ),
       );
 
+      if (Supabase.instance.client.auth.currentUser?.id != _ownerId) {
+        throw StateError('A conta mudou. O resultado permanece no histórico da conta original.');
+      }
       final detailedAnalysis = response.data as Map<String, dynamic>;
       // Only a successfully persisted dream suppresses today's reminder.
       try { await AionNotificationService.cancelTodaysMorning(); }
@@ -144,7 +171,9 @@ class _InterviewScreenState extends State<InterviewScreen>
 
       if (!mounted) return;
 
-      try { Hive.box('dreams').delete('interview_draft'); } catch (_) {}
+      await box.delete(_draftKey);
+      await box.delete(DreamCommandJournal.key(_ownerId));
+      if (!mounted) return;
 
       Navigator.pushReplacement(
         context,
@@ -169,7 +198,9 @@ class _InterviewScreenState extends State<InterviewScreen>
             'feche e reabra o app, depois toque em Revelar o Significado novamente.';
       } else if (e.type == DioExceptionType.receiveTimeout ||
           e.type == DioExceptionType.connectionTimeout) {
-        msg = 'O servidor demorou a responder. Tente novamente — ele já deve estar acordado.';
+        msg = 'A resposta não chegou. Suas respostas e o identificador foram preservados. Tente novamente para recuperar a mesma análise.';
+      } else if (e.response?.data is Map && e.response!.data['detail'] is Map) {
+        msg = e.response!.data['detail']['message']?.toString() ?? 'A operação está pendente. Tente consultar novamente.';
       } else if (status != null) {
         msg = 'Não foi possível analisar o sonho (HTTP $status). Verifique sua internet e tente novamente.';
       } else {
@@ -187,7 +218,7 @@ class _InterviewScreenState extends State<InterviewScreen>
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Ocorreu um erro inesperado. Suas respostas estão preservadas — tente novamente.',
+            e is StateError ? e.message.toString() : 'Não foi possível confirmar a operação. Suas respostas foram mantidas na tela.',
             style: GoogleFonts.ptSerif(color: Colors.white),
           ),
           backgroundColor: AionTheme.crimson,

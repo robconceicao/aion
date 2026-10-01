@@ -86,51 +86,43 @@ def _build_dream_row(
 
 
 async def _persist_dream_dual_with_retry(dream_data: dict, max_attempts: int = 3) -> None:
-    """
-    Insert síncrono via service_role + retry + verificação por SELECT.
-    Levanta se todas as tentativas falharem — o caller NÃO devolve HTTP 200.
-    """
+    """Recover uncertain commits by reading the same operation ID and owner."""
     service = get_supabase_service()
     dream_id = dream_data["id"]
+    owner = dream_data["user_id"]
     last_err: Exception | None = None
-    delays = (0.5, 1.5)
 
-    for attempt in range(1, max_attempts + 1):
+    immutable_fields = [field for field in (
+        "relato", "tags_emocao", "temas", "residuos_diurnos",
+        "interpretacao_narrativa", "pergunta_reflexao",
+    ) if field in dream_data]
+
+    def exists() -> bool:
+        result = (service.table("dreams").select(",".join(["id", *immutable_fields]))
+                  .eq("id", dream_id).eq("user_id", owner).limit(1).execute())
+        if not result.data:
+            return False
+        if any(result.data[0].get(field) != dream_data[field] for field in immutable_fields):
+            raise RuntimeError("ID existente com conteúdo divergente; dados preservados")
+        return True
+
+    for attempt in range(max_attempts):
         try:
-            service.table("dreams").insert(dream_data).execute()
-            check = (
-                service.table("dreams")
-                .select("id")
-                .eq("id", dream_id)
-                .limit(1)
-                .execute()
-            )
-            if check.data:
-                logger.info(
-                    "[PERSIST] OK dream_id=%s attempt=%s embedding=%s",
-                    dream_id, attempt, dream_data.get("embedding_status"),
-                )
+            if exists():
                 return
-            last_err = RuntimeError(
-                f"insert retornou sem erro mas SELECT não encontrou id={dream_id}"
-            )
-            logger.error(
-                "[PERSIST][ERROR] verify miss dream_id=%s attempt=%s/%s",
-                dream_id, attempt, max_attempts,
-            )
-        except Exception as e:
-            last_err = e
-            logger.error(
-                "[PERSIST][ERROR] insert falhou dream_id=%s attempt=%s/%s: %s",
-                dream_id, attempt, max_attempts, e,
-                exc_info=True,
-            )
-        if attempt < max_attempts:
-            await asyncio.sleep(delays[attempt - 1])
-
-    raise RuntimeError(
-        f"persist failed after {max_attempts} attempts for dream_id={dream_id}: {last_err}"
-    )
+            try:
+                service.table("dreams").insert(dream_data).execute()
+            except Exception as error:
+                # Lost insert response or duplicate ID: verify before deciding it failed.
+                last_err = error
+            if exists():
+                return
+            last_err = RuntimeError("Persistência ainda não confirmada")
+        except Exception as error:
+            last_err = error
+        if attempt + 1 < max_attempts:
+            await asyncio.sleep(min(0.5 * (attempt + 1), 1.5))
+    raise RuntimeError(f"persist failed after {max_attempts} attempts for dream_id={dream_id}: {last_err}")
 
 
 async def _background_recurrence_enrich(
@@ -201,108 +193,111 @@ async def create_dream(
     user_id = current_user.get("sub")
     user_email = current_user.get("email", "anonimo@aion.app")
 
-    # Síntese dual + embedding em paralelo
-    try:
-        synthesis_coro = synthesize_dual(
-            dream_text=dream_in.text,
-            tags_emocao=dream_in.tags_emocao,
-            temas=dream_in.temas,
-            residuos_diurnos=dream_in.residuos_diurnos,
-            interview_answers=dream_in.interview_answers,
-        )
-        synthesis, embedding = await asyncio.gather(
-            synthesis_coro,
-            generate_embedding(dream_in.text),
-            return_exceptions=False,  # SynthesisError propaga diretamente
-        )
-    except SynthesisError as e:
-        logger.error("[ROUTER][ERROR] SynthesisError — nenhum dado salvo: %s", e)
-        raise HTTPException(
-            status_code=503,
-            detail={
-                "error": "synthesis_failed",
-                "message": "Aion está em silêncio profundo. Nenhum provider de IA está disponível no momento. Tente novamente em instantes.",
-            }
-        )
-    except Exception as e:
-        if isinstance(e, SynthesisError):
-            logger.error("[ROUTER][ERROR] SynthesisError (via gather): %s", e)
+    async def generate():
+        # Síntese dual + embedding em paralelo
+        try:
+            synthesis_coro = synthesize_dual(
+                dream_text=dream_in.text,
+                tags_emocao=dream_in.tags_emocao,
+                temas=dream_in.temas,
+                residuos_diurnos=dream_in.residuos_diurnos,
+                interview_answers=dream_in.interview_answers,
+            )
+            synthesis, embedding = await asyncio.gather(
+                synthesis_coro,
+                generate_embedding(dream_in.text),
+                return_exceptions=False,  # SynthesisError propaga diretamente
+            )
+        except SynthesisError as e:
+            logger.error("[ROUTER][ERROR] SynthesisError — nenhum dado salvo: %s", e)
             raise HTTPException(
                 status_code=503,
                 detail={
                     "error": "synthesis_failed",
-                    "message": "Aion está em silêncio profundo. Tente novamente em instantes.",
+                    "message": "Aion está em silêncio profundo. Nenhum provider de IA está disponível no momento. Tente novamente em instantes.",
                 }
             )
-        logger.error("[ROUTER][ERROR] Erro inesperado em create_dream: %s", e, exc_info=True)
-        raise HTTPException(
-            status_code=500,
-            detail={
-                "error": "internal_error",
-                "message": "Erro interno ao processar o sonho. Tente novamente em instantes.",
+        except Exception as e:
+            if isinstance(e, SynthesisError):
+                logger.error("[ROUTER][ERROR] SynthesisError (via gather): %s", e)
+                raise HTTPException(
+                    status_code=503,
+                    detail={
+                        "error": "synthesis_failed",
+                        "message": "Aion está em silêncio profundo. Tente novamente em instantes.",
+                    }
+                )
+            logger.error("[ROUTER][ERROR] Erro inesperado em create_dream: %s", e, exc_info=True)
+            raise HTTPException(
+                status_code=500,
+                detail={
+                    "error": "internal_error",
+                    "message": "Erro interno ao processar o sonho. Tente novamente em instantes.",
+                },
+            )
+
+        dream_id, dream_data = _build_dream_row(
+            dream_in, synthesis, embedding, user_id, user_email
+        )
+        # 200: dual + id (linha garantida)
+        response = {
+            "id": dream_id,
+            # Alias: clientes que leem dream_id (ex. telas dual/áudio)
+            "dream_id": dream_id,
+            "analise_completa": synthesis.analise_completa.model_dump(),
+            "interpretacao_narrativa": synthesis.interpretacao_narrativa,
+            "pergunta_reflexao": synthesis.pergunta_reflexao,
+            # Compatibilidade com clientes Flutter antigos que leem 'narrative' e campos planos
+            "narrative": synthesis.interpretacao_narrativa,
+            "essencia": synthesis.analise_completa.sintese_tecnica,
+            "simbolos_chave": [
+                {"elemento": s.elemento, "significado": s.significado}
+                for s in synthesis.analise_completa.simbolos
+            ],
+            "arquetipos": [
+                {"nome": a.arquetipo, "descricao": a.manifestacao, "simbolo": "◯"}
+                for a in synthesis.analise_completa.arquetipos
+            ],
+            "funcao_compensatoria": synthesis.analise_completa.compensacao,
+            "fase_jornada": {"nome": synthesis.analise_completa.fase_jornada, "descricao": ""},
+            "pergunta_para_reflexao": synthesis.pergunta_reflexao,
+            "mito_espelho": {
+                "titulo": synthesis.analise_completa.mito_espelho.titulo,
+                "paralela": synthesis.analise_completa.mito_espelho.paralela,
             },
+            "prospeccao": synthesis.analise_completa.prospeccao,
+            "intensidade_sombra": 5, "intensidade_heroi": 5, "intensidade_transformacao": 5,
+        }
+
+        return dream_data, response
+
+    def enrich(dream):
+        synthesis = SynthesisResult(
+            analise_completa=dream["analise_completa"],
+            interpretacao_narrativa=dream["interpretacao_narrativa"],
+            pergunta_reflexao=dream["pergunta_reflexao"],
+        )
+        background_tasks.add_task(
+            _background_recurrence_enrich, dream["id"], dream_in,
+            synthesis, dream.get("embedding"), user_id,
         )
 
-    # Persistência dual SÍNCRONA — 200 só com linha confirmada
-    dream_id, dream_data = _build_dream_row(
-        dream_in, synthesis, embedding, user_id, user_email
-    )
+    if dream_in.command_id is not None:
+        from app.services.dream_commands import execute_dream_command
+        payload = dream_in.model_dump(mode="json", exclude={"command_id", "user_email"})
+        return await execute_dream_command(
+            get_supabase_service(), user_id, dream_in.command_id, payload,
+            generate, _persist_dream_dual_with_retry, enrich,
+        )
+
+    # Compatibility with already installed clients; new builds send command_id.
+    dream_data, response = await generate()
     try:
         await _persist_dream_dual_with_retry(dream_data)
-    except Exception as e:
-        logger.error(
-            "[ROUTER][ERROR] Persistência dual FALHOU dream_id=%s user_id=%s: %s",
-            dream_id,
-            user_id,
-            e,
-            exc_info=True,
-        )
-        raise HTTPException(
-            status_code=503,
-            detail={
-                "error": "persist_failed",
-                "message": (
-                    "A interpretação foi gerada, mas não foi possível salvá-la. "
-                    "Tente novamente em instantes."
-                ),
-            },
-        )
-
-    # Recorrência (enriquecimento) — best-effort em background
-    background_tasks.add_task(
-        _background_recurrence_enrich,
-        dream_id, dream_in, synthesis, embedding, user_id,
-    )
-
-    # 200: dual + id (linha garantida)
-    return {
-        "id": dream_id,
-        # Alias: clientes que leem dream_id (ex. telas dual/áudio)
-        "dream_id": dream_id,
-        "analise_completa": synthesis.analise_completa.model_dump(),
-        "interpretacao_narrativa": synthesis.interpretacao_narrativa,
-        "pergunta_reflexao": synthesis.pergunta_reflexao,
-        # Compatibilidade com clientes Flutter antigos que leem 'narrative' e campos planos
-        "narrative": synthesis.interpretacao_narrativa,
-        "essencia": synthesis.analise_completa.sintese_tecnica,
-        "simbolos_chave": [
-            {"elemento": s.elemento, "significado": s.significado}
-            for s in synthesis.analise_completa.simbolos
-        ],
-        "arquetipos": [
-            {"nome": a.arquetipo, "descricao": a.manifestacao, "simbolo": "◯"}
-            for a in synthesis.analise_completa.arquetipos
-        ],
-        "funcao_compensatoria": synthesis.analise_completa.compensacao,
-        "fase_jornada": {"nome": synthesis.analise_completa.fase_jornada, "descricao": ""},
-        "pergunta_para_reflexao": synthesis.pergunta_reflexao,
-        "mito_espelho": {
-            "titulo": synthesis.analise_completa.mito_espelho.titulo,
-            "paralela": synthesis.analise_completa.mito_espelho.paralela,
-        },
-        "prospeccao": synthesis.analise_completa.prospeccao,
-        "intensidade_sombra": 5, "intensidade_heroi": 5, "intensidade_transformacao": 5,
-    }
+    except Exception:
+        raise HTTPException(503, detail={"error": "persist_failed", "message": "Não foi possível confirmar a persistência do sonho."})
+    enrich(dream_data)
+    return response
 
 
 @router.get("/history", response_model=list)

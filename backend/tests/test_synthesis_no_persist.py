@@ -97,7 +97,7 @@ class ServiceTableSpy:
             if self._client.verify_finds_row and any(
                 c["data"].get("id") == self._eq_id for c in self._client.insert_calls
             ):
-                return MagicMock(data=[{"id": self._eq_id}])
+                return MagicMock(data=[next(c["data"] for c in self._client.insert_calls if c["data"].get("id") == self._eq_id)])
             return MagicMock(data=[])
         return MagicMock(data=[{}])
 

@@ -1,3 +1,5 @@
+import 'package:flutter_timezone/flutter_timezone.dart';
+import 'notification_schedule.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
@@ -8,6 +10,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 class AionNotificationService {
   static final _plugin = FlutterLocalNotificationsPlugin();
   static bool _initialized = false;
+  static final _observer = _NotificationObserver();
 
   // IDs de notificação
   static const int _morningId = 1001;
@@ -35,6 +38,7 @@ class AionNotificationService {
     if (_initialized) return;
 
     tz.initializeTimeZones();
+    await _refreshTimezone();
 
     const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
     const iosSettings = DarwinInitializationSettings(
@@ -51,38 +55,74 @@ class AionNotificationService {
     );
 
     _initialized = true;
+    WidgetsBinding.instance.addObserver(_observer);
+  }
+
+  static String _today() => DateTime.now().toIso8601String().substring(0, 10);
+  static Future<void> _refreshTimezone() async {
+    final identifier = await FlutterTimezone.getLocalTimezone();
+    tz.setLocalLocation(tz.getLocation(identifier));
+  }
+  static Future<void> refreshOnResume() async {
+    try {
+      await initialize();
+      await _refreshTimezone();
+      final prefs = await SharedPreferences.getInstance();
+      final time = await getSavedWakeUpTime();
+      if (prefs.getBool('notifications_enabled') == true && time != null) {
+        await _scheduleMorningNotification(time, skipToday: prefs.getString('dream_registered_day') == _today());
+        await _scheduleNightNotification();
+      }
+    } catch (error) { debugPrint('Lembretes indisponíveis: $error'); }
   }
 
   /// Solicita permissão e agenda notificações.
   /// Retorna true se agendado com sucesso; false se permissão negada
   /// ou alarme exato indisponível (Android 12).
   static Future<bool> requestAndSchedule(TimeOfDay wakeUpTime) async {
-    final status = await Permission.notification.request();
-    if (!status.isGranted) return false;
+    try {
+      await initialize();
+      await _refreshTimezone();
+      final status = await Permission.notification.request();
+      if (!status.isGranted) return false;
 
-    // Android 12 (API 31–32): SCHEDULE_EXACT_ALARM requer opt-in em
-    // Configurações → Apps → Aion → Acesso especial. Verificar antes
-    // de agendar para evitar falha silenciosa.
-    final androidImpl = _plugin.resolvePlatformSpecificImplementation<
-        AndroidFlutterLocalNotificationsPlugin>();
-    if (androidImpl != null) {
-      final canSchedule = await androidImpl.canScheduleExactNotifications();
-      if (canSchedule == false) return false;
+      // Android 12 (API 31–32): SCHEDULE_EXACT_ALARM requer opt-in em
+      // Configurações → Apps → Aion → Acesso especial. Verificar antes
+      // de agendar para evitar falha silenciosa.
+      final androidImpl = _plugin.resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin>();
+      if (androidImpl != null) {
+        final canSchedule = await androidImpl.canScheduleExactNotifications();
+        if (canSchedule == false) return false;
+      }
+
+      await _scheduleMorningNotification(wakeUpTime);
+      await _scheduleNightNotification();
+      await _saveWakeUpTime(wakeUpTime);
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('notifications_enabled', true);
+      return true;
+    } catch (error) {
+      debugPrint('Não foi possível agendar lembretes: $error');
+      return false;
     }
-
-    await _saveWakeUpTime(wakeUpTime);
-    await _scheduleMorningNotification(wakeUpTime);
-    await _scheduleNightNotification();
-    return true;
   }
 
   /// Cancela a notificação matinal do dia (usuário já registrou o sonho)
   static Future<void> cancelTodaysMorning() async {
-    await _plugin.cancel(_morningId);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('dream_registered_day', _today());
+    final time = await getSavedWakeUpTime();
+    if (time != null && prefs.getBool('notifications_enabled') == true) {
+      await _refreshTimezone();
+      await _scheduleMorningNotification(time, skipToday: true);
+    }
   }
 
   /// Cancela todas as notificações
   static Future<void> cancelAll() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('notifications_enabled', false);
     await _plugin.cancelAll();
   }
 
@@ -101,7 +141,7 @@ class AionNotificationService {
     await prefs.setInt('wake_minute', time.minute);
   }
 
-  static Future<void> _scheduleMorningNotification(TimeOfDay time) async {
+  static Future<void> _scheduleMorningNotification(TimeOfDay time, {bool skipToday = false}) async {
     await _plugin.cancel(_morningId);
 
     final message = _morningMessages[
@@ -109,12 +149,7 @@ class AionNotificationService {
     ];
 
     final now = tz.TZDateTime.now(tz.local);
-    var scheduled = tz.TZDateTime(
-      tz.local, now.year, now.month, now.day, time.hour, time.minute,
-    );
-    if (scheduled.isBefore(now)) {
-      scheduled = scheduled.add(const Duration(days: 1));
-    }
+    final scheduled = nextReminder(now, time.hour, time.minute, skipToday: skipToday);
 
     await _plugin.zonedSchedule(
       _morningId,
@@ -149,12 +184,7 @@ class AionNotificationService {
     ];
 
     final now = tz.TZDateTime.now(tz.local);
-    var scheduled = tz.TZDateTime(
-      tz.local, now.year, now.month, now.day, 22, 0,
-    );
-    if (scheduled.isBefore(now)) {
-      scheduled = scheduled.add(const Duration(days: 1));
-    }
+    final scheduled = nextReminder(now, 22, 0);
 
     await _plugin.zonedSchedule(
       _nightId,
@@ -179,5 +209,12 @@ class AionNotificationService {
       uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
       matchDateTimeComponents: DateTimeComponents.time,
     );
+  }
+}
+
+class _NotificationObserver extends WidgetsBindingObserver {
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) { AionNotificationService.refreshOnResume(); }
   }
 }

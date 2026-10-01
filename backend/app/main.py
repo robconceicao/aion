@@ -48,6 +48,9 @@ async def tadeu_usage_metering(request: Request, call_next):
     if feature is None:
         return await call_next(request)
 
+    if not request.headers.get("Authorization", "").startswith("Bearer "):
+        return _http_exception_response(HTTPException(401, detail="missing_token"))
+
     token = request.headers.get("X-Tadeu-Token")
     idempotency_key = request.headers.get("X-Tadeu-Idempotency-Key")
 
